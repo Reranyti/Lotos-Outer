@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FlowingFluid;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.common.SoundActions;
 import net.minecraftforge.fluids.FluidType;
 import net.minecraftforge.fluids.ForgeFlowingFluid;
@@ -23,7 +24,25 @@ public final class ModFluids {
             .canSwim(false)
             .canDrown(false)
             .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
-            .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)));
+            .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)) {
+        // Forge 1.20.1 has no RegisterClientExtensionsEvent (that's a later-version API) —
+        // FluidType itself carries this override, and Forge only ever invokes it from client
+        // code paths, so this is safe on a dedicated server despite referencing a client-only type.
+        @Override
+        public void initializeClient(java.util.function.Consumer<IClientFluidTypeExtensions> consumer) {
+            consumer.accept(new IClientFluidTypeExtensions() {
+                @Override
+                public ResourceLocation getStillTexture() {
+                    return stillTexture();
+                }
+
+                @Override
+                public ResourceLocation getFlowingTexture() {
+                    return flowingTexture();
+                }
+            });
+        }
+    });
 
     public static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(ForgeRegistries.FLUIDS, LotusBlight.MODID);
     public static final RegistryObject<FlowingFluid> INFECTED_WATER = FLUIDS.register("infected_water", () -> new ForgeFlowingFluid.Source(properties()));
