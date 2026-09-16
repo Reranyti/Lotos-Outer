@@ -91,6 +91,15 @@ description='''${mod_description}'''
     versionRange="[4.8,5.0)"
     ordering="AFTER"
     side="BOTH"
+# Soft dependency on YACL: not required to load. If present, its classes back our in-game config
+# screen (see client.config); if absent, the mod falls back to no config-screen button and the
+# player edits config/lotusblight-common.toml by hand as before.
+[[dependencies.${mod_id}]]
+    modId="yet_another_config_lib_v3"
+    mandatory=false
+    versionRange="[3.6,4.0)"
+    ordering="AFTER"
+    side="CLIENT"
 
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't

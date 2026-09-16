@@ -15,6 +15,11 @@ import com.lotusblight.spread.roots.RootGrowthEngine;
 import com.lotusblight.worldgen.GuaranteedSpawnManager;
 import com.lotusblight.advancement.SingleBiomeWorldTrigger;
 import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.ConfigScreenHandler;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -91,6 +96,15 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
+
+        // Config-screen button in the mods list — soft dependency, only touches YACL classes
+        // (client-only, and absent unless the player installed YACL themselves) after confirming
+        // both the physical side and the mod's actual presence.
+        if (ModList.get().isLoaded("yet_another_config_lib_v3")) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+                    ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+                            () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> com.lotusblight.client.config.LotusConfigScreen.create(parent))));
+        }
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {
