@@ -9,6 +9,8 @@ import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModBiomes;
 import net.minecraftforge.common.BiomeManager;
 import com.lotusblight.world.LotusEvents;
+import com.lotusblight.spread.InfectionSpreadEngine;
+import com.lotusblight.spread.BarrierEvents;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -70,6 +72,8 @@ public class LotusBlight {
         modBus.addListener(this::addVanillaCreativeItems);
         context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
+        MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
+        MinecraftForge.EVENT_BUS.register(new BarrierEvents());
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {

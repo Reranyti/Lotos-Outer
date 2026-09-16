@@ -8,6 +8,8 @@ import com.lotusblight.world.LotusShootBlock;
 import com.lotusblight.world.LotusMimicBlock;
 import com.lotusblight.world.GlowBerryBushBlock;
 import com.lotusblight.world.LotusRootsBlock;
+import com.lotusblight.world.LianaBarrierBlock;
+import com.lotusblight.world.LianaWeakPointBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -41,6 +43,8 @@ public final class ModBlocks {
     public static final RegistryObject<Block> LOTUS_LEAVES = BLOCKS.register("lotus_leaves", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.2f).sound(SoundType.GRASS).noOcclusion()));
     public static final RegistryObject<Block> BLESSING_LOG = BLOCKS.register("blessing_log", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(2.2f).sound(SoundType.WOOD)));
     public static final RegistryObject<Block> BLESSING_LEAVES = BLOCKS.register("blessing_leaves", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(0.2f).sound(SoundType.GLASS).noOcclusion()));
+    public static final RegistryObject<Block> LIANA_BARRIER = BLOCKS.register("liana_barrier", () -> new LianaBarrierBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(-1.0f, 3600000.0f).sound(SoundType.WOOD).noOcclusion()));
+    public static final RegistryObject<Block> LIANA_WEAK_POINT = BLOCKS.register("liana_weak_point", () -> new LianaWeakPointBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PINK).strength(1.5f).sound(SoundType.WOOD).noOcclusion()));
 
     private ModBlocks() {}
 }
