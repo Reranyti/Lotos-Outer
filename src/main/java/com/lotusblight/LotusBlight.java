@@ -1,0 +1,85 @@
+package com.lotusblight;
+
+import com.mojang.logging.LogUtils;
+import com.lotusblight.registry.ModBlocks;
+import com.lotusblight.registry.ModItems;
+import com.lotusblight.registry.ModEffects;
+import com.lotusblight.registry.ModVillagers;
+import com.lotusblight.registry.ModFluids;
+import com.lotusblight.registry.ModBiomes;
+import net.minecraftforge.common.BiomeManager;
+import com.lotusblight.world.LotusEvents;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import org.slf4j.Logger;
+
+@Mod(LotusBlight.MODID)
+public class LotusBlight {
+    public static final String MODID = "lotusblight";
+    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final RegistryObject<CreativeModeTab> LOTUS_TAB = TABS.register("lotus_tab", () -> CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.translatable("itemGroup.lotusblight.lotus_tab"))
+            .icon(() -> ModItems.LOTUS_MAP.get().getDefaultInstance())
+            .displayItems((parameters, output) -> {
+                output.accept(ModItems.LOTUS_SEED.get());
+                output.accept(ModItems.LOTUS_WIKI.get());
+                output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
+                output.accept(ModItems.LOTUS_MAP.get());
+                output.accept(ModItems.INFECTED_WATER_BUCKET.get());
+                output.accept(ModItems.CLEANSING_POWDER.get());
+                output.accept(ModItems.LOTUS_ORE_ITEM.get());
+                output.accept(ModItems.LOTUS_ALLOY.get());
+                output.accept(ModItems.LOTUS_PICKAXE.get());
+                output.accept(ModBlocks.LOTUS_HEART.get());
+                output.accept(ModBlocks.INFECTED_LOTUS.get());
+                output.accept(ModBlocks.INFECTED_SOIL.get());
+                output.accept(ModBlocks.LOTUS_ROOTS.get());
+                output.accept(ModItems.BLOSSOM_GRASS_ITEM.get());
+                output.accept(ModItems.GLOW_BERRIES_ITEM.get());
+                output.accept(ModItems.BLESSING_NODULE_ITEM.get());
+                output.accept(ModItems.BLESSING_SOIL_ITEM.get());
+                output.accept(ModItems.LOTUS_LOG_ITEM.get());
+                output.accept(ModItems.LOTUS_LEAVES_ITEM.get());
+                output.accept(ModItems.BLESSING_LOG_ITEM.get());
+                output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
+            }).build());
+
+    public LotusBlight(FMLJavaModLoadingContext context) {
+        IEventBus modBus = context.getModEventBus();
+        ModFluids.FLUID_TYPES.register(modBus);
+        ModFluids.FLUIDS.register(modBus);
+        ModBlocks.BLOCKS.register(modBus);
+        ModItems.ITEMS.register(modBus);
+        ModEffects.EFFECTS.register(modBus);
+        ModVillagers.POI_TYPES.register(modBus);
+        ModVillagers.PROFESSIONS.register(modBus);
+        BiomeManager.addAdditionalOverworldBiomes(ModBiomes.LOTUS_BIOME);
+        BiomeManager.addAdditionalOverworldBiomes(ModBiomes.BLESSING_BIOME);
+        TABS.register(modBus);
+        modBus.addListener(this::addVanillaCreativeItems);
+        context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
+        MinecraftForge.EVENT_BUS.register(new LotusEvents());
+    }
+
+    private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(ModItems.LOTUS_MAP.get());
+            event.accept(ModItems.LOTUS_WIKI.get());
+            event.accept(ModItems.CLEANSING_POWDER.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.NATURAL_BLOCKS) {
+            event.accept(ModItems.LOTUS_SEED.get());
+        }
+    }
+}

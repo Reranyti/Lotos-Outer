@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "lotusblight:block/lotus_log",
+    "side": "lotusblight:block/lotus_log"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "lotusblight:block/infected_lotus"
+  },
+  "render_type": "minecraft:cutout"
+}
