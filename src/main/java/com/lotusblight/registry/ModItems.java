@@ -1,10 +1,18 @@
 package com.lotusblight.registry;
 
 import com.lotusblight.LotusBlight;
+import com.lotusblight.item.LotusArmorItem;
+import com.lotusblight.item.LotusArmorMaterial;
+import com.lotusblight.item.LotusGraftingRodItem;
 import com.lotusblight.item.LotusMapItem;
+import com.lotusblight.item.LotusSeerLensItem;
 import com.lotusblight.item.LotusSeedItem;
 import com.lotusblight.item.LotusWikiItem;
 import com.lotusblight.item.LotusPickaxeItem;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.HoeItem;
+import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -39,6 +47,23 @@ public final class ModItems {
     public static final RegistryObject<Item> LOTUS_LEAVES_ITEM = ITEMS.register("lotus_leaves", () -> new BlockItem(ModBlocks.LOTUS_LEAVES.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LOG_ITEM = ITEMS.register("blessing_log", () -> new BlockItem(ModBlocks.BLESSING_LOG.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LEAVES_ITEM = ITEMS.register("blessing_leaves", () -> new BlockItem(ModBlocks.BLESSING_LEAVES.get(), new Item.Properties()));
+
+    // --- Lotus alloy tools (same tier/material as the pickaxe) ---
+    public static final RegistryObject<Item> LOTUS_AXE = ITEMS.register("lotus_axe", () -> new AxeItem(Tiers.DIAMOND, 5.0f, -3.0f, new Item.Properties().durability(900)));
+    public static final RegistryObject<Item> LOTUS_SWORD = ITEMS.register("lotus_sword", () -> new SwordItem(Tiers.DIAMOND, 3, -2.4f, new Item.Properties().durability(900)));
+    public static final RegistryObject<Item> LOTUS_HOE = ITEMS.register("lotus_hoe", () -> new HoeItem(Tiers.DIAMOND, -3, 0.0f, new Item.Properties().durability(900)));
+
+    // --- Lotus alloy armor set ---
+    public static final RegistryObject<Item> LOTUS_HELMET = ITEMS.register("lotus_helmet", () -> new LotusArmorItem(LotusArmorMaterial.LOTUS_ALLOY_ARMOR, ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_CHESTPLATE = ITEMS.register("lotus_chestplate", () -> new LotusArmorItem(LotusArmorMaterial.LOTUS_ALLOY_ARMOR, ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_LEGGINGS = ITEMS.register("lotus_leggings", () -> new LotusArmorItem(LotusArmorMaterial.LOTUS_ALLOY_ARMOR, ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_BOOTS = ITEMS.register("lotus_boots", () -> new LotusArmorItem(LotusArmorMaterial.LOTUS_ALLOY_ARMOR, ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // --- Join-ending spreading tool (gated behind LotusPlayerState.hasJoinedLotus) ---
+    public static final RegistryObject<Item> LOTUS_GRAFTING_ROD = ITEMS.register("lotus_grafting_rod", () -> new LotusGraftingRodItem(new Item.Properties().stacksTo(1).durability(200)));
+
+    // --- Full map visibility modifier (see com.lotusblight.map.MapSyncManager) ---
+    public static final RegistryObject<Item> LOTUS_SEER_LENS = ITEMS.register("lotus_seer_lens", () -> new LotusSeerLensItem(new Item.Properties().stacksTo(1)));
 
     private ModItems() {}
 }

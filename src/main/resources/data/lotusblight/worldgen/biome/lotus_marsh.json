@@ -12,7 +12,19 @@
     "mood_sound": {"sound": "minecraft:ambient.cave", "tick_delay": 6000, "block_search_extent": 8, "offset": 2.0}
   },
   "carvers": {},
-  "features": [[], [], [], [], [], [], [], [], [], [], []],
+  "features": [
+    [],
+    ["lotusblight:small_pond"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    ["lotusblight:lotus_water_flower"],
+    []
+  ],
   "spawners": {},
   "spawn_costs": {}
 }

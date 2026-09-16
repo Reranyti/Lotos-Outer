@@ -1,0 +1,15 @@
+{
+  "parent": "lotusblight:blight_and_shine",
+  "display": {
+    "icon": {"item": "lotusblight:blossom_grass"},
+    "title": {"translate": "advancements.lotusblight.red_in_green.title"},
+    "description": {"translate": "advancements.lotusblight.red_in_green.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "grass": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:blossom_grass"]}]}}
+  }
+}

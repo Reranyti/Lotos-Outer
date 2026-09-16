@@ -65,6 +65,15 @@ description='''${mod_description}'''
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+# Soft dependency on Streams Reflowing: not required to load, but if present it must load BEFORE us
+# so its water-flow mixins (WaterFluidMixin/FlowingFluidMixin) are already active when our spread
+# engine reads FluidState#getFlow — see InfectionSpreadEngine's STREAMS_REFLOWING_LOADED javadoc.
+[[dependencies.${mod_id}]]
+    modId="streamsreflowing"
+    mandatory=false
+    versionRange="[2.13.0,)"
+    ordering="AFTER"
+    side="BOTH"
 
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't

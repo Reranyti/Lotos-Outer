@@ -1,7 +1,7 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-ROOT = Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight/textures')
+ROOT = Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight' / 'textures'
 BLOCK = ROOT / 'block'
 ITEM = ROOT / 'item'
 BLOCK.mkdir(parents=True, exist_ok=True)

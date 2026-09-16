@@ -1,0 +1,15 @@
+{
+  "parent": "lotusblight:too_much_beauty",
+  "display": {
+    "icon": {"item": "lotusblight:cleansing_powder"},
+    "title": {"translate": "advancements.lotusblight.survivor_of_the_bloom.title"},
+    "description": {"translate": "advancements.lotusblight.survivor_of_the_bloom.description"},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "endured_spores": {"trigger": "minecraft:effects_changed", "conditions": {"effects": {"lotusblight:lotus_spores": {"amplifier": {"min": 1}}}}}
+  }
+}

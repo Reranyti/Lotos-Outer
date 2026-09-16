@@ -1,6 +1,6 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
-root = Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight/textures/block')
+root = Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight' / 'textures' / 'block'
 names = ['lotus_petal','lotus_leaf','lotus_stem','lotus_center','blossom_grass','glow_berries','blessing_nodule','blessing_soil','lotus_log','blessing_log','infected_water_still','infected_water_flow']
 cell = 128
 sheet = Image.new('RGB', (cell*4, cell*3), (38, 38, 42))
@@ -17,4 +17,4 @@ for i, name in enumerate(names):
     img = img.resize((96,96), Image.Resampling.NEAREST)
     sheet.alpha_composite(img, (i%4*cell+16, i//4*cell+12)) if sheet.mode == 'RGBA' else sheet.paste(img, (i%4*cell+16, i//4*cell+12), img)
     draw.text((i%4*cell+5, i//4*cell+108), name, fill='white')
-sheet.save('/home/ubuntu/lotus-forge-mod/texture_contact_sheet.png')
+sheet.save(str(Path(__file__).resolve().parent / 'texture_contact_sheet.png'))

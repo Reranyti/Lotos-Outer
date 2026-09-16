@@ -1,7 +1,7 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-root = Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight/textures')
+root = Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight' / 'textures'
 (root / 'block').mkdir(parents=True, exist_ok=True)
 (root / 'item').mkdir(parents=True, exist_ok=True)
 
@@ -37,7 +37,7 @@ for name, base, accent in [
     img.save(root / 'item' / f'{name}.png')
 
 import json
-assets = Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight')
+assets = Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight'
 for name in ['infected_lotus', 'infected_water', 'infected_soil', 'lotus_roots', 'lotus_heart']:
     (assets / 'blockstates' / f'{name}.json').parent.mkdir(parents=True, exist_ok=True)
     (assets / 'blockstates' / f'{name}.json').write_text(json.dumps({'variants': {'': {'model': f'lotusblight:block/{name}'}}}, indent=2), encoding='utf-8')

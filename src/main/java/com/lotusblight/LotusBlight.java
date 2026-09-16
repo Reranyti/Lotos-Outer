@@ -11,6 +11,10 @@ import net.minecraftforge.common.BiomeManager;
 import com.lotusblight.world.LotusEvents;
 import com.lotusblight.spread.InfectionSpreadEngine;
 import com.lotusblight.spread.BarrierEvents;
+import com.lotusblight.spread.roots.RootGrowthEngine;
+import com.lotusblight.worldgen.GuaranteedSpawnManager;
+import com.lotusblight.advancement.SingleBiomeWorldTrigger;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -55,6 +59,15 @@ public class LotusBlight {
                 output.accept(ModItems.LOTUS_LEAVES_ITEM.get());
                 output.accept(ModItems.BLESSING_LOG_ITEM.get());
                 output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
+                output.accept(ModItems.LOTUS_AXE.get());
+                output.accept(ModItems.LOTUS_SWORD.get());
+                output.accept(ModItems.LOTUS_HOE.get());
+                output.accept(ModItems.LOTUS_HELMET.get());
+                output.accept(ModItems.LOTUS_CHESTPLATE.get());
+                output.accept(ModItems.LOTUS_LEGGINGS.get());
+                output.accept(ModItems.LOTUS_BOOTS.get());
+                output.accept(ModItems.LOTUS_GRAFTING_ROD.get());
+                output.accept(ModItems.LOTUS_SEER_LENS.get());
             }).build());
 
     public LotusBlight(FMLJavaModLoadingContext context) {
@@ -74,6 +87,10 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
         MinecraftForge.EVENT_BUS.register(new BarrierEvents());
+        MinecraftForge.EVENT_BUS.register(new RootGrowthEngine());
+        MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
+        com.lotusblight.map.NetworkHandler.register();
+        CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {

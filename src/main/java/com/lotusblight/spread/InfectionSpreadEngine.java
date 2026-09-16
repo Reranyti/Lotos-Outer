@@ -29,6 +29,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import org.joml.Vector3f;
 
 import java.util.ArrayDeque;
@@ -58,6 +59,16 @@ public class InfectionSpreadEngine {
     private static final DustParticleOptions PINK = new DustParticleOptions(new Vector3f(1.0f, 0.2f, 0.55f), 1.0f);
     private static final int FRONTIER_CAP = 48;
     private static final double SPORE_RADIUS = 3.5;
+
+    /**
+     * Streams Reflowing has no public API, but it doesn't need one: it works by mixin-patching
+     * vanilla's own FluidState#getFlow (WaterFluidMixin/FlowingFluidMixin), so any code that
+     * calls the vanilla flow API — including findWaterDownstream below — already reads SR's
+     * realistic river flow field for free once SR is installed. Detecting its presence here only
+     * lets us decide to TRUST that flow more (chase it further per attempt, spend more attempts
+     * on water) — a soft dependency with a strong effect when present, per design decision.
+     */
+    private static final boolean STREAMS_REFLOWING_LOADED = ModList.get().isLoaded("streamsreflowing");
 
     /** Non-persisted per-outbreak set of recently infected positions. Lazily reseeded from the anchor if missing (e.g. after a restart). */
     private final Map<UUID, Deque<BlockPos>> frontiers = new HashMap<>();
@@ -100,6 +111,10 @@ public class InfectionSpreadEngine {
 
         int phase = outbreak.phase();
         int attempts = InfectionPhases.attemptsPerTick(phase);
+        if (STREAMS_REFLOWING_LOADED && LotusConfig.STREAMS_COMPATIBILITY.get() && isNearWater(level, frontier, outbreak.pos())) {
+            // A real, mixin-driven river/stream network is a much stronger signal than vanilla's flat water — lean on it harder.
+            attempts += 2;
+        }
         int radius = InfectionPhases.spreadRadius(phase);
         int converted = 0;
 
@@ -156,7 +171,18 @@ public class InfectionSpreadEngine {
         // Water has priority: infection follows the actual water layout (soft Streams Reflowing compatibility).
         if (LotusConfig.STREAMS_COMPATIBILITY.get()
                 && (level.getFluidState(source).is(Fluids.WATER) || level.getFluidState(source).is(ModFluids.INFECTED_WATER.get()))) {
-            target = findWaterDownstream(level, source);
+            // With Streams Reflowing loaded, vanilla's getFlow() reports its realistic river flow
+            // field (direction AND speed — see STREAMS_REFLOWING_LOADED javadoc) instead of vanilla's
+            // weak default. Fast-flowing water (a real river) lets infection chase the current several
+            // hops in one attempt; still/slow water (a lake) behaves like before. This is what makes
+            // the current directly drive how far and how fast the infection actually travels.
+            int hops = STREAMS_REFLOWING_LOADED ? 1 + flowSpeedHops(level, source) : 1;
+            target = source;
+            for (int hop = 0; hop < hops; hop++) {
+                BlockPos next = findWaterDownstream(level, target);
+                if (next.equals(target)) break;
+                target = next;
+            }
         }
 
         BlockState targetState = level.getBlockState(target);
@@ -217,6 +243,32 @@ public class InfectionSpreadEngine {
         }
 
         return null;
+    }
+
+    /**
+     * Extra downstream hops earned from the current's actual speed, not just its presence.
+     * Vanilla's own flow magnitude is nearly flat; Streams Reflowing's mixin-patched getFlow()
+     * reports real hydraulic speed, so a fast river genuinely pushes infection further per
+     * attempt than a barely-moving lake edge does. Thresholds are heuristic since SR exposes no
+     * documented scale — tuned to feel like "river" clearly outruns "lake" without either
+     * degenerating to 0 or exploding to an unbounded chase.
+     */
+    private int flowSpeedHops(ServerLevel level, BlockPos pos) {
+        var flow = level.getFluidState(pos).getFlow(level, pos);
+        double speed = Math.sqrt(flow.x * flow.x + flow.z * flow.z);
+        if (speed > 0.08) return 2;
+        if (speed > 0.02) return 1;
+        return 0;
+    }
+
+    /** Cheap sample of a handful of frontier positions to decide whether this outbreak currently touches water at all. */
+    private boolean isNearWater(ServerLevel level, Deque<BlockPos> frontier, BlockPos anchor) {
+        int checked = 0;
+        for (BlockPos pos : frontier) {
+            if (level.getFluidState(pos).is(Fluids.WATER) || level.getFluidState(pos.below()).is(Fluids.WATER)) return true;
+            if (++checked >= 6) break;
+        }
+        return level.getFluidState(anchor).is(Fluids.WATER) || level.getFluidState(anchor.below()).is(Fluids.WATER);
     }
 
     private BlockPos randomNeighbour(ServerLevel level, BlockPos source, int radius) {

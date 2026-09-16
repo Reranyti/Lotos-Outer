@@ -1,6 +1,6 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
-root=Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight/textures/item')
+root=Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight' / 'textures' / 'item'
 root.mkdir(parents=True,exist_ok=True)
 im=Image.new('RGBA',(16,16),(0,0,0,0)); d=ImageDraw.Draw(im)
 d.line((3,13,8,7,13,10),fill=(35,91,54,255),width=2)

@@ -1,0 +1,15 @@
+{
+  "parent": "lotusblight:first_bloom",
+  "display": {
+    "icon": {"item": "lotusblight:infected_water_bucket"},
+    "title": {"translate": "advancements.lotusblight.follow_the_current.title"},
+    "description": {"translate": "advancements.lotusblight.follow_the_current.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "infected_water": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:infected_water_bucket"]}]}}
+  }
+}

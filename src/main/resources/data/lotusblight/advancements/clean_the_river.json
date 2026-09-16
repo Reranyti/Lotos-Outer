@@ -1,0 +1,15 @@
+{
+  "parent": "lotusblight:follow_the_current",
+  "display": {
+    "icon": {"item": "lotusblight:cleansing_powder"},
+    "title": {"translate": "advancements.lotusblight.clean_the_river.title"},
+    "description": {"translate": "advancements.lotusblight.clean_the_river.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "powder": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:cleansing_powder"]}]}}
+  }
+}

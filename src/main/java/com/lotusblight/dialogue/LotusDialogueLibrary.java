@@ -45,4 +45,31 @@ public final class LotusDialogueLibrary {
         if (branch == Branch.ALLIANCE) return List.of("Что мне распространять?", "Как помочь корням?", "Я слышу вас.");
         return List.of("Что ты такое?", "Почему ты заражаешь воду?", "Я присоединюсь.", "Я свергну тебя.");
     }
+
+    /**
+     * Polevoy zhurnal ("field journal") lines — the scientist-protagonist framing from
+     * Объект Ноль. Branch-independent, written like notes to self; the final phase ends
+     * with a vague forward-hint at the two possible endings (destroy the Heart, or
+     * become part of it).
+     */
+    public static String scientistNote(int phase) {
+        return switch (phase) {
+            case 1 -> "Полевой журнал: я прибыл как исследователь, не как солдат. Но образцы под микроскопом ведут себя так, будто уже знают моё имя.";
+            case 2 -> "Полевой журнал: течение несёт больше, чем споры. Оно несёт решение, которое рано или поздно придётся принять — не реке, а мне.";
+            case 3 -> "Полевой журнал: Сердце отвечает на вопросы, которые я ещё не задавал вслух. Учёный во мне записывает это как аномалию. Всё остальное во мне — как приглашение.";
+            default -> "Полевой журнал: похоже, у меня будет только два честных выхода — сжечь Сердце дотла или признать, что я давно стал его частью. Объект Ноль не подготовил меня к третьему варианту.";
+        };
+    }
+
+    /**
+     * The real, human-scale crisis behind the botanical horror: a village downstream
+     * that the Lotus has cut off from its own water with a living wall of stems.
+     */
+    public static List<String> villageWaterCrisisLines() {
+        return List.of(
+            "Ниже по течению стоит деревня. Стебли лотоса выросли поперёк русла плотной стеной — колодцы ещё целы, но река до них больше не доходит.",
+            "Это не метафора заражения. Это настоящие люди, считающие вёдра, пока стена стеблей держит их реку в заложниках.",
+            "Староста спрашивал не про споры и не про Сердце. Он спрашивал, когда вода снова дойдёт до их берега."
+        );
+    }
 }

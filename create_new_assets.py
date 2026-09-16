@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-root = Path('/home/ubuntu/lotus-forge-mod/src/main/resources/assets/lotusblight')
+root = Path(__file__).resolve().parent / 'src' / 'main' / 'resources' / 'assets' / 'lotusblight'
 blocks = {
     'blessing_nodule': 'blessing_nodule',
     'blessing_soil': 'blessing_soil',

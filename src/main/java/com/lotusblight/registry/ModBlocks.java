@@ -46,5 +46,8 @@ public final class ModBlocks {
     public static final RegistryObject<Block> LIANA_BARRIER = BLOCKS.register("liana_barrier", () -> new LianaBarrierBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(-1.0f, 3600000.0f).sound(SoundType.WOOD).noOcclusion()));
     public static final RegistryObject<Block> LIANA_WEAK_POINT = BLOCKS.register("liana_weak_point", () -> new LianaWeakPointBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PINK).strength(1.5f).sound(SoundType.WOOD).noOcclusion()));
 
+    /** Underwater obstruction root grown by the roots-and-mini-lotuses system (com.lotusblight.spread.roots) — unlike LOTUS_ROOTS it has real collision and briefly slows entities that push through it. */
+    public static final RegistryObject<Block> TANGLED_ROOTS = BLOCKS.register("tangled_roots", () -> new com.lotusblight.world.TangledRootsBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.5f).sound(SoundType.WOOD).noOcclusion()));
+
     private ModBlocks() {}
 }
