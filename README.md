@@ -1,4 +1,4 @@
-# Lotus Blight / Порча лотоса
+# Lotos-Outer — Lotus Blight / Порча лотоса
 
 Minecraft Forge 1.20.1 mod about a beautiful but dangerous lotus infection. The infection begins in water, follows river courses, reaches the shore, and blooms into a green-and-pink domain.
 
@@ -32,4 +32,4 @@ The common config is generated under `config/lotusblight-common.toml`. It contro
 
 ## License
 
-All Rights Reserved for this prototype. Minecraft is a trademark of Mojang Studios. Streams Reflowing, Oculus and Complementary Reimagined are separate projects with their own licenses.
+Licensed under GPLv3 (see `LICENSE`). Minecraft is a trademark of Mojang Studios. Streams Reflowing, Oculus and Complementary Reimagined are separate projects with their own licenses.
