@@ -117,9 +117,11 @@ repositories {
 
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
-    // flatDir {
-    //     dir 'libs'
-    // }
+    // Used for journeymap-api: extracted directly from the installed JourneyMap 6.0.5 jar's
+    // META-INF/jarjar (no confirmed live Maven repo for the v2.0.0 API on 1.20.1 — see libs/README.md).
+    flatDir {
+        dir 'libs'
+    }
 
     maven {
         name = 'Xander Maven'
@@ -150,6 +152,10 @@ dependencies {
 
     // YACL (YetAnotherConfigLib): soft dependency for an in-game config screen.
     compileOnly fg.deobf("dev.isxander:yet-another-config-lib:${yacl_version}")
+
+    // JourneyMap API: soft dependency, waypoints/overlays for known outbreaks.
+    // Coordinate reconstructs to libs/journeymap-api-forge-1.20.1-2.0.0.jar (flatDir naming: name-version.jar).
+    compileOnly fg.deobf("blank:journeymap-api-forge-1.20.1:2.0.0")
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
