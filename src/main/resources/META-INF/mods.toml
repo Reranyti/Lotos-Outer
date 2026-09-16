@@ -100,6 +100,15 @@ description='''${mod_description}'''
     versionRange="[3.6,4.0)"
     ordering="AFTER"
     side="CLIENT"
+# Soft dependency on JourneyMap: not required to load. If present, LotusJourneyMapPlugin (found by
+# JourneyMap itself via @JourneyMapPlugin service discovery, not registered by us) replaces our own
+# LotusHudOverlay/LotusAtlasScreen with real JourneyMap waypoints for known outbreaks.
+[[dependencies.${mod_id}]]
+    modId="journeymap"
+    mandatory=false
+    versionRange="[6.0,7.0)"
+    ordering="AFTER"
+    side="CLIENT"
 
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't

@@ -14,6 +14,7 @@ import com.lotusblight.spread.BarrierEvents;
 import com.lotusblight.spread.roots.RootGrowthEngine;
 import com.lotusblight.worldgen.GuaranteedSpawnManager;
 import com.lotusblight.advancement.SingleBiomeWorldTrigger;
+import com.lotusblight.map.journeymap.JourneyMapSyncTicker;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.ConfigScreenHandler;
@@ -96,6 +97,7 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes
         // (client-only, and absent unless the player installed YACL themselves) after confirming

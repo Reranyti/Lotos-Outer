@@ -50,6 +50,9 @@ public final class LotusHudOverlay {
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Post event) {
+        // JourneyMap (if installed) replaces this HUD with real waypoints — see
+        // com.lotusblight.map.journeymap.LotusJourneyMapPlugin. Avoid drawing both.
+        if (net.minecraftforge.fml.ModList.get().isLoaded("journeymap")) return;
         Minecraft mc = Minecraft.getInstance();
         if (hidden || mc.player == null || mc.level == null || mc.screen instanceof ChatScreen) return;
 
