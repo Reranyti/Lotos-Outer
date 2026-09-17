@@ -10,7 +10,14 @@ import software.bernie.geckolib.model.DefaultedBlockGeoModel;
  * via GeckoLib's DefaultedBlockGeoModel convention.
  */
 public class LotusCrownModel extends DefaultedBlockGeoModel<LotusCrownBlockEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(LotusBlight.MODID, "textures/block/infected_lotus.png");
+    // infected_lotus.png used to double as both this crown's box-UV atlas (each cube in
+    // infected_lotus_crown.geo.json samples a specific pixel region of it, texture_width/height
+    // 32x32) AND a plain square texture for the cross-model flower block/item. Those are
+    // incompatible: replacing infected_lotus.png with ordinary "centered icon" art (as part of
+    // the sprite-sheet art pass) would scramble this model's petals/stem, since each cube would
+    // sample a slice of a flat icon instead of its own dedicated atlas region. Split into its own
+    // file so the two textures can evolve independently.
+    private static final ResourceLocation TEXTURE = new ResourceLocation(LotusBlight.MODID, "textures/block/infected_lotus_crown_atlas.png");
 
     public LotusCrownModel() {
         super(new ResourceLocation(LotusBlight.MODID, "infected_lotus_crown"));
@@ -18,8 +25,6 @@ public class LotusCrownModel extends DefaultedBlockGeoModel<LotusCrownBlockEntit
 
     @Override
     public ResourceLocation getTextureResource(LotusCrownBlockEntity animatable) {
-        // Reuse the existing flower texture (infected_lotus.png) instead of requiring a
-        // separately-named infected_lotus_crown.png — same art, no duplicate asset to maintain.
         return TEXTURE;
     }
 }
