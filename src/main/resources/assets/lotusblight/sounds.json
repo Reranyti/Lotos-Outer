@@ -1,0 +1,11 @@
+{
+  "inner_voice_theme": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "lotusblight:inner_voice_theme",
+        "stream": true
+      }
+    ]
+  }
+}

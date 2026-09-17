@@ -1,10 +1,14 @@
 package com.lotusblight.client;
 
 import com.lotusblight.LotusBlight;
+import com.lotusblight.registry.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
@@ -38,6 +42,7 @@ public final class InnerVoiceOverlay {
     private static final Deque<String> queue = new ArrayDeque<>();
     private static String activeText;
     private static long lineExpireAtMs;
+    private static SimpleSoundInstance musicInstance;
 
     private InnerVoiceOverlay() {}
 
@@ -45,11 +50,17 @@ public final class InnerVoiceOverlay {
         queue.clear();
         queue.addAll(scene);
         advance();
+        musicInstance = SimpleSoundInstance.forUI(ModSounds.INNER_VOICE_THEME.get(), 1.0f, 0.6f);
+        Minecraft.getInstance().getSoundManager().play(musicInstance);
     }
 
     private static void advance() {
         activeText = queue.poll();
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
+        if (activeText == null && musicInstance != null) {
+            Minecraft.getInstance().getSoundManager().stop(musicInstance);
+            musicInstance = null;
+        }
     }
 
     private static boolean active() {

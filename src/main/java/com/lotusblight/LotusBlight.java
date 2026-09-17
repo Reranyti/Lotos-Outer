@@ -5,6 +5,7 @@ import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.registry.ModBlockEntities;
 import com.lotusblight.registry.ModItems;
 import com.lotusblight.registry.ModEffects;
+import com.lotusblight.registry.ModSounds;
 import com.lotusblight.registry.ModVillagers;
 import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModBiomes;
@@ -85,6 +86,7 @@ public class LotusBlight {
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModEffects.EFFECTS.register(modBus);
+        ModSounds.SOUNDS.register(modBus);
         ModVillagers.POI_TYPES.register(modBus);
         ModVillagers.PROFESSIONS.register(modBus);
         if (ModList.get().isLoaded("terrablender")) {
