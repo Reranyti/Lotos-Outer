@@ -1,6 +1,8 @@
 package com.lotusblight.client;
 
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.dialogue.LotusDialogueLibrary;
+import com.lotusblight.map.ClientPlayerStateCache;
 import com.lotusblight.map.DialogueChoicePacket;
 import com.lotusblight.map.NetworkHandler;
 import net.minecraft.client.Minecraft;
@@ -21,10 +23,14 @@ public final class LotusDialogueScreen extends Screen {
     private final BlockHitResult target;
     private final ItemStack held;
     private int line;
-    private LotusDialogueLibrary.Branch branch = LotusDialogueLibrary.Branch.UNDECIDED;
+    private LotusDialogueLibrary.Branch branch;
+    /** True once the branch was already locked in before this screen opened (a past visit). */
+    private final boolean branchWasPreLocked;
     private String lotusText;
     private String[] primaryAnswers;
     private boolean asideOpen;
+    /** Non-null while showing the "this is permanent" confirmation for this pending branch. */
+    private LotusDialogueLibrary.Branch pendingConfirm;
 
     public LotusDialogueScreen(int phase, BlockHitResult target) {
         super(Component.literal("Разговор с лотосом"));
@@ -32,22 +38,33 @@ public final class LotusDialogueScreen extends Screen {
         this.target = target;
         Minecraft client = Minecraft.getInstance();
         this.held = client.player == null ? ItemStack.EMPTY : client.player.getMainHandItem().copy();
-        setConversation(0);
+        this.branch = toBranch(ClientPlayerStateCache.dialogueBranch());
+        this.branchWasPreLocked = branch != LotusDialogueLibrary.Branch.UNDECIDED;
+        setConversation(branchWasPreLocked ? 1 : 0);
+    }
+
+    private static LotusDialogueLibrary.Branch toBranch(int stored) {
+        return switch (stored) {
+            case LotusPlayerState.BRANCH_ALLIANCE -> LotusDialogueLibrary.Branch.ALLIANCE;
+            case LotusPlayerState.BRANCH_RESISTANCE -> LotusDialogueLibrary.Branch.RESISTANCE;
+            default -> LotusDialogueLibrary.Branch.UNDECIDED;
+        };
     }
 
     private void setConversation(int nextLine) {
         this.line = nextLine;
         this.asideOpen = false;
+        this.pendingConfirm = null;
         lotusText = LotusDialogueLibrary.mainLine(phase, held, branch);
         primaryAnswers = LotusDialogueLibrary.playerAnswers(branch).toArray(String[]::new);
-        if (line > 0) {
-            if (branch == LotusDialogueLibrary.Branch.ALLIANCE) {
-                lotusText += "\n\n— Тогда слушай. Молодые побеги уже выбрали для тебя первый корень — иди за ними.";
-            } else if (branch == LotusDialogueLibrary.Branch.RESISTANCE) {
-                lotusText += "\n\n— Ладно. Только сначала найди главный якорь — на побеги порошок не трать, без толку.";
-            } else {
-                lotusText += "\n\n— Спроси ещё раз, если хочешь. Я запоминаю не слова. Я запоминаю выбор.";
-            }
+        if (branchWasPreLocked) {
+            lotusText = (branch == LotusDialogueLibrary.Branch.ALLIANCE
+                    ? "— Ты уже сделал выбор. Я помню.\n\n"
+                    : "— Твой выбор давно сделан. Назад пути нет.\n\n") + lotusText;
+        } else if (line > 0) {
+            lotusText += branch == LotusDialogueLibrary.Branch.ALLIANCE
+                    ? "\n\n— Тогда слушай. Молодые побеги уже выбрали для тебя первый корень — иди за ними."
+                    : "\n\n— Ладно. Только сначала найди главный якорь — на побеги порошок не трать, без толку.";
         }
     }
 
@@ -60,6 +77,17 @@ public final class LotusDialogueScreen extends Screen {
         this.clearWidgets();
         int left = (this.width - 340) / 2;
         int top = this.height / 2 + 42;
+
+        if (pendingConfirm != null) {
+            boolean joining = pendingConfirm == LotusDialogueLibrary.Branch.ALLIANCE;
+            this.addRenderableWidget(Button.builder(
+                    Component.literal(joining ? "Да. Я присоединяюсь — навсегда." : "Да. Я объявляю войну — навсегда."),
+                    button -> confirmBranch()).bounds(left, top, 340, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("Нет, я ещё подумаю."),
+                    button -> { pendingConfirm = null; rebuildButtons(); }).bounds(left, top + 24, 340, 20).build());
+            return;
+        }
+
         int row = 0;
         for (int i = 0; i < primaryAnswers.length; i++, row++) {
             final int choice = i;
@@ -77,14 +105,12 @@ public final class LotusDialogueScreen extends Screen {
     private void choosePrimary(int choice) {
         if (branch == LotusDialogueLibrary.Branch.UNDECIDED) {
             if (choice == UNDECIDED_JOIN_INDEX) {
-                branch = LotusDialogueLibrary.Branch.ALLIANCE;
-                NetworkHandler.CHANNEL.sendToServer(new DialogueChoicePacket(true));
-            } else if (choice == UNDECIDED_RESIST_INDEX) {
-                branch = LotusDialogueLibrary.Branch.RESISTANCE;
-                NetworkHandler.CHANNEL.sendToServer(new DialogueChoicePacket(false));
+                pendingConfirm = LotusDialogueLibrary.Branch.ALLIANCE;
+                rebuildButtons();
+                return;
             }
-            if (branch != LotusDialogueLibrary.Branch.UNDECIDED) {
-                setConversation(1);
+            if (choice == UNDECIDED_RESIST_INDEX) {
+                pendingConfirm = LotusDialogueLibrary.Branch.RESISTANCE;
                 rebuildButtons();
                 return;
             }
@@ -94,6 +120,16 @@ public final class LotusDialogueScreen extends Screen {
             return;
         }
         setConversation(line + 1);
+        rebuildButtons();
+    }
+
+    private void confirmBranch() {
+        branch = pendingConfirm;
+        int stored = branch == LotusDialogueLibrary.Branch.ALLIANCE
+                ? LotusPlayerState.BRANCH_ALLIANCE
+                : LotusPlayerState.BRANCH_RESISTANCE;
+        NetworkHandler.CHANNEL.sendToServer(new DialogueChoicePacket(stored));
+        setConversation(1);
         rebuildButtons();
     }
 
@@ -117,13 +153,29 @@ public final class LotusDialogueScreen extends Screen {
         graphics.fill(left, top, left + width, top + height, 0xF20B100D);
         graphics.fill(left + 10, top + 10, left + width - 10, top + 36, 0xFF263C2B);
         graphics.drawString(this.font, Component.literal(asideOpen ? "ПОЛЕВОЙ ЖУРНАЛ" : "ГЛАВНЫЙ ЛОТОС"), left + 18, top + 18, asideOpen ? 0xFF9AD47D : 0xFFF1A9CF, false);
-        graphics.drawString(this.font, Component.literal("Фаза: " + phaseName()), left + 240, top + 18, 0xFF9AD47D, false);
+        graphics.drawString(this.font, Component.literal(headerRight()), left + 240, top + 18, branchColor(), false);
         graphics.drawString(this.font, Component.literal("В руке: " + held.getHoverName().getString()), left + 18, top + 47, 0xFFB8C8BE, false);
         var lines = this.font.split(Component.literal(lotusText), width - 36);
         for (int i = 0; i < lines.size(); i++) {
             graphics.drawString(this.font, lines.get(i), left + 18, top + 62 + i * 10, 0xFFE4E7D8, false);
         }
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private String headerRight() {
+        return switch (branch) {
+            case ALLIANCE -> "Фаза: " + phaseName() + " | Ветка: Альянс";
+            case RESISTANCE -> "Фаза: " + phaseName() + " | Ветка: Война";
+            default -> "Фаза: " + phaseName();
+        };
+    }
+
+    private int branchColor() {
+        return switch (branch) {
+            case ALLIANCE -> 0xFF9AD47D;
+            case RESISTANCE -> 0xFFE0705A;
+            default -> 0xFF9AD47D;
+        };
     }
 
     private String phaseName() {

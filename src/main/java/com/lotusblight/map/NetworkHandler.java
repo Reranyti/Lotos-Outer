@@ -41,5 +41,6 @@ public final class NetworkHandler {
         int id = 0;
         CHANNEL.registerMessage(id++, MapSyncPacket.class, MapSyncPacket::encode, MapSyncPacket::decode, MapSyncPacket::handle);
         CHANNEL.registerMessage(id++, DialogueChoicePacket.class, DialogueChoicePacket::encode, DialogueChoicePacket::decode, DialogueChoicePacket::handle);
+        CHANNEL.registerMessage(id++, PlayerStateSyncPacket.class, PlayerStateSyncPacket::encode, PlayerStateSyncPacket::decode, PlayerStateSyncPacket::handle);
     }
 }
