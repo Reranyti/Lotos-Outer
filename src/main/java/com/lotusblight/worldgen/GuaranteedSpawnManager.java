@@ -34,9 +34,11 @@ public final class GuaranteedSpawnManager {
     /** How far from a chunk's center we search for the nearest body of water. */
     private static final int WATER_SEARCH_RADIUS = 48;
     /** If a registered outbreak already exists within this many blocks of the water, it counts as covered. */
-    private static final double OUTBREAK_COVERAGE_RADIUS = 64.0;
-    /** Not every loaded chunk is sampled — keeps the periodic scan cheap and matches the throttling style used elsewhere. */
-    private static final int CHUNK_SAMPLE_RATE = 6;
+    private static final double OUTBREAK_COVERAGE_RADIUS = 112.0;
+    /** Not every loaded chunk is sampled — keeps the periodic scan cheap and matches the throttling style used elsewhere.
+     *  Widened from 6 to 14: at 6, every water body within ~4 chunks of a player's flight path got
+     *  its own full anchor, which read as "lotuses everywhere" rather than distinct outbreaks. */
+    private static final int CHUNK_SAMPLE_RATE = 14;
     private static final int WATER_SEARCH_ATTEMPTS = 20;
 
     private static final LotusTaskQueue<GlobalPos> PENDING_WATER_CHECKS = new LotusTaskQueue<>();

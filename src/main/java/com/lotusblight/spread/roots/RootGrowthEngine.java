@@ -160,13 +160,25 @@ public final class RootGrowthEngine {
         maybeSpawnChildOutbreak(level, data, outbreak, chain, next);
     }
 
+    /**
+     * Registering a child outbreak used to place no block at all — the mini-lotus was
+     * invisible data until InfectionSpreadEngine happened to convert something near it, which
+     * (before that engine's own pillar bug was fixed) meant the first visible sign of a child
+     * outbreak was a full-size anchor pillar. Now the child gets its own small LOTUS_SHOOT the
+     * moment it's registered, directly above the root tip that spawned it, so a mini-lotus is
+     * always a visible flower first and a growth source second.
+     */
     private void maybeSpawnChildOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord parent, RootChainState chain, BlockPos at) {
         if (chain.chainLength < CHILD_MIN_CHAIN_LENGTH) return;
         if (level.random.nextDouble() >= CHILD_OUTBREAK_CHANCE) return;
 
-        OutbreakRecord child = data.registerOutbreak(at, level.getGameTime(), true);
+        BlockPos flowerPos = at.above();
+        if (!level.getBlockState(flowerPos).isAir()) return;
+
+        OutbreakRecord child = data.registerOutbreak(flowerPos.immutable(), level.getGameTime(), true);
         childPhaseCaps.put(child.id(), CHILD_MAX_PHASE);
-        level.sendParticles(ROOT_GREEN, at.getX() + 0.5, at.getY() + 0.6, at.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
+        level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
+        level.sendParticles(ROOT_GREEN, flowerPos.getX() + 0.5, flowerPos.getY() + 0.6, flowerPos.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.lotusblight.spread;
 
 import com.lotusblight.LotusConfig;
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.registry.ModBlocks;
@@ -115,6 +116,11 @@ public class InfectionSpreadEngine {
             // A real, mixin-driven river/stream network is a much stronger signal than vanilla's flat water — lean on it harder.
             attempts += 2;
         }
+        // The dialogue branch a nearby player locked in now actually does something to the world,
+        // not just gate the grafting rod tool: an ALLIANCE player is actively helping this outbreak
+        // grow, a RESISTANCE player is actively suppressing it just by presence.
+        attempts = Math.max(0, attempts + branchInfluence(level, outbreak.pos()));
+        if (attempts == 0) return;
         int radius = InfectionPhases.spreadRadius(phase);
         int converted = 0;
 
@@ -144,6 +150,22 @@ public class InfectionSpreadEngine {
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
         }
         data.updateOutbreak(updated);
+    }
+
+    private static final double BRANCH_INFLUENCE_RADIUS = 48.0;
+    private static final int BRANCH_INFLUENCE_STRENGTH = 2;
+
+    /** Sums +/- influence from every player within range who has locked in a dialogue branch. */
+    private int branchInfluence(ServerLevel level, BlockPos anchor) {
+        int influence = 0;
+        AABB box = new AABB(anchor).inflate(BRANCH_INFLUENCE_RADIUS);
+        for (ServerPlayer player : level.players()) {
+            if (!box.contains(player.getX(), player.getY(), player.getZ())) continue;
+            int branch = LotusPlayerState.getDialogueBranch(player);
+            if (branch == LotusPlayerState.BRANCH_ALLIANCE) influence += BRANCH_INFLUENCE_STRENGTH;
+            else if (branch == LotusPlayerState.BRANCH_RESISTANCE) influence -= BRANCH_INFLUENCE_STRENGTH;
+        }
+        return influence;
     }
 
     private BlockPos pickFrontierSource(ServerLevel level, Deque<BlockPos> frontier, BlockPos anchor) {
@@ -235,9 +257,15 @@ public class InfectionSpreadEngine {
             return target;
         }
 
-        // A shoot can bloom on open air directly above still-clean water reached at the edge of the radius.
-        if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER)) {
-            level.setBlock(target, ModBlocks.INFECTED_LOTUS.get().defaultBlockState(), 3);
+        // A small shoot can bloom on open air directly above still-clean water reached at the
+        // edge of the radius. This used to place the full 4-tall LOTUS_MAIN anchor here — the
+        // same "one indestructible pillar per outbreak" block meant for GuaranteedSpawnManager —
+        // so every ordinary spread tick was littering the world with duplicate anchor pillars
+        // instead of small decorative flowers. LOTUS_SHOOT is the correct block: cosmetic, not
+        // an anchor, and already used for the equivalent case a few lines up (water source ->
+        // shoot). Throttled so it doesn't outbid ground conversion at every single attempt.
+        if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER) && level.random.nextInt(3) == 0) {
+            level.setBlock(target, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
             bloom(level, target, PINK);
             return target;
         }
