@@ -41,7 +41,8 @@ public class DialogueChoicePacket {
             }
             LotusPlayerState.setDialogueBranch(player, packet.branch);
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
-                    LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player)));
+                    LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
+                    LotusPlayerState.hasHeardInnerVoice(player)));
         });
         ctx.setPacketHandled(true);
     }

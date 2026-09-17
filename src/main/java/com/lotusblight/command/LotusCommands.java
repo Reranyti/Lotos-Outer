@@ -176,7 +176,7 @@ public final class LotusCommands {
     private static int setBranch(CommandSourceStack source, ServerPlayer player, int branch) {
         LotusPlayerState.forceDialogueBranch(player, branch);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new PlayerStateSyncPacket(branch, LotusPlayerState.hasFullMapVisibility(player)));
+                new PlayerStateSyncPacket(branch, LotusPlayerState.hasFullMapVisibility(player), LotusPlayerState.hasHeardInnerVoice(player)));
         source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + " -> " + branchName(branch) + " (это админ-оверрайд, обходит блокировку одноразового выбора)."), true);
         return 1;
     }
@@ -202,7 +202,7 @@ public final class LotusCommands {
     private static int setReveal(CommandSourceStack source, ServerPlayer player, boolean reveal) {
         LotusPlayerState.setFullMapVisibility(player, reveal);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(player), reveal));
+                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(player), reveal, LotusPlayerState.hasHeardInnerVoice(player)));
         source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": полная видимость карты = " + reveal), true);
         return 1;
     }

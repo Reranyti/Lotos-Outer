@@ -12,13 +12,15 @@ import com.lotusblight.data.LotusPlayerState;
 public final class ClientPlayerStateCache {
     private static volatile int dialogueBranch = LotusPlayerState.BRANCH_UNDECIDED;
     private static volatile boolean fullMapVisibility = false;
+    private static volatile boolean heardInnerVoice = false;
 
     private ClientPlayerStateCache() {
     }
 
-    public static void update(int branch, boolean fullVisibility) {
+    public static void update(int branch, boolean fullVisibility, boolean heardVoice) {
         dialogueBranch = branch;
         fullMapVisibility = fullVisibility;
+        heardInnerVoice = heardVoice;
     }
 
     public static int dialogueBranch() {
@@ -29,9 +31,14 @@ public final class ClientPlayerStateCache {
         return fullMapVisibility;
     }
 
+    public static boolean heardInnerVoice() {
+        return heardInnerVoice;
+    }
+
     /** Clears the cache, e.g. on disconnect, so a stale server's state doesn't linger. */
     public static void clear() {
         dialogueBranch = LotusPlayerState.BRANCH_UNDECIDED;
         fullMapVisibility = false;
+        heardInnerVoice = false;
     }
 }

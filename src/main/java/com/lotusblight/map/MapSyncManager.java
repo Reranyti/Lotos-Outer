@@ -92,7 +92,7 @@ public final class MapSyncManager {
 
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MapSyncPacket(markers));
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
-                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility));
+                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility, LotusPlayerState.hasHeardInnerVoice(serverPlayer)));
     }
 
     @SubscribeEvent

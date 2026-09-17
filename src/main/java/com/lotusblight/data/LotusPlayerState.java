@@ -26,6 +26,7 @@ public final class LotusPlayerState {
     private static final String ROOT_TAG = "LotusBlightState";
     private static final String DIALOGUE_BRANCH_KEY = "DialogueBranch";
     private static final String FULL_MAP_VISIBILITY_KEY = "FullMapVisibility";
+    private static final String HEARD_INNER_VOICE_KEY = "HeardInnerVoice";
 
     private LotusPlayerState() {
     }
@@ -74,6 +75,17 @@ public final class LotusPlayerState {
     public static void setFullMapVisibility(Player player, boolean visible) {
         CompoundTag root = root(player, true);
         root.putBoolean(FULL_MAP_VISIBILITY_KEY, visible);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Whether the player has ever eaten a glowing_berry — gates the "try eating one" item tooltip hint. */
+    public static boolean hasHeardInnerVoice(Player player) {
+        return root(player, false).getBoolean(HEARD_INNER_VOICE_KEY);
+    }
+
+    public static void setHeardInnerVoice(Player player, boolean heard) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HEARD_INNER_VOICE_KEY, heard);
         player.getPersistentData().put(ROOT_TAG, root);
     }
 }
