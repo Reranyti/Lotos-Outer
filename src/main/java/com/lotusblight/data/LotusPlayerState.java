@@ -56,6 +56,13 @@ public final class LotusPlayerState {
         return true;
     }
 
+    /** Admin-only override for testing (see com.lotusblight.command.LotusCommands) — bypasses the one-way lock that {@link #setDialogueBranch} enforces for real dialogue choices. */
+    public static void forceDialogueBranch(Player player, int branch) {
+        CompoundTag root = root(player, true);
+        root.putInt(DIALOGUE_BRANCH_KEY, branch);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static boolean hasJoinedLotus(Player player) {
         return getDialogueBranch(player) == BRANCH_ALLIANCE;
     }

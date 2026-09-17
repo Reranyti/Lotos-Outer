@@ -34,6 +34,8 @@ public class OutbreakSavedData extends SavedData {
     private final Map<UUID, OutbreakRecord> outbreaks = new LinkedHashMap<>();
     private final Map<Long, Integer> chunkInfectionCounts = new HashMap<>();
     private final Map<UUID, BarrierRecord> barriers = new LinkedHashMap<>();
+    /** True once EpicenterManager has placed (or given up trying to place) the guaranteed distant mini-biome epicenter for this dimension. */
+    private boolean epicenterResolved = false;
 
     public static OutbreakSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(OutbreakSavedData::load, OutbreakSavedData::new, ID);
@@ -62,6 +64,7 @@ public class OutbreakSavedData extends SavedData {
             BarrierRecord barrier = BarrierRecord.load(barrierList.getCompound(i));
             data.barriers.put(barrier.id(), barrier);
         }
+        data.epicenterResolved = tag.getBoolean("EpicenterResolved");
         return data;
     }
 
@@ -84,7 +87,17 @@ public class OutbreakSavedData extends SavedData {
             barrierList.add(barrier.save(new CompoundTag()));
         }
         tag.put("Barriers", barrierList);
+        tag.putBoolean("EpicenterResolved", epicenterResolved);
         return tag;
+    }
+
+    public boolean isEpicenterResolved() {
+        return epicenterResolved;
+    }
+
+    public void markEpicenterResolved() {
+        epicenterResolved = true;
+        setDirty();
     }
 
     // ---- Vine barriers ------------------------------------------------------

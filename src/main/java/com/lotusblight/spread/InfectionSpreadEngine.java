@@ -160,6 +160,7 @@ public class InfectionSpreadEngine {
         if (newPhase > outbreak.phase()) {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
+            maybeSpawnHeart(level, outbreak, newPhase);
         }
         data.updateOutbreak(updated);
     }
@@ -290,8 +291,17 @@ public class InfectionSpreadEngine {
         BlockState groundReplacement = SpreadTables.infectedGroundReplacement(targetState);
         if (groundReplacement != null && Math.abs(target.getY() - source.getY()) <= 1) {
             level.setBlock(target, groundReplacement, 3);
-            if (level.random.nextInt(4) == 0 && level.getBlockState(target.above()).isAir()) {
-                level.setBlock(target.above(), ModBlocks.LOTUS_ROOTS.get().defaultBlockState(), 3);
+            BlockPos above = target.above();
+            if (level.getBlockState(above).isAir()) {
+                // Before this, the mini-biome (phase 4) never grew anything of its own — logs and
+                // leaves only ever came from converting a vanilla tree that happened to already be
+                // standing there. An outbreak that spread across open stone or sand had no way to
+                // ever grow a single tree. growOwnVegetation gives it real, self-seeding flora.
+                if (!growOwnVegetation(level, phase, above)) {
+                    if (level.random.nextInt(4) == 0) {
+                        level.setBlock(above, ModBlocks.LOTUS_ROOTS.get().defaultBlockState(), 3);
+                    }
+                }
             }
             bloom(level, target, GREEN);
             return target;
@@ -370,6 +380,78 @@ public class InfectionSpreadEngine {
             if (entity.getType().getCategory() == MobCategory.MISC) continue;
             entity.addEffect(new MobEffectInstance(ModEffects.LOTUS_SPORES.get(), 240, 0));
         }
+    }
+
+    private static final int MINI_TREE_CHANCE = 30;
+    private static final int BLOSSOM_GRASS_CHANCE = 6;
+
+    /**
+     * Self-seeding flora for freshly-converted ground, instead of relying entirely on whatever
+     * vanilla grass/trees happened to already be standing there. Phase 4 ground has a chance to
+     * grow its own small lotus-log tree from scratch; any infected phase >= 2 ground has a chance
+     * to grow blossom grass directly, not just via the separate "grass converts if soil below is
+     * infected" rule (which only ever recolors pre-existing grass). Returns true if it planted
+     * anything, so the caller doesn't also drop a root on the same spot.
+     */
+    private boolean growOwnVegetation(ServerLevel level, int phase, BlockPos above) {
+        if (phase >= 4 && level.random.nextInt(MINI_TREE_CHANCE) == 0) {
+            return tryGrowMiniTree(level, above);
+        }
+        if (phase >= 2 && level.random.nextInt(BLOSSOM_GRASS_CHANCE) == 0) {
+            level.setBlock(above, ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);
+            return true;
+        }
+        return false;
+    }
+
+    /** A small 2-3 tall lotus-log trunk with a leaf canopy — the mini-biome's own tree, grown rather than converted. */
+    private boolean tryGrowMiniTree(ServerLevel level, BlockPos base) {
+        int trunkHeight = 2 + level.random.nextInt(2);
+        for (int i = 0; i < trunkHeight; i++) {
+            if (!level.getBlockState(base.above(i)).isAir()) return false;
+        }
+        for (int i = 0; i < trunkHeight; i++) {
+            level.setBlock(base.above(i), ModBlocks.LOTUS_LOG.get().defaultBlockState(), 3);
+        }
+        BlockPos canopyCenter = base.above(trunkHeight);
+        for (BlockPos leaf : BlockPos.betweenClosed(canopyCenter.offset(-1, 0, -1), canopyCenter.offset(1, 1, 1))) {
+            if (level.getBlockState(leaf).isAir()) {
+                level.setBlock(leaf, ModBlocks.LOTUS_LEAVES.get().defaultBlockState(), 3);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Reaching phase 4 for the first time upgrades the outbreak's anchor pillar into the lotus
+     * heart, replacing the whole 4-part stem/crown structure. Before this, LOTUS_HEART was only
+     * ever placed by LotusSeedItem the instant a player planted a seed — completely disconnected
+     * from phase progression, so a heart could exist next to a barely-infected patch while a
+     * fully matured phase-4 outbreak never grew one at all.
+     */
+    private void maybeSpawnHeart(ServerLevel level, OutbreakRecord outbreak, int newPhase) {
+        if (newPhase < 4 || outbreak.phase() >= 4) return;
+        promoteAnchorToHeart(level, outbreak.pos());
+    }
+
+    /**
+     * Public/static so admin commands (see com.lotusblight.command.LotusCommands) can force this
+     * same transition for testing without needing an InfectionSpreadEngine instance or waiting for
+     * a real phase-4 transition. Returns false if there's no ordinary anchor pillar at pos to
+     * upgrade (e.g. it's already a heart, or nothing's there).
+     */
+    public static boolean promoteAnchorToHeart(ServerLevel level, BlockPos pos) {
+        if (!level.getBlockState(pos).is(ModBlocks.INFECTED_LOTUS.get())) return false;
+        for (int i = 1; i < 4; i++) {
+            BlockPos above = pos.above(i);
+            if (level.getBlockState(above).is(ModBlocks.INFECTED_LOTUS.get())) {
+                level.removeBlock(above, false);
+            }
+        }
+        level.setBlock(pos, ModBlocks.LOTUS_HEART.get().defaultBlockState(), 3);
+        level.sendParticles(PINK, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 40, 1.0, 1.0, 1.0, 0.05);
+        level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0f, 0.6f);
+        return true;
     }
 
     private void bloom(ServerLevel level, BlockPos pos, DustParticleOptions color) {

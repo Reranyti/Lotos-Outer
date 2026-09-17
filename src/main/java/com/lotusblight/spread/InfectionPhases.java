@@ -28,6 +28,11 @@ public final class InfectionPhases {
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;
 
+    /** Lowest infected-block-count that counts as this phase — used by admin commands that force a phase directly. */
+    public static int minBlockCountForPhase(int phase) {
+        return PHASE_UP_THRESHOLD[Math.max(1, Math.min(4, phase))];
+    }
+
     public static int phaseForBlockCount(int infectedBlockCount) {
         int phase = 1;
         for (int p = 2; p <= 4; p++) {
