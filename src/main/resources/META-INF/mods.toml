@@ -115,7 +115,11 @@ description='''${mod_description}'''
 [[dependencies.${mod_id}]]
     modId="journeymap"
     mandatory=false
-    versionRange="[6.0,7.0)"
+    # JourneyMap reports its mod version prefixed with the MC version, e.g. "1.20.1-6.0.5", not
+    # a bare "6.0.5" - a plain "[6.0,7.0)" range compares "1.20.1-6.0.5" as LESS than 6.0 (the
+    # leading "1" loses to "6" as a Maven version component) and always fails, hard-crashing the
+    # game at mod-loading even with a perfectly compatible JourneyMap installed.
+    versionRange="[1.20.1-6.0,1.21)"
     ordering="AFTER"
     side="CLIENT"
 
