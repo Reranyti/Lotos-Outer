@@ -49,7 +49,7 @@ public final class GuaranteedSpawnManager {
         if (RANDOM.nextInt(CHUNK_SAMPLE_RATE) != 0) return;
         ChunkPos chunk = event.getChunk().getPos();
         BlockPos center = new BlockPos(chunk.getMinBlockX() + 8, 0, chunk.getMinBlockZ() + 8);
-        PENDING_WATER_CHECKS.offer(GlobalPos.of(level.dimension(), center));
+        PENDING_WATER_CHECKS.offer(GlobalPos.of(level.dimension(), center), com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get());
     }
 
     @SubscribeEvent

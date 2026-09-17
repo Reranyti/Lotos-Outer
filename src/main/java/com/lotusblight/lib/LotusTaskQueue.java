@@ -15,6 +15,11 @@ public final class LotusTaskQueue<T> {
         if (task != null) tasks.offer(task);
     }
 
+    /** Silently drops the task instead of queuing it once {@code maxSize} pending tasks are already waiting. */
+    public void offer(T task, int maxSize) {
+        if (task != null && tasks.size() < maxSize) tasks.offer(task);
+    }
+
     public int size() {
         return tasks.size();
     }

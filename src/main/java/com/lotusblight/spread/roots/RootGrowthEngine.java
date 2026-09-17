@@ -96,9 +96,13 @@ public final class RootGrowthEngine {
         OutbreakSavedData data = OutbreakSavedData.get(level);
         enforcePhaseCaps(level, data);
 
+        double activeBlocks = com.lotusblight.LotusConfig.ACTIVE_CHUNK_RADIUS.get() * 16.0;
+        double activeRangeSq = activeBlocks * activeBlocks;
+
         for (OutbreakRecord outbreak : new ArrayList<>(data.allOutbreaks())) {
             if (outbreak.phase() < 2) continue;
             if (!level.hasChunkAt(outbreak.pos())) continue;
+            if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
             RootChainState chain = chains.get(outbreak.id());
             if (chain != null && (chain.exhausted || chain.chainLength >= MAX_CHAIN_LENGTH || chain.rootsGrown >= MAX_ROOTS_PER_OUTBREAK)) {
                 continue;
@@ -106,6 +110,13 @@ public final class RootGrowthEngine {
             if (!queuedOutbreaks.add(outbreak.id())) continue; // at most one pending task per outbreak at a time
             queue.offer(new RootGrowthTask(outbreak.id(), level.dimension()));
         }
+    }
+
+    private boolean withinActiveRange(ServerLevel level, BlockPos pos, double rangeSq) {
+        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+            if (player.blockPosition().distSqr(pos) <= rangeSq) return true;
+        }
+        return false;
     }
 
     private void enforcePhaseCaps(ServerLevel level, OutbreakSavedData data) {

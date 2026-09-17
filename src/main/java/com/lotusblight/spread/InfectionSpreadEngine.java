@@ -97,10 +97,27 @@ public class InfectionSpreadEngine {
     private void tickLevel(ServerLevel level) {
         OutbreakSavedData data = OutbreakSavedData.get(level);
         List<OutbreakRecord> outbreaks = new ArrayList<>(data.allOutbreaks());
+        double activeRangeSq = activeChunkRangeSq();
         for (OutbreakRecord outbreak : outbreaks) {
             if (!level.hasChunkAt(outbreak.pos())) continue;
+            // ACTIVE_CHUNK_RADIUS config used to be pure placebo — exposed in the config screen as
+            // "active infection/scanning radius around players" but nothing ever read it. An
+            // outbreak with no player within that radius now simply doesn't tick.
+            if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
             tickOutbreak(level, data, outbreak);
         }
+    }
+
+    private double activeChunkRangeSq() {
+        double blocks = LotusConfig.ACTIVE_CHUNK_RADIUS.get() * 16.0;
+        return blocks * blocks;
+    }
+
+    private boolean withinActiveRange(ServerLevel level, BlockPos pos, double rangeSq) {
+        for (ServerPlayer player : level.players()) {
+            if (player.blockPosition().distSqr(pos) <= rangeSq) return true;
+        }
+        return false;
     }
 
     private void tickOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord outbreak) {
@@ -121,7 +138,18 @@ public class InfectionSpreadEngine {
         // not just gate the grafting rod tool: an ALLIANCE player is actively helping this outbreak
         // grow, a RESISTANCE player is actively suppressing it just by presence.
         attempts = Math.max(0, attempts + branchInfluence(level, outbreak.pos()));
-        int radius = InfectionPhases.spreadRadius(phase);
+        // SPREAD_RADIUS used to have zero callers (InfectionPhases' own per-phase array did all the
+        // actual work) despite being exposed as a tunable "search radius around an active lotus
+        // heart". Treat its default (6) as a no-op baseline and apply the delta on top of the
+        // normal phase-scaled radius, so the slider still means something without flattening the
+        // phase 1->4 escalation into one fixed number.
+        int radius = Math.max(1, InfectionPhases.spreadRadius(phase) + (LotusConfig.SPREAD_RADIUS.get() - 6));
+        if (isInBlessingBiome(level, outbreak.pos())) {
+            // The wiki has always claimed "Blessing slows the spread of the lotus" — until now
+            // nothing anywhere actually checked the biome to make that true.
+            attempts = Math.max(0, attempts - BLESSING_ATTEMPTS_PENALTY);
+            radius = Math.max(1, radius - BLESSING_RADIUS_PENALTY);
+        }
         if (openOcean) {
             // Open water is nothing but a spread medium for this infection, so it races through
             // it much faster than it eats through land — but "захват ближников"/mini-biome only
@@ -167,6 +195,13 @@ public class InfectionSpreadEngine {
 
     private static final double BRANCH_INFLUENCE_RADIUS = 48.0;
     private static final int BRANCH_INFLUENCE_STRENGTH = 2;
+
+    private static final int BLESSING_ATTEMPTS_PENALTY = 1;
+    private static final int BLESSING_RADIUS_PENALTY = 1;
+
+    private boolean isInBlessingBiome(ServerLevel level, BlockPos pos) {
+        return level.getBiome(pos).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME);
+    }
 
     private static final int OCEAN_ATTEMPTS_BONUS = 3;
     private static final int OCEAN_RADIUS_BONUS = 2;

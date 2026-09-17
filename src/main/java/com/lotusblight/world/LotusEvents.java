@@ -67,7 +67,8 @@ public class LotusEvents {
         } else {
             boolean lotusBiome = level.getBiome(probe).is(ModBiomes.LOTUS_BIOME);
             if (lotusBiome || RANDOM.nextInt(24) == 0) {
-                PENDING_LOTUS_CHUNKS.offer(GlobalPos.of(level.dimension(), new BlockPos(minX, 0, minZ)));
+                PENDING_LOTUS_CHUNKS.offer(GlobalPos.of(level.dimension(), new BlockPos(minX, 0, minZ)),
+                        com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get());
             }
         }
     }
