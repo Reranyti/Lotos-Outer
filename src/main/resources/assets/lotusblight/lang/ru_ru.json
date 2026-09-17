@@ -71,6 +71,6 @@
   "block.lotusblight.liana_barrier": "Стена лиан",
   "block.lotusblight.liana_weak_point": "Уязвимый узел лиан",
   "block.lotusblight.tangled_roots": "Спутанные корни",
-  "advancement.lotusblight.single_biome_secret.title": "Мир одного цветка",
-  "advancement.lotusblight.single_biome_secret.description": "Создать мир целиком из лотосового биома"
+  "block.lotusblight.lotus_shoot": "Росток лотоса",
+  "item.lotusblight.glowing_berry": "Светящаяся ягода"
 }
