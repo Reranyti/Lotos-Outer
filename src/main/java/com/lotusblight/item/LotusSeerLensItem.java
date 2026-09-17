@@ -5,7 +5,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -17,6 +16,18 @@ import net.minecraft.world.level.Level;
  * visibility (every known outbreak, not just physically discovered ones —
  * see com.lotusblight.map.MapSyncManager, which already checks
  * LotusPlayerState.hasFullMapVisibility on every sync).
+ *
+ * A Curios-accessory variant (worn-only visibility instead of a permanent
+ * unlock) was attempted but reverted: `implements ICurioItem` directly on
+ * this class would make the JVM require curios-api's ICurioItem to be
+ * resolvable at class-LOAD time (interfaces are part of a class's hierarchy,
+ * unlike a method parameter type, which resolves lazily) — so with Curios
+ * merely a soft/optional dependency, this item would throw
+ * NoClassDefFoundError and fail to register entirely for every player
+ * without Curios installed. Doing this safely needs either a separate
+ * conditionally-instantiated ICurioItem adapter class, or promoting Curios
+ * to a mandatory dependency (like GeckoLib) — neither was worth deciding
+ * unilaterally overnight. See IDEAS_AND_MODS.md.
  */
 public class LotusSeerLensItem extends Item {
 
