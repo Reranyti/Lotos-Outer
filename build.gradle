@@ -157,6 +157,10 @@ dependencies {
     // Coordinate reconstructs to libs/journeymap-api-forge-1.20.1-2.0.0.jar (flatDir naming: name-version.jar).
     compileOnly fg.deobf("blank:journeymap-api-forge-1.20.1:2.0.0")
 
+    // TerraBlender: soft dependency for better overworld biome placement/compatibility than the
+    // plain BiomeManager fallback. Coordinate reconstructs to libs/TerraBlender-forge-1.20.1-3.0.1.10.jar.
+    compileOnly fg.deobf("blank:TerraBlender-forge-1.20.1:3.0.1.10")
+
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")

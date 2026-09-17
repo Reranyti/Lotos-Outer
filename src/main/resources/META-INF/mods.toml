@@ -100,6 +100,15 @@ description='''${mod_description}'''
     versionRange="[3.6,4.0)"
     ordering="AFTER"
     side="CLIENT"
+# Soft dependency on TerraBlender: not required to load. If present, LotusRegion registers our
+# biomes through it for better overworld placement/compatibility; if absent, LotusBlight falls
+# back to the plain BiomeManager.addAdditionalOverworldBiomes calls.
+[[dependencies.${mod_id}]]
+    modId="terrablender"
+    mandatory=false
+    versionRange="[3.0.1,4.0)"
+    ordering="AFTER"
+    side="BOTH"
 # Soft dependency on JourneyMap: not required to load. If present, LotusJourneyMapPlugin (found by
 # JourneyMap itself via @JourneyMapPlugin service discovery, not registered by us) replaces our own
 # LotusHudOverlay/LotusAtlasScreen with real JourneyMap waypoints for known outbreaks.

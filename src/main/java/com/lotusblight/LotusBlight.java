@@ -87,8 +87,14 @@ public class LotusBlight {
         ModEffects.EFFECTS.register(modBus);
         ModVillagers.POI_TYPES.register(modBus);
         ModVillagers.PROFESSIONS.register(modBus);
-        BiomeManager.addAdditionalOverworldBiomes(ModBiomes.LOTUS_BIOME);
-        BiomeManager.addAdditionalOverworldBiomes(ModBiomes.BLESSING_BIOME);
+        if (ModList.get().isLoaded("terrablender")) {
+            // Better overworld placement/compatibility than the plain BiomeManager fallback —
+            // see com.lotusblight.worldgen.terrablender.LotusRegion.
+            modBus.addListener(this::registerTerraBlenderRegions);
+        } else {
+            BiomeManager.addAdditionalOverworldBiomes(ModBiomes.LOTUS_BIOME);
+            BiomeManager.addAdditionalOverworldBiomes(ModBiomes.BLESSING_BIOME);
+        }
         TABS.register(modBus);
         modBus.addListener(this::addVanillaCreativeItems);
         modBus.addListener(this::registerRenderers);
@@ -114,6 +120,11 @@ public class LotusBlight {
 
     private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
+    }
+
+    private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> terrablender.api.Regions.register(
+                new com.lotusblight.worldgen.terrablender.LotusRegion(new net.minecraft.resources.ResourceLocation(MODID, "overworld"), 2)));
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {
