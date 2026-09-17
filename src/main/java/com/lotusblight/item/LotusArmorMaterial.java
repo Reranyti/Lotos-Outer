@@ -21,7 +21,11 @@ import java.util.function.Supplier;
  *   - enchantability:     iron 9 / diamond 10 -> lotus 9
  */
 public enum LotusArmorMaterial implements ArmorMaterial {
-    LOTUS_ALLOY_ARMOR("lotusblight_lotus_alloy", 24, buildDefenseMap(), 9, SoundEvents.ARMOR_EQUIP_IRON, 1.0f, 0.05f,
+    // Must be namespaced ("modid:name") - without the colon, vanilla's armor-layer renderer
+    // defaults to the "minecraft" domain and looks for
+    // assets/minecraft/textures/models/armor/lotusblight_lotus_alloy_layer_1.png, which never
+    // exists, instead of assets/lotusblight/textures/models/armor/lotus_alloy_layer_1.png.
+    LOTUS_ALLOY_ARMOR("lotusblight:lotus_alloy", 24, buildDefenseMap(), 9, SoundEvents.ARMOR_EQUIP_IRON, 1.0f, 0.05f,
             () -> Ingredient.of(ModItems.LOTUS_ALLOY.get()));
 
     // Base per-slot durability points, mirroring vanilla's own base table, scaled by durabilityMultiplier.

@@ -254,6 +254,26 @@ public class InfectionSpreadEngine {
         return anchor;
     }
 
+    private static final int SHOOT_SPACING = 2;
+
+    /**
+     * Without this, both shoot-placement sites above kept refilling the exact same tiny patch of
+     * water edge every tick — visually reads as "30 mini lotuses crammed into one square meter"
+     * instead of the infection actually spreading outward. A shoot only places if nothing else in
+     * a small radius already has one, forcing growth to walk outward across the frontier instead
+     * of endlessly re-rolling the same crowded spot.
+     */
+    private boolean hasNearbyShoot(ServerLevel level, BlockPos pos) {
+        for (BlockPos check : BlockPos.betweenClosed(pos.offset(-SHOOT_SPACING, -1, -SHOOT_SPACING), pos.offset(SHOOT_SPACING, 1, SHOOT_SPACING))) {
+            if (check.equals(pos)) continue;
+            BlockState state = level.getBlockState(check);
+            if (state.is(ModBlocks.LOTUS_SHOOT.get()) || state.is(ModBlocks.INFECTED_LOTUS.get()) || state.is(ModBlocks.LOTUS_HEART.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void pushFrontier(Deque<BlockPos> frontier, BlockPos pos) {
         frontier.addLast(pos.immutable());
         while (frontier.size() > FRONTIER_CAP) {
@@ -293,7 +313,7 @@ public class InfectionSpreadEngine {
                 return target;
             }
             BlockPos flowerPos = target.above();
-            if (level.getBlockState(flowerPos).isAir()) {
+            if (level.getBlockState(flowerPos).isAir() && !hasNearbyShoot(level, flowerPos)) {
                 level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
                 bloom(level, flowerPos, PINK);
                 return flowerPos;
@@ -349,7 +369,8 @@ public class InfectionSpreadEngine {
         // instead of small decorative flowers. LOTUS_SHOOT is the correct block: cosmetic, not
         // an anchor, and already used for the equivalent case a few lines up (water source ->
         // shoot). Throttled so it doesn't outbid ground conversion at every single attempt.
-        if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER) && level.random.nextInt(3) == 0) {
+        if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER) && level.random.nextInt(3) == 0
+                && !hasNearbyShoot(level, target)) {
             level.setBlock(target, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
             bloom(level, target, PINK);
             return target;

@@ -1,6 +1,8 @@
 package com.lotusblight.world;
 
+import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
+import com.lotusblight.spread.InfectionPhases;
 import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.registry.ModItems;
 import com.lotusblight.item.LotusWikiItem;
@@ -250,11 +252,26 @@ public class LotusEvents {
         if (event.getItemStack().is(ModItems.CLEANSING_POWDER.get()) && event.getEntity().level() instanceof ServerLevel level) {
             OutbreakSavedData data = OutbreakSavedData.get(level);
             BlockPos pos = event.getEntity().blockPosition();
+            int cleansed = 0;
             for (BlockPos target : BlockPos.betweenClosed(pos.offset(-2, -1, -2), pos.offset(2, 1, 2))) {
                 if (level.getBlockState(target).is(ModBlocks.INFECTED_SOIL.get()) || level.getBlockState(target).is(ModBlocks.INFECTED_WATER.get()) || level.getBlockState(target).is(ModBlocks.LOTUS_ROOTS.get())) {
                     level.setBlock(target, Blocks.DIRT.defaultBlockState(), 3);
                     data.incrementChunkCount(new ChunkPos(target), -1);
+                    cleansed++;
                     level.sendParticles(GREEN, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 4, 0.2, 0.2, 0.2, 0.01);
+                }
+            }
+            // This used to only touch the per-chunk counter above (which nothing reads for the
+            // boss bar/phase) and never OutbreakRecord#infectedBlockCount — the actual number the
+            // progress bar and phase are computed from. Cleansing blocks visibly did nothing to
+            // the bar. Now the nearest outbreak's count/phase/progress actually goes back down.
+            if (cleansed > 0) {
+                OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
+                if (nearest != null) {
+                    int newCount = Math.max(0, nearest.infectedBlockCount() - cleansed);
+                    int newPhase = InfectionPhases.phaseForBlockCount(newCount);
+                    float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
+                    data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
                 }
             }
             if (!event.getEntity().getAbilities().instabuild) event.getItemStack().shrink(1);

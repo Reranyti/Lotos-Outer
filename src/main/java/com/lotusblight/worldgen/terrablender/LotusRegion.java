@@ -50,7 +50,12 @@ public class LotusRegion extends Region {
                 .build().forEach(point -> builder.add(point, ModBiomes.LOTUS_BIOME));
 
         new ParameterPointListBuilder()
-                .temperature(Temperature.span(Temperature.ICY, Temperature.FROZEN))
+                // Was ICY-FROZEN: the same climate-parameter band vanilla's own surface rules use
+                // to decide where to place snow, independent of this biome's own "temperature":0.18
+                // and "has_precipitation":false in blessing_tundra.json. That's why it generated as
+                // a heavily snow-covered alpine biome despite the data saying otherwise. COOL-NEUTRAL
+                // keeps it distinctly colder than lotus_marsh without tripping vanilla's snow rule.
+                .temperature(Temperature.span(Temperature.COOL, Temperature.NEUTRAL))
                 .humidity(Humidity.span(Humidity.ARID, Humidity.DRY))
                 .continentalness(Continentalness.span(Continentalness.MID_INLAND, Continentalness.FAR_INLAND))
                 .erosion(Erosion.span(Erosion.EROSION_0, Erosion.EROSION_2))
