@@ -1,0 +1,23 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "bloom_idle": {
+      "animation_length": 3.0,
+      "loop": true,
+      "bones": {
+        "crown": {
+          "rotation": {
+            "0.0": {"vector": [0, 0, 0], "easing": "easeInOutSine"},
+            "1.5": {"vector": [0, 5, 0], "easing": "easeInOutSine"},
+            "3.0": {"vector": [0, 0, 0]}
+          },
+          "scale": {
+            "0.0": {"vector": [1, 1, 1], "easing": "easeInOutSine"},
+            "1.5": {"vector": [1.07, 1.09, 1.07], "easing": "easeInOutSine"},
+            "3.0": {"vector": [1, 1, 1]}
+          }
+        }
+      }
+    }
+  }
+}

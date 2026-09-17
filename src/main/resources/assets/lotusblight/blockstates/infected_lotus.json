@@ -3,6 +3,6 @@
     "part=0": { "model": "lotusblight:block/infected_lotus_base" },
     "part=1": { "model": "lotusblight:block/infected_lotus_stem" },
     "part=2": { "model": "lotusblight:block/infected_lotus_stem" },
-    "part=3": { "model": "lotusblight:block/infected_lotus_crown" }
+    "part=3": { "model": "lotusblight:block/infected_lotus_crown_entity" }
   }
 }

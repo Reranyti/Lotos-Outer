@@ -2,6 +2,7 @@ package com.lotusblight;
 
 import com.mojang.logging.LogUtils;
 import com.lotusblight.registry.ModBlocks;
+import com.lotusblight.registry.ModBlockEntities;
 import com.lotusblight.registry.ModItems;
 import com.lotusblight.registry.ModEffects;
 import com.lotusblight.registry.ModVillagers;
@@ -81,6 +82,7 @@ public class LotusBlight {
         ModFluids.FLUID_TYPES.register(modBus);
         ModFluids.FLUIDS.register(modBus);
         ModBlocks.BLOCKS.register(modBus);
+        ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModEffects.EFFECTS.register(modBus);
         ModVillagers.POI_TYPES.register(modBus);
@@ -89,6 +91,7 @@ public class LotusBlight {
         BiomeManager.addAdditionalOverworldBiomes(ModBiomes.BLESSING_BIOME);
         TABS.register(modBus);
         modBus.addListener(this::addVanillaCreativeItems);
+        modBus.addListener(this::registerRenderers);
         context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
@@ -107,6 +110,10 @@ public class LotusBlight {
                     ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
                             () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> com.lotusblight.client.config.LotusConfigScreen.create(parent))));
         }
+    }
+
+    private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {
