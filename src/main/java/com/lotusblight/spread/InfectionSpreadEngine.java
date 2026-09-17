@@ -111,6 +111,7 @@ public class InfectionSpreadEngine {
         });
 
         int phase = outbreak.phase();
+        boolean openOcean = !hasNearbyLand(level, outbreak.pos());
         int attempts = InfectionPhases.attemptsPerTick(phase);
         if (STREAMS_REFLOWING_LOADED && LotusConfig.STREAMS_COMPATIBILITY.get() && isNearWater(level, frontier, outbreak.pos())) {
             // A real, mixin-driven river/stream network is a much stronger signal than vanilla's flat water — lean on it harder.
@@ -120,8 +121,16 @@ public class InfectionSpreadEngine {
         // not just gate the grafting rod tool: an ALLIANCE player is actively helping this outbreak
         // grow, a RESISTANCE player is actively suppressing it just by presence.
         attempts = Math.max(0, attempts + branchInfluence(level, outbreak.pos()));
-        if (attempts == 0) return;
         int radius = InfectionPhases.spreadRadius(phase);
+        if (openOcean) {
+            // Open water is nothing but a spread medium for this infection, so it races through
+            // it much faster than it eats through land — but "захват ближников"/mini-biome only
+            // make sense once there are actual trees and ground to take over, so an outbreak stuck
+            // in the middle of an ocean is capped below phase 3 until it actually finds a shore.
+            attempts += OCEAN_ATTEMPTS_BONUS;
+            radius += OCEAN_RADIUS_BONUS;
+        }
+        if (attempts == 0) return;
         int converted = 0;
 
         for (int i = 0; i < attempts; i++) {
@@ -142,6 +151,9 @@ public class InfectionSpreadEngine {
 
         int newCount = outbreak.infectedBlockCount() + converted;
         int newPhase = InfectionPhases.phaseForBlockCount(newCount);
+        if (openOcean) {
+            newPhase = Math.min(newPhase, OCEAN_PHASE_CAP);
+        }
         float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
 
         OutbreakRecord updated = outbreak.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress);
@@ -154,6 +166,34 @@ public class InfectionSpreadEngine {
 
     private static final double BRANCH_INFLUENCE_RADIUS = 48.0;
     private static final int BRANCH_INFLUENCE_STRENGTH = 2;
+
+    private static final int OCEAN_ATTEMPTS_BONUS = 3;
+    private static final int OCEAN_RADIUS_BONUS = 2;
+    private static final int OCEAN_PHASE_CAP = 2;
+    private static final int LAND_SEARCH_RADIUS = 32;
+    private static final int LAND_SEARCH_SAMPLES = 8;
+
+    /**
+     * Cheap sample-based check: does any nearby column actually break the surface above water?
+     * Uses the WORLD_SURFACE heightmap, whose topmost non-air block is the top of the water
+     * column itself out in open ocean (water isn't air) — so if that block is water, this sample
+     * found no land. A handful of random samples in a wide radius is enough to tell "still out at
+     * sea" from "reached a shore" without scanning the whole area every tick.
+     */
+    private boolean hasNearbyLand(ServerLevel level, BlockPos anchor) {
+        for (int i = 0; i < LAND_SEARCH_SAMPLES; i++) {
+            int dx = level.random.nextInt(LAND_SEARCH_RADIUS * 2 + 1) - LAND_SEARCH_RADIUS;
+            int dz = level.random.nextInt(LAND_SEARCH_RADIUS * 2 + 1) - LAND_SEARCH_RADIUS;
+            int x = anchor.getX() + dx;
+            int z = anchor.getZ() + dz;
+            if (!level.hasChunkAt(new BlockPos(x, anchor.getY(), z))) continue;
+            int surfaceY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+            if (!level.getFluidState(new BlockPos(x, surfaceY, z)).is(Fluids.WATER)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** Sums +/- influence from every player within range who has locked in a dialogue branch. */
     private int branchInfluence(ServerLevel level, BlockPos anchor) {
