@@ -18,13 +18,14 @@ public final class InfectionPhases {
 
     /**
      * Infected-block-count thresholds to advance out of phase 1/2/3. Index 0 unused.
-     * Phase 4 (which grows the lotus heart) raised from 220 to 500 - with the boosted attempts
-     * below, 220 let a whole field of independently-seeded marsh-pond outbreaks (see
+     * Phase 4 (which grows the lotus heart) raised from 220 - with the boosted attempts below,
+     * 220 let a whole field of independently-seeded marsh-pond outbreaks (see
      * GuaranteedSpawnManager) all reach phase 4 within minutes of each other, scattering a heart
      * across nearly every pond in a lotus_marsh biome at once instead of it staying a rare,
-     * earned mini-biome milestone.
+     * earned mini-biome milestone. First pass overshot to 500 and made a single deliberately
+     * nurtured outbreak feel like it barely progressed at all - split the difference at 350.
      */
-    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 500};
+    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 350};
 
     /** Radius (blocks) a spread attempt from this phase may reach from its source block. */
     private static final int[] SPREAD_RADIUS = {0, 2, 3, 4, 4};
@@ -38,7 +39,7 @@ public final class InfectionPhases {
      * pulled back from a full double (was 6/8) since the phase-4 threshold above now does the
      * real work of keeping hearts rare - no need to also race there faster.
      */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 2, 4, 5, 6};
+    private static final int[] ATTEMPTS_PER_TICK = {0, 2, 4, 6, 7};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;

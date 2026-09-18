@@ -109,7 +109,7 @@ public class LotusEvents {
     }
 
     /** Matches GuaranteedSpawnManager's own coverage radius - see the comment on generateLotusPatch below. */
-    private static final double LOTUS_PATCH_COVERAGE_RADIUS = 224.0;
+    private static final double LOTUS_PATCH_COVERAGE_RADIUS = 160.0;
 
     private void generateLotusPatch(ServerLevel level, int minX, int minZ) {
         // Inside the lotus_marsh biome this runs unconditionally on EVERY newly generated chunk

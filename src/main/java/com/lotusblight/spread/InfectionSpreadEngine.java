@@ -188,7 +188,7 @@ public class InfectionSpreadEngine {
         if (newPhase > outbreak.phase()) {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
-            maybeSpawnHeart(level, outbreak, newPhase);
+            maybeSpawnHeart(level, data, outbreak, newPhase);
         }
         data.updateOutbreak(updated);
     }
@@ -521,8 +521,13 @@ public class InfectionSpreadEngine {
      * from phase progression, so a heart could exist next to a barely-infected patch while a
      * fully matured phase-4 outbreak never grew one at all.
      */
-    private void maybeSpawnHeart(ServerLevel level, OutbreakRecord outbreak, int newPhase) {
+    private void maybeSpawnHeart(ServerLevel level, OutbreakSavedData data, OutbreakRecord outbreak, int newPhase) {
         if (newPhase < 4 || outbreak.phase() >= 4) return;
+        // Only one lotus heart is meant to ever exist in the world, like the End portal - a
+        // singular landmark, not something every sufficiently-grown outbreak earns. Whichever
+        // outbreak gets here first claims it; every other one still reaches phase 4 (the
+        // mini-biome itself, vegetation, vine barriers) but never grows its own heart block.
+        if (!data.claimHeart()) return;
         promoteAnchorToHeart(level, outbreak.pos());
     }
 

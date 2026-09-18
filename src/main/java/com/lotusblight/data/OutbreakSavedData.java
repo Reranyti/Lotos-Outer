@@ -36,6 +36,13 @@ public class OutbreakSavedData extends SavedData {
     private final Map<UUID, BarrierRecord> barriers = new LinkedHashMap<>();
     /** True once EpicenterManager has placed (or given up trying to place) the guaranteed distant mini-biome epicenter for this dimension. */
     private boolean epicenterResolved = false;
+    /**
+     * True once ANY outbreak in this dimension has grown a lotus heart. Only one heart is meant
+     * to ever exist - a singular, deliberately rare landmark like the End portal - not a reward
+     * every sufficiently-grown outbreak gets. Whichever outbreak reaches phase 4 first claims it;
+     * every other outbreak just stays at phase 4 without ever growing its own heart block.
+     */
+    private boolean heartClaimed = false;
 
     public static OutbreakSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(OutbreakSavedData::load, OutbreakSavedData::new, ID);
@@ -65,6 +72,7 @@ public class OutbreakSavedData extends SavedData {
             data.barriers.put(barrier.id(), barrier);
         }
         data.epicenterResolved = tag.getBoolean("EpicenterResolved");
+        data.heartClaimed = tag.getBoolean("HeartClaimed");
         return data;
     }
 
@@ -88,7 +96,20 @@ public class OutbreakSavedData extends SavedData {
         }
         tag.put("Barriers", barrierList);
         tag.putBoolean("EpicenterResolved", epicenterResolved);
+        tag.putBoolean("HeartClaimed", heartClaimed);
         return tag;
+    }
+
+    public boolean isHeartClaimed() {
+        return heartClaimed;
+    }
+
+    /** Returns false (and claims nothing) if a heart was already claimed by another outbreak first. */
+    public boolean claimHeart() {
+        if (heartClaimed) return false;
+        heartClaimed = true;
+        setDirty();
+        return true;
     }
 
     public boolean isEpicenterResolved() {

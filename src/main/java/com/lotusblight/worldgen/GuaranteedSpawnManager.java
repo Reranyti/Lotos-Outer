@@ -40,7 +40,7 @@ public final class GuaranteedSpawnManager {
      * nearly every pond - once each one matured, the entire marsh filled with its own lotus heart
      * at roughly the same time.
      */
-    private static final double OUTBREAK_COVERAGE_RADIUS = 224.0;
+    private static final double OUTBREAK_COVERAGE_RADIUS = 160.0;
     /** Not every loaded chunk is sampled — keeps the periodic scan cheap and matches the throttling style used elsewhere.
      *  Widened from 6 to 14: at 6, every water body within ~4 chunks of a player's flight path got
      *  its own full anchor, which read as "lotuses everywhere" rather than distinct outbreaks. */

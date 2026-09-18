@@ -15,8 +15,8 @@ public final class LotusConfig {
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.push("lotus infection");
-        SPREAD_INTERVAL_TICKS = builder.comment("Ticks between spread attempts. 200 ticks = 10 seconds.")
-                .defineInRange("spreadIntervalTicks", 200, 20, 2400);
+        SPREAD_INTERVAL_TICKS = builder.comment("Ticks between spread attempts. 140 ticks = 7 seconds.")
+                .defineInRange("spreadIntervalTicks", 140, 20, 2400);
         SPREAD_RADIUS = builder.comment("Search radius around an active lotus heart.")
                 .defineInRange("spreadRadius", 6, 2, 16);
         SCAN_RADIUS = builder.comment("Lotus map detection radius in blocks.")

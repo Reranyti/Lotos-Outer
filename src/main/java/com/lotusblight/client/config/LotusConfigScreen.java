@@ -30,7 +30,7 @@ public final class LotusConfigScreen {
                         .option(intOption(
                                 "Интервал спреда (тики)",
                                 "Как часто движок заражения пытается распространиться. Меньше значение — быстрее заражение.",
-                                LotusConfig.SPREAD_INTERVAL_TICKS, 20, 2400, 200))
+                                LotusConfig.SPREAD_INTERVAL_TICKS, 20, 2400, 140))
                         .option(intOption(
                                 "Радиус сканирования карты",
                                 "Радиус (блоки), в котором карта/лупа ищет известные очаги.",
