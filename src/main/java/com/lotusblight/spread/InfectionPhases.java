@@ -16,20 +16,29 @@ public final class InfectionPhases {
     private InfectionPhases() {
     }
 
-    /** Infected-block-count thresholds to advance out of phase 1/2/3. Index 0 unused. */
-    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 220};
+    /**
+     * Infected-block-count thresholds to advance out of phase 1/2/3. Index 0 unused.
+     * Phase 4 (which grows the lotus heart) raised from 220 to 500 - with the boosted attempts
+     * below, 220 let a whole field of independently-seeded marsh-pond outbreaks (see
+     * GuaranteedSpawnManager) all reach phase 4 within minutes of each other, scattering a heart
+     * across nearly every pond in a lotus_marsh biome at once instead of it staying a rare,
+     * earned mini-biome milestone.
+     */
+    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 500};
 
     /** Radius (blocks) a spread attempt from this phase may reach from its source block. */
     private static final int[] SPREAD_RADIUS = {0, 2, 3, 4, 4};
 
     /**
      * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,
-     * 10s by default - not literally per tick despite the name). Doubled from the original
+     * 10s by default - not literally per tick despite the name). Boosted from the original
      * {1,2,3,4}: with radius 1 and one attempt every 10 seconds, most rolls landed on a block
      * SpreadTables has no rule for and did nothing, so phase 1/2 read as "почти пусты" - the
-     * infection existed on paper but nothing visible happened for minutes at a time.
+     * infection existed on paper but nothing visible happened for minutes at a time. Phase 3/4
+     * pulled back from a full double (was 6/8) since the phase-4 threshold above now does the
+     * real work of keeping hearts rare - no need to also race there faster.
      */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 2, 4, 6, 8};
+    private static final int[] ATTEMPTS_PER_TICK = {0, 2, 4, 5, 6};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;

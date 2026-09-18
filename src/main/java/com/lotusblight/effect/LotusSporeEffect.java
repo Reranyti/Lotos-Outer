@@ -24,7 +24,10 @@ public class LotusSporeEffect extends MobEffect {
         if (entity.level() instanceof ServerLevel level) {
             level.sendParticles(PINK_SPORES, entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(), 4 + amplifier * 2, 0.3, 0.4, 0.3, 0.01);
         }
-        if (amplifier > 0 && entity.tickCount % 80 == 0) {
+        // Every application of this effect in the codebase uses amplifier 0 (roots, leaves,
+        // nearby-living spread contact all pass 0) - gating the damage on amplifier > 0 meant it
+        // never actually hurt anyone, same bug ColdBlightEffect had.
+        if (entity.tickCount % 80 == 0) {
             entity.hurt(entity.damageSources().magic(), 0.5f + amplifier * 0.5f);
         }
     }

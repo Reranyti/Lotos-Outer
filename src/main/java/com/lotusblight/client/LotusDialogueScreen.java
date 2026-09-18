@@ -73,10 +73,33 @@ public final class LotusDialogueScreen extends Screen {
         rebuildButtons();
     }
 
+    /**
+     * Panel width/height/position shared by render() and rebuildButtons() - they used to compute
+     * their layouts completely independently (a fixed 210-tall box in render(), a button start
+     * position derived from screen center in rebuildButtons() with no relation to that box height
+     * at all), so any time there were enough answer rows (primary answers + aside choices, up to
+     * 6 total) the buttons simply overflowed past the panel's own bottom border instead of the
+     * panel growing to fit them.
+     */
+    private int panelRowCount() {
+        return pendingConfirm != null ? 2 : primaryAnswers.length + LotusDialogueLibrary.asideAnswers().size();
+    }
+
+    private int panelHeight() {
+        var lines = this.font.split(Component.literal(lotusText), 370 - 36);
+        int textBlockHeight = 62 + lines.size() * 10;
+        int buttonsHeight = panelRowCount() * 24 + 8;
+        return Math.max(210, textBlockHeight + buttonsHeight + 14);
+    }
+
     private void rebuildButtons() {
         this.clearWidgets();
-        int left = (this.width - 340) / 2;
-        int top = this.height / 2 + 42;
+        int width = 370;
+        int height = panelHeight();
+        int panelLeft = (this.width - width) / 2;
+        int panelTop = (this.height - height) / 2;
+        int left = panelLeft + 15;
+        int top = panelTop + height - panelRowCount() * 24 - 14;
 
         if (pendingConfirm != null) {
             boolean joining = pendingConfirm == LotusDialogueLibrary.Branch.ALLIANCE;
@@ -124,6 +147,12 @@ public final class LotusDialogueScreen extends Screen {
     }
 
     private void confirmBranch() {
+        // Guard against confirmBranch() firing a second time after the first click already
+        // consumed pendingConfirm (setConversation() below resets it to null) - a stray/duplicate
+        // click event on the old "Да..." button reaching here after rebuildButtons() already
+        // swapped it out would otherwise set branch itself to null, crashing every subsequent
+        // render (headerRight()/branchColor() switch on branch with no null case).
+        if (pendingConfirm == null) return;
         branch = pendingConfirm;
         int stored = branch == LotusDialogueLibrary.Branch.ALLIANCE
                 ? LotusPlayerState.BRANCH_ALLIANCE
@@ -145,7 +174,7 @@ public final class LotusDialogueScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
         int width = 370;
-        int height = 210;
+        int height = panelHeight();
         int left = (this.width - width) / 2;
         int top = (this.height - height) / 2;
         graphics.fill(0, 0, this.width, this.height, 0x99050907);

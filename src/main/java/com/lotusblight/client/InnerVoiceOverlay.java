@@ -109,7 +109,10 @@ public final class InnerVoiceOverlay {
 
         drawPortrait(g, mc, left + 6, top + (boxHeight - portrait) / 2, portrait);
 
-        String name = "[" + mc.player.getGameProfile().getName() + "]";
+        // Was the player's own username - the portrait is deliberately the player's own face
+        // (it's their own inner voice, not an NPC), but labeling it with their username made the
+        // line read as something the player said themselves in chat, not a voice speaking to them.
+        String name = "[Внутренний голос]";
         g.drawString(mc.font, name, left + textLeftPad, top + 6, NAME_COLOR, true);
         for (int i = 0; i < lines.size(); i++) {
             g.drawString(mc.font, lines.get(i), left + textLeftPad, top + 18 + i * 10, TEXT_COLOR, true);

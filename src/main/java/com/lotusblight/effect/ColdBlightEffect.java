@@ -16,7 +16,10 @@ public class ColdBlightEffect extends MobEffect {
 
     @Override
     public void applyEffectTick(LivingEntity entity, int amplifier) {
-        if (amplifier > 0 && entity.tickCount % 80 == 0) {
+        // Every application of this effect in the codebase uses amplifier 0 (see
+        // BlessingNoduleBlock#stepOn) - gating on amplifier > 0 meant the "dangerous" block's
+        // effect never actually did anything beyond showing an icon, ever.
+        if (entity.tickCount % 80 == 0) {
             entity.hurt(entity.damageSources().freeze(), 0.5f + amplifier * 0.5f);
         }
     }

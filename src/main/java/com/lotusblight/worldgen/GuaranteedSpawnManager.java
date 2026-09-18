@@ -33,8 +33,14 @@ public final class GuaranteedSpawnManager {
     private static final Random RANDOM = new Random();
     /** How far from a chunk's center we search for the nearest body of water. */
     private static final int WATER_SEARCH_RADIUS = 48;
-    /** If a registered outbreak already exists within this many blocks of the water, it counts as covered. */
-    private static final double OUTBREAK_COVERAGE_RADIUS = 112.0;
+    /**
+     * If a registered outbreak already exists within this many blocks of the water, it counts as
+     * covered. Raised from 112: inside a dense lotus_marsh biome (its whole point is lots of
+     * small ponds close together), 112 still let this seed a separate independent outbreak on
+     * nearly every pond - once each one matured, the entire marsh filled with its own lotus heart
+     * at roughly the same time.
+     */
+    private static final double OUTBREAK_COVERAGE_RADIUS = 224.0;
     /** Not every loaded chunk is sampled — keeps the periodic scan cheap and matches the throttling style used elsewhere.
      *  Widened from 6 to 14: at 6, every water body within ~4 chunks of a player's flight path got
      *  its own full anchor, which read as "lotuses everywhere" rather than distinct outbreaks. */

@@ -68,7 +68,13 @@ public class LotusEvents {
         int minZ = chunk.getMinBlockZ();
         BlockPos probe = new BlockPos(minX + 8, 64, minZ + 8);
         if (level.getBiome(probe).is(ModBiomes.BLESSING_BIOME)) {
-            generateBlessingPatch(level, minX, minZ);
+            // Blessing is meant to read as "почти пустая пустошь" (an almost-empty wasteland,
+            // see LotusRegion's own doc comment) - this used to run unconditionally on every
+            // single new chunk of the biome, guaranteeing dense decoration everywhere instead of
+            // the sparse, barren feel the design calls for.
+            if (RANDOM.nextInt(6) == 0) {
+                generateBlessingPatch(level, minX, minZ);
+            }
         } else {
             boolean lotusBiome = level.getBiome(probe).is(ModBiomes.LOTUS_BIOME);
             if (lotusBiome || RANDOM.nextInt(24) == 0) {
@@ -88,7 +94,7 @@ public class LotusEvents {
     }
 
     private void generateBlessingPatch(ServerLevel level, int minX, int minZ) {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 1; i++) {
             int x = minX + 2 + RANDOM.nextInt(12);
             int z = minZ + 2 + RANDOM.nextInt(12);
             int y = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z) - 1;
@@ -102,7 +108,20 @@ public class LotusEvents {
         }
     }
 
+    /** Matches GuaranteedSpawnManager's own coverage radius - see the comment on generateLotusPatch below. */
+    private static final double LOTUS_PATCH_COVERAGE_RADIUS = 224.0;
+
     private void generateLotusPatch(ServerLevel level, int minX, int minZ) {
+        // Inside the lotus_marsh biome this runs unconditionally on EVERY newly generated chunk
+        // (see onChunkLoad's lotusBiome check above, which skips the 1/24 random gate entirely
+        // for that biome) with no check against outbreaks already nearby - a marsh biome is
+        // deliberately full of small ponds close together, so this planted a brand new
+        // independent anchor on nearly every single one. Once boosted spread pacing let those all
+        // mature around the same time, an entire marsh filled with its own lotus heart at once.
+        OutbreakSavedData data = OutbreakSavedData.get(level);
+        BlockPos chunkCenter = new BlockPos(minX + 8, 64, minZ + 8);
+        if (data.nearestOutbreak(chunkCenter, LOTUS_PATCH_COVERAGE_RADIUS, false) != null) return;
+
         for (int i = 0; i < 12; i++) {
             int x = minX + 1 + RANDOM.nextInt(14);
             int z = minZ + 1 + RANDOM.nextInt(14);

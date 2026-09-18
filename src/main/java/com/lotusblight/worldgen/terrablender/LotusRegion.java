@@ -55,10 +55,14 @@ public class LotusRegion extends Region {
                 // and "has_precipitation":false in blessing_tundra.json. That's why it generated as
                 // a heavily snow-covered alpine biome despite the data saying otherwise. COOL-NEUTRAL
                 // keeps it distinctly colder than lotus_marsh without tripping vanilla's snow rule.
-                .temperature(Temperature.span(Temperature.COOL, Temperature.NEUTRAL))
-                .humidity(Humidity.span(Humidity.ARID, Humidity.DRY))
-                .continentalness(Continentalness.span(Continentalness.MID_INLAND, Continentalness.FAR_INLAND))
-                .erosion(Erosion.span(Erosion.EROSION_0, Erosion.EROSION_2))
+                // Widened from COOL-NEUTRAL/ARID-DRY/MID_INLAND-FAR_INLAND/EROSION_0-2 - the
+                // biome generated noticeably smaller than lotus_marsh despite the design calling
+                // for it to be a real, substantial (if sparsely decorated) wasteland, not a
+                // sliver smaller than the infection's own mini-biome.
+                .temperature(Temperature.span(Temperature.ICY, Temperature.NEUTRAL))
+                .humidity(Humidity.span(Humidity.ARID, Humidity.NEUTRAL))
+                .continentalness(Continentalness.span(Continentalness.NEAR_INLAND, Continentalness.FAR_INLAND))
+                .erosion(Erosion.span(Erosion.EROSION_0, Erosion.EROSION_4))
                 .depth(Depth.SURFACE)
                 .weirdness(Weirdness.FULL_RANGE)
                 .build().forEach(point -> builder.add(point, ModBiomes.BLESSING_BIOME));
