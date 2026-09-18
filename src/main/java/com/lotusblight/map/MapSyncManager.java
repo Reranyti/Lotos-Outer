@@ -7,15 +7,18 @@ import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.registry.ModBlocks;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -90,9 +93,54 @@ public final class MapSyncManager {
                 ))
                 .toList();
 
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MapSyncPacket(markers));
+        List<Long> infectedChunkKeys = visibleInfectedChunkKeys(data, toSend);
+
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MapSyncPacket(markers, infectedChunkKeys));
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
                 new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility, LotusPlayerState.hasHeardInnerVoice(serverPlayer)));
+    }
+
+    /**
+     * Per-chunk infection counts aren't tagged with which outbreak grew them, so a chunk's
+     * visibility is inherited from whichever known outbreak's anchor is physically closest to it
+     * — the same "you have to have discovered/be allowed to see this lotus" rule markers already
+     * follow, extended to the area around it instead of just its point. This is what finally makes
+     * the map show the actual infection footprint instead of a single marker dot.
+     */
+    private static List<Long> visibleInfectedChunkKeys(OutbreakSavedData data, List<OutbreakRecord> visibleOutbreaks) {
+        if (visibleOutbreaks.isEmpty()) {
+            return List.of();
+        }
+        Set<ChunkPos> infected = data.infectedChunks();
+        if (infected.isEmpty()) {
+            return List.of();
+        }
+        List<OutbreakRecord> allOutbreaks = List.copyOf(data.allOutbreaks());
+        Set<UUID> visibleIds = new java.util.HashSet<>();
+        for (OutbreakRecord record : visibleOutbreaks) {
+            visibleIds.add(record.id());
+        }
+
+        List<Long> result = new ArrayList<>();
+        for (ChunkPos chunkPos : infected) {
+            OutbreakRecord nearest = null;
+            long nearestDistSq = Long.MAX_VALUE;
+            long chunkCenterX = (long) (chunkPos.getMinBlockX() + 8);
+            long chunkCenterZ = (long) (chunkPos.getMinBlockZ() + 8);
+            for (OutbreakRecord candidate : allOutbreaks) {
+                long dx = candidate.pos().getX() - chunkCenterX;
+                long dz = candidate.pos().getZ() - chunkCenterZ;
+                long distSq = dx * dx + dz * dz;
+                if (distSq < nearestDistSq) {
+                    nearestDistSq = distSq;
+                    nearest = candidate;
+                }
+            }
+            if (nearest != null && visibleIds.contains(nearest.id())) {
+                result.add(chunkPos.toLong());
+            }
+        }
+        return result;
     }
 
     @SubscribeEvent

@@ -17,9 +17,11 @@ import java.util.function.Supplier;
  */
 public class MapSyncPacket {
     private final List<MapMarker> markers;
+    private final List<Long> infectedChunkKeys;
 
-    public MapSyncPacket(List<MapMarker> markers) {
+    public MapSyncPacket(List<MapMarker> markers, List<Long> infectedChunkKeys) {
         this.markers = markers;
+        this.infectedChunkKeys = infectedChunkKeys;
     }
 
     public static void encode(MapSyncPacket packet, FriendlyByteBuf buf) {
@@ -32,6 +34,10 @@ public class MapSyncPacket {
             buf.writeVarInt(marker.infectedBlockCount());
             buf.writeBoolean(marker.heartAnchor());
             buf.writeBoolean(marker.hidden());
+        }
+        buf.writeVarInt(packet.infectedChunkKeys.size());
+        for (long key : packet.infectedChunkKeys) {
+            buf.writeLong(key);
         }
     }
 
@@ -48,12 +54,17 @@ public class MapSyncPacket {
             boolean hidden = buf.readBoolean();
             markers.add(new MapMarker(id, pos, phase, progress, infectedBlockCount, heartAnchor, hidden));
         }
-        return new MapSyncPacket(markers);
+        int chunkCount = buf.readVarInt();
+        List<Long> infectedChunkKeys = new ArrayList<>(chunkCount);
+        for (int i = 0; i < chunkCount; i++) {
+            infectedChunkKeys.add(buf.readLong());
+        }
+        return new MapSyncPacket(markers, infectedChunkKeys);
     }
 
     public static void handle(MapSyncPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ClientMapCache.update(packet.markers));
+        ctx.enqueueWork(() -> ClientMapCache.update(packet.markers, packet.infectedChunkKeys));
         ctx.setPacketHandled(true);
     }
 }

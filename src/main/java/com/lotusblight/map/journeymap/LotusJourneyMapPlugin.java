@@ -4,16 +4,23 @@ import com.lotusblight.map.ClientMapCache;
 import com.lotusblight.map.MapMarker;
 import journeymap.api.v2.client.IClientAPI;
 import journeymap.api.v2.client.IClientPlugin;
+import journeymap.api.v2.client.display.PolygonOverlay;
 import journeymap.api.v2.client.event.MappingEvent;
+import journeymap.api.v2.client.model.MapPolygonWithHoles;
+import journeymap.api.v2.client.model.ShapeProperties;
+import journeymap.api.v2.client.util.PolygonHelper;
 import journeymap.api.v2.common.JourneyMapPlugin;
 import journeymap.api.v2.common.event.ClientEventRegistry;
 import journeymap.api.v2.common.waypoint.Waypoint;
 import journeymap.api.v2.common.waypoint.WaypointFactory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Replaces the mod's own minimap/atlas (LotusHudOverlay/LotusAtlasScreen)
@@ -86,6 +93,41 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
             waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
             waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
             journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
+        }
+        syncInfectionArea(dimension);
+    }
+
+    /**
+     * The map used to only ever place a single point per outbreak, no matter how far its actual
+     * infected footprint had spread - "самая главная [функция] ОТОБРАЖАТЬ ЗАРАЖЕНИЕ" (display the
+     * infection itself, not just a marker). OutbreakSavedData already tracks every infected chunk
+     * incrementally; this merges that chunk set into real filled polygons via JourneyMap's own
+     * PolygonHelper instead of drawing one shape per chunk.
+     */
+    private void syncInfectionArea(ResourceKey<Level> dimension) {
+        List<Long> keys = ClientMapCache.infectedChunkKeys();
+        if (keys.isEmpty()) return;
+
+        List<ChunkPos> chunks = new ArrayList<>(keys.size());
+        for (long key : keys) {
+            chunks.add(new ChunkPos(key));
+        }
+
+        ShapeProperties shapeProperties = new ShapeProperties()
+                .setStrokeWidth(2)
+                .setStrokeColor(0x2ecc40).setStrokeOpacity(0.8f)
+                .setFillColor(0x2ecc40).setFillOpacity(0.22f);
+
+        for (MapPolygonWithHoles polygon : PolygonHelper.createChunksPolygon(chunks, 64)) {
+            PolygonOverlay overlay = new PolygonOverlay(MOD_ID, dimension, shapeProperties, polygon);
+            overlay.setOverlayGroupName("Заражение лотоса");
+            overlay.setLabel("Заражённая территория");
+            try {
+                journeyMapClientApi.show(overlay);
+            } catch (Exception ignored) {
+                // JourneyMap's own show() is declared to throw - nothing useful to recover here,
+                // and one bad polygon shouldn't stop the rest of the sync.
+            }
         }
     }
 }

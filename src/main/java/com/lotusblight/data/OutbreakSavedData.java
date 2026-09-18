@@ -233,4 +233,13 @@ public class OutbreakSavedData extends SavedData {
     public int totalInfectedBlocks() {
         return chunkInfectionCounts.values().stream().mapToInt(Integer::intValue).sum();
     }
+
+    /** Every chunk that currently has at least one converted block — the raw footprint the map's infection-area overlay is built from. */
+    public java.util.Set<ChunkPos> infectedChunks() {
+        java.util.Set<ChunkPos> result = new java.util.HashSet<>(chunkInfectionCounts.size());
+        for (long key : chunkInfectionCounts.keySet()) {
+            result.add(new ChunkPos(key));
+        }
+        return result;
+    }
 }

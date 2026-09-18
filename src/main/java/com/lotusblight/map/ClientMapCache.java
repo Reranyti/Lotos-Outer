@@ -11,18 +11,25 @@ import java.util.List;
  */
 public final class ClientMapCache {
     private static volatile List<MapMarker> markers = List.of();
+    private static volatile List<Long> infectedChunkKeys = List.of();
     private static volatile long lastUpdateMs = 0L;
 
     private ClientMapCache() {
     }
 
-    public static void update(List<MapMarker> newMarkers) {
+    public static void update(List<MapMarker> newMarkers, List<Long> newInfectedChunkKeys) {
         markers = List.copyOf(newMarkers);
+        infectedChunkKeys = List.copyOf(newInfectedChunkKeys);
         lastUpdateMs = System.currentTimeMillis();
     }
 
     public static List<MapMarker> markers() {
         return markers;
+    }
+
+    /** Raw ChunkPos.toLong() keys of every chunk the player is currently allowed to see as infected — the source for the map's infection-area overlay. */
+    public static List<Long> infectedChunkKeys() {
+        return infectedChunkKeys;
     }
 
     public static long lastUpdateMs() {
@@ -32,6 +39,7 @@ public final class ClientMapCache {
     /** Clears the cache, e.g. on disconnect, so a stale server's markers don't linger. */
     public static void clear() {
         markers = List.of();
+        infectedChunkKeys = List.of();
         lastUpdateMs = 0L;
     }
 }

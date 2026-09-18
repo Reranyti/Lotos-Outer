@@ -20,10 +20,16 @@ public final class InfectionPhases {
     private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 220};
 
     /** Radius (blocks) a spread attempt from this phase may reach from its source block. */
-    private static final int[] SPREAD_RADIUS = {0, 1, 2, 3, 3};
+    private static final int[] SPREAD_RADIUS = {0, 2, 3, 4, 4};
 
-    /** Spread attempts performed per active outbreak per engine tick. */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 1, 2, 3, 4};
+    /**
+     * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,
+     * 10s by default - not literally per tick despite the name). Doubled from the original
+     * {1,2,3,4}: with radius 1 and one attempt every 10 seconds, most rolls landed on a block
+     * SpreadTables has no rule for and did nothing, so phase 1/2 read as "почти пусты" - the
+     * infection existed on paper but nothing visible happened for minutes at a time.
+     */
+    private static final int[] ATTEMPTS_PER_TICK = {0, 2, 4, 6, 8};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;
