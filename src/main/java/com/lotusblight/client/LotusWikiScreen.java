@@ -89,22 +89,69 @@ public final class LotusWikiScreen extends Screen {
         return 0xFF000000 | (r << 16) | (gr << 8) | b;
     }
 
+    /** How far a letter shies away from the cursor at most, and the radius within which it reacts at all. */
+    private static final float SHY_MAX_OFFSET = 3.0f;
+    private static final float SHY_RADIUS = 26.0f;
+
     /**
-     * "Голос проступает сквозь страницу" — a persistent, gently pulsing gold ghost drawn just
-     * behind the normal text (offset by 1px, lower alpha), instead of the plain flash-fade other
-     * pages get. Matches the reference: the ordinary handwritten note with a glowing overlay of
-     * something else reading/speaking through it.
+     * "Буквы немного отодвигаются, если мышка рядом, и плавно" — normal text is legible by
+     * default; a letter the cursor gets close to eases a couple pixels away from it (falls off
+     * smoothly with distance, no snapping) and fades toward the gold "voice" ink underneath as it
+     * moves, so the golden layer only really shows through right where the cursor is.
      */
-    private void drawVoiceOverlayText(GuiGraphics g, List<net.minecraft.util.FormattedCharSequence> lines, int x, int y) {
-        float pulse = (float) (0.5 + 0.5 * Math.sin(System.currentTimeMillis() / 380.0));
-        int ghostAlpha = 0x50 + (int) (pulse * 0x50);
-        int ghostColor = (ghostAlpha << 24) | 0xFFD54F;
+    private void drawVoiceOverlayText(GuiGraphics g, List<String> lines, int x, int y, int mouseX, int mouseY) {
         for (int i = 0; i < lines.size(); i++) {
             int lineY = y + i * 11;
-            g.drawString(this.font, lines.get(i), x - 1, lineY - 1, ghostColor, false);
-            g.drawString(this.font, lines.get(i), x + 1, lineY + 1, ghostColor, false);
-            g.drawString(this.font, lines.get(i), x, lineY, 0xFFE4E7D8, false);
+            int penX = x;
+            String plain = lines.get(i);
+            for (int c = 0; c < plain.length(); c++) {
+                String glyph = String.valueOf(plain.charAt(c));
+                int glyphWidth = this.font.width(glyph);
+                float cx = penX + glyphWidth / 2f;
+                float cy = lineY + 4f;
+                float dx = cx - mouseX;
+                float dy = cy - mouseY;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+                float t = Math.max(0f, 1f - dist / SHY_RADIUS); // 1 at cursor, 0 at/beyond radius, smooth falloff
+                t = t * t; // ease-in, so it's barely noticeable until the cursor is genuinely close
+                float offset = t * SHY_MAX_OFFSET;
+                float nx = dist > 0.001f ? dx / dist : 0f;
+                float ny = dist > 0.001f ? dy / dist : 0f;
+
+                int goldAlpha = (int) (t * 0xFF);
+                int goldColor = (goldAlpha << 24) | 0xFFD54F;
+                g.drawString(this.font, glyph, penX, lineY, goldColor, false);
+
+                int normalAlpha = 0xFF - (int) (t * 0x90);
+                int normalColor = (normalAlpha << 24) | 0xE4E7D8;
+                g.drawString(this.font, glyph, penX + Math.round(nx * offset), lineY + Math.round(ny * offset), normalColor, false);
+
+                penX += glyphWidth;
+            }
         }
+    }
+
+    /** Plain-string word wrap (unlike Font#split's FormattedCharSequence result) so drawVoiceOverlayText can walk real chars. */
+    private List<String> wrapPlain(String text, int maxWidth) {
+        List<String> out = new java.util.ArrayList<>();
+        for (String paragraph : text.split("\n", -1)) {
+            if (paragraph.isEmpty()) {
+                out.add("");
+                continue;
+            }
+            StringBuilder line = new StringBuilder();
+            for (String word : paragraph.split(" ")) {
+                String candidate = line.isEmpty() ? word : line + " " + word;
+                if (this.font.width(candidate) > maxWidth && !line.isEmpty()) {
+                    out.add(line.toString());
+                    line = new StringBuilder(word);
+                } else {
+                    line = new StringBuilder(candidate);
+                }
+            }
+            out.add(line.toString());
+        }
+        return out;
     }
 
     private void drawSparkles(GuiGraphics g, int left, int top) {
@@ -141,12 +188,12 @@ public final class LotusWikiScreen extends Screen {
         String rawText = pages.isEmpty() ? "" : pages.get(pageIndex);
         boolean voiceEntry = rawText.startsWith(LotusWikiLibrary.VOICE_MARKER);
         String pageText = voiceEntry ? rawText.substring(LotusWikiLibrary.VOICE_MARKER.length()) : rawText;
-        var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
 
         if (voiceEntry) {
             drawSparkles(g, left, top);
-            drawVoiceOverlayText(g, lines, left + 18, top + 46);
+            drawVoiceOverlayText(g, wrapPlain(pageText, WIDTH - 36), left + 18, top + 46, mouseX, mouseY);
         } else {
+            var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
             int textColor = currentTextColor();
             for (int i = 0; i < lines.size(); i++) {
                 g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);

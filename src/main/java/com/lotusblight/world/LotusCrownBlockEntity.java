@@ -3,6 +3,7 @@ package com.lotusblight.world;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.registry.ModBlockEntities;
+import com.lotusblight.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,6 +29,7 @@ public class LotusCrownBlockEntity extends BlockEntity implements GeoBlockEntity
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private int cachedPhase = 1;
     private int ticksSincePhaseRefresh = Integer.MAX_VALUE;
+    private boolean checkedForLegacyStack;
 
     public LotusCrownBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.LOTUS_CROWN.get(), pos, state);
@@ -35,6 +37,12 @@ public class LotusCrownBlockEntity extends BlockEntity implements GeoBlockEntity
 
     /** Called from a block ticker (see LotusMainBlock#getTicker) — refreshes phase only every PHASE_REFRESH_INTERVAL_TICKS, not every tick. */
     public void serverTick(ServerLevel level) {
+        if (!checkedForLegacyStack) {
+            checkedForLegacyStack = true;
+            if (removeIfLegacyStackSegment(level)) {
+                return;
+            }
+        }
         if (++ticksSincePhaseRefresh < PHASE_REFRESH_INTERVAL_TICKS) {
             return;
         }
@@ -43,6 +51,29 @@ public class LotusCrownBlockEntity extends BlockEntity implements GeoBlockEntity
         if (nearest != null) {
             cachedPhase = nearest.phase();
         }
+    }
+
+    /**
+     * LotusMainBlock used to be a real 4-tall stack of separate blocks (PART=0..3), each now
+     * independently rendering as its own giant lily pad after the "no more столбы" redesign — a
+     * world saved before that change still has all 4 old block positions sitting there, so a
+     * single old pillar now looks like several overlapping oversized pads instead of one. This
+     * position is a leftover stem/crown segment (not the real anchor) if it doesn't match any
+     * registered outbreak AND the block directly below it is also part of the same block/heart —
+     * i.e. it's sitting on top of another lotus block, which a freshly-placed anchor never does.
+     */
+    private boolean removeIfLegacyStackSegment(ServerLevel level) {
+        BlockPos pos = getBlockPos();
+        boolean isRegisteredAnchor = OutbreakSavedData.get(level).allOutbreaks().stream()
+                .anyMatch(record -> record.pos().equals(pos));
+        if (isRegisteredAnchor) return false;
+
+        var below = level.getBlockState(pos.below());
+        if (below.is(ModBlocks.INFECTED_LOTUS.get()) || below.is(ModBlocks.LOTUS_HEART.get())) {
+            level.removeBlock(pos, false);
+            return true;
+        }
+        return false;
     }
 
     /** 1 at phase 1 (slow, calm) up to ~2.2x at phase 4 (fast, agitated) — see InfectionPhases for the phase scale itself. */
