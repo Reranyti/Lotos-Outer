@@ -11,6 +11,7 @@ import journeymap.api.v2.client.model.ShapeProperties;
 import journeymap.api.v2.client.util.PolygonHelper;
 import journeymap.api.v2.common.JourneyMapPlugin;
 import journeymap.api.v2.common.event.ClientEventRegistry;
+import journeymap.api.v2.client.event.RegistryEvent;
 import journeymap.api.v2.common.waypoint.Waypoint;
 import journeymap.api.v2.common.waypoint.WaypointFactory;
 import net.minecraft.core.BlockPos;
@@ -50,6 +51,7 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
     private static LotusJourneyMapPlugin instance;
 
     private IClientAPI journeyMapClientApi;
+    private LotusJourneyMapOptions options;
 
     public static LotusJourneyMapPlugin instance() {
         return instance;
@@ -60,6 +62,10 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
         this.journeyMapClientApi = jmClientApi;
         instance = this;
         ClientEventRegistry.MAPPING_EVENT.subscribe(MOD_ID, this::onMappingEvent);
+        // A dedicated options category, same as every other JourneyMap-integrated mod exposes —
+        // before this the markers/overlay were unconditional with no way to turn either off from
+        // JourneyMap's own options screen.
+        ClientEventRegistry.OPTIONS_REGISTRY_EVENT.subscribe(MOD_ID, (RegistryEvent.OptionsRegistryEvent event) -> options = new LotusJourneyMapOptions());
     }
 
     @Override
@@ -87,14 +93,18 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
     private void syncWaypoints(ResourceKey<Level> dimension) {
         if (journeyMapClientApi == null) return;
         journeyMapClientApi.removeAll(MOD_ID);
-        for (MapMarker marker : ClientMapCache.markers()) {
-            BlockPos pos = marker.pos();
-            Waypoint waypoint = WaypointFactory.createWaypoint(MOD_ID, pos, dimension, true);
-            waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
-            waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
-            journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
+        if (options == null || options.showOutbreakMarkers.get()) {
+            for (MapMarker marker : ClientMapCache.markers()) {
+                BlockPos pos = marker.pos();
+                Waypoint waypoint = WaypointFactory.createWaypoint(MOD_ID, pos, dimension, true);
+                waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
+                waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
+                journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
+            }
         }
-        syncInfectionArea(dimension);
+        if (options == null || options.showInfectionArea.get()) {
+            syncInfectionArea(dimension);
+        }
     }
 
     /**
