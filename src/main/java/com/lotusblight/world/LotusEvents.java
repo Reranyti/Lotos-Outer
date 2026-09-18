@@ -36,7 +36,10 @@ import net.minecraftforge.event.village.VillagerTradesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Vector3f;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * Everything that is NOT the infection spread tick anymore — worldgen patch
@@ -157,25 +160,62 @@ public class LotusEvents {
         player.getInventory().add(new ItemStack(ModItems.LOTUS_SEED.get(), 3));
         player.getInventory().add(LotusWikiItem.createStack());
         player.displayClientMessage(Component.literal("Три семени лотоса и книга-вики появились у тебя. Ты сам решаешь, куда пустить корни."), false);
-        ensureNearbyOutbreak(player.serverLevel(), player.blockPosition());
+        // Used to scan up to 512 blocks out (16 radius tiers x 8 samples x a full-height column
+        // scan each) synchronously in this very event handler — effectively the same bug that was
+        // just found and fixed in EpicenterManager (unbounded synchronous world queries forcing
+        // chunk generation), except this one fired on every single new player login instead of
+        // once at world creation. Now spread across ticks via pendingStarterSearches below.
+        pendingStarterSearches.put(player.getUUID(), new StarterSearch(player.serverLevel(), player.blockPosition()));
     }
 
-    private void ensureNearbyOutbreak(ServerLevel level, BlockPos center) {
-        // 32 chunks are the tutorial area: 32 * 16 = 512 blocks.
-        for (int radius = 16; radius <= 512; radius += 32) {
-            for (int i = 0; i < 8; i++) {
-                int x = center.getX() + RANDOM.nextInt(radius * 2 + 1) - radius;
-                int z = center.getZ() + RANDOM.nextInt(radius * 2 + 1) - radius;
-                BlockPos water = findWaterColumn(level, x, z);
-                if (water != null && level.getBlockState(water.above()).isAir()) {
-                    placeTutorialLotus(level, water);
-                    return;
-                }
+    private static final class StarterSearch {
+        final ServerLevel level;
+        final BlockPos center;
+        int radius = 16;
+        int attemptsAtRadius = 0;
+
+        StarterSearch(ServerLevel level, BlockPos center) {
+            this.level = level;
+            this.center = center;
+        }
+    }
+
+    private final Map<UUID, StarterSearch> pendingStarterSearches = new HashMap<>();
+    private static final int STARTER_ATTEMPTS_PER_RADIUS = 8;
+    private static final int STARTER_MAX_RADIUS = 512;
+    private static final int STARTER_RADIUS_STEP = 32;
+    private static final int STARTER_PROBE_INTERVAL_TICKS = 4;
+
+    /** One probe (one column scan) per call, budgeted to run at most once every few ticks — see the class javadoc on pendingStarterSearches' use site. */
+    private void tickStarterSearches(net.minecraft.server.MinecraftServer server) {
+        if (pendingStarterSearches.isEmpty()) return;
+        if (server.getTickCount() % STARTER_PROBE_INTERVAL_TICKS != 0) return;
+
+        var it = pendingStarterSearches.entrySet().iterator();
+        if (!it.hasNext()) return;
+        var entry = it.next();
+        StarterSearch search = entry.getValue();
+
+        int x = search.center.getX() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
+        int z = search.center.getZ() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
+        BlockPos water = findWaterColumn(search.level, x, z);
+        if (water != null && search.level.getBlockState(water.above()).isAir()) {
+            placeTutorialLotus(search.level, water);
+            it.remove();
+            return;
+        }
+
+        search.attemptsAtRadius++;
+        if (search.attemptsAtRadius >= STARTER_ATTEMPTS_PER_RADIUS) {
+            search.attemptsAtRadius = 0;
+            search.radius += STARTER_RADIUS_STEP;
+            if (search.radius > STARTER_MAX_RADIUS) {
+                // A new player must always have a safe water lesson nearby.
+                BlockPos pondWater = createTutorialPond(search.level, search.center);
+                placeTutorialLotus(search.level, pondWater);
+                it.remove();
             }
         }
-        // A new player must always have a safe water lesson nearby.
-        BlockPos pondWater = createTutorialPond(level, center);
-        placeTutorialLotus(level, pondWater);
     }
 
     private void placeTutorialLotus(ServerLevel level, BlockPos water) {
@@ -205,6 +245,7 @@ public class LotusEvents {
         if (event.phase != TickEvent.Phase.END) return;
         integrations.tick();
         processPendingLotusChunk(event.getServer());
+        tickStarterSearches(event.getServer());
     }
 
     private void bloom(ServerLevel level, BlockPos pos, DustParticleOptions color) {

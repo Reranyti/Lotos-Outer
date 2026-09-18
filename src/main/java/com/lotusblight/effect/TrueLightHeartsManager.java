@@ -45,12 +45,22 @@ public final class TrueLightHeartsManager {
         }
     }
 
-    /** Vanilla clears absorption on death/respawn regardless of source — re-grant if the bonus hadn't actually expired yet. */
+    /**
+     * Vanilla clears absorption on death/respawn regardless of source — re-grant if the bonus
+     * hadn't actually expired yet. This also fires (isWasDeath=false) when a new player instance
+     * is constructed on a non-death respawn, e.g. returning from the End through the exit portal —
+     * that path's own absorption carry-over isn't guaranteed the same way health/XP are, so top up
+     * rather than blindly re-add, in case vanilla did carry it over and we'd otherwise double-grant.
+     */
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        if (!event.isWasDeath() || !(event.getEntity() instanceof ServerPlayer newPlayer)) return;
+        if (!(event.getEntity() instanceof ServerPlayer newPlayer)) return;
         long expiresAt = LotusPlayerState.getTrueLightHeartsExpireAt(newPlayer);
-        if (expiresAt > newPlayer.level().getGameTime()) {
+        if (expiresAt <= newPlayer.level().getGameTime()) return;
+
+        if (event.isWasDeath()) {
+            newPlayer.setAbsorptionAmount(newPlayer.getAbsorptionAmount() + BONUS_ABSORPTION);
+        } else if (newPlayer.getAbsorptionAmount() < BONUS_ABSORPTION) {
             newPlayer.setAbsorptionAmount(newPlayer.getAbsorptionAmount() + BONUS_ABSORPTION);
         }
     }

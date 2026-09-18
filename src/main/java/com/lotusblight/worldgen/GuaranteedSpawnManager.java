@@ -81,6 +81,11 @@ public final class GuaranteedSpawnManager {
         for (int attempt = 0; attempt < WATER_SEARCH_ATTEMPTS; attempt++) {
             int x = center.getX() + RANDOM.nextInt(radius * 2 + 1) - radius;
             int z = center.getZ() + RANDOM.nextInt(radius * 2 + 1) - radius;
+            // The center chunk is confirmed loaded by the caller, but a 48-block/3-chunk radius
+            // around it routinely lands in the not-yet-generated fringe during fast flight,
+            // forcing synchronous chunk generation — same bug class as EpicenterManager. Skip
+            // ungenerated columns instead of forcing them.
+            if (!level.hasChunkAt(new BlockPos(x, center.getY(), z))) continue;
             for (int y = top; y >= bottom; y--) {
                 BlockPos pos = new BlockPos(x, y, z);
                 if (level.getFluidState(pos).is(Fluids.WATER) && level.getFluidState(pos).isSource()

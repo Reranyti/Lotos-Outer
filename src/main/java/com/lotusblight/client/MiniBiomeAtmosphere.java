@@ -34,8 +34,14 @@ public final class MiniBiomeAtmosphere {
         if (player == null || level == null) return;
 
         double rangeSq = RANGE * RANGE;
-        boolean inMiniBiome = ClientMapCache.markers().stream()
-                .anyMatch(marker -> marker.phase() >= 4 && marker.pos().distSqr(player.blockPosition()) <= rangeSq);
+        boolean inMiniBiome = false;
+        var playerPos = player.blockPosition();
+        for (var marker : ClientMapCache.markers()) {
+            if (marker.phase() >= 4 && marker.pos().distSqr(playerPos) <= rangeSq) {
+                inMiniBiome = true;
+                break;
+            }
+        }
         if (!inMiniBiome) return;
 
         for (int i = 0; i < 2; i++) {

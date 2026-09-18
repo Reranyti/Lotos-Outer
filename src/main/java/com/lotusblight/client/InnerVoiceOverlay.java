@@ -50,6 +50,12 @@ public final class InnerVoiceOverlay {
         queue.clear();
         queue.addAll(scene);
         advance();
+        // Without this, a second scene starting while the first's theme was still playing (e.g.
+        // eating a second free berry quickly) orphaned the old SimpleSoundInstance — its reference
+        // was overwritten below with no way left to stop it, so it just kept playing underneath.
+        if (musicInstance != null) {
+            Minecraft.getInstance().getSoundManager().stop(musicInstance);
+        }
         musicInstance = SimpleSoundInstance.forUI(ModSounds.INNER_VOICE_THEME.get(), 1.0f, 0.6f);
         Minecraft.getInstance().getSoundManager().play(musicInstance);
     }
