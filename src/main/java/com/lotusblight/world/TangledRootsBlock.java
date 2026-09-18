@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -40,30 +41,46 @@ public final class TangledRootsBlock extends Block implements SimpleWaterloggedB
     // through, matching the "obstruction, not a wall" intent in the class doc below.
     private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 6.0, 16.0);
 
+    /**
+     * Whether the fluid this block is waterlogged with was actually INFECTED_WATER rather than
+     * vanilla water. getFluidState() used to hardcode Fluids.WATER regardless, so every tangled
+     * root grown on top of an infected water source visibly turned that tile's rendered fluid
+     * back into plain blue water right where the root sat - as roots kept growing across an
+     * infected waterway, patches of "infected water" appeared to flicker back to normal water one
+     * by one. This tracks which fluid was really there so the block reports it correctly.
+     */
+    public static final BooleanProperty INFECTED = BooleanProperty.create("infected");
+
     public TangledRootsBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(BlockStateProperties.WATERLOGGED, false));
+        registerDefaultState(stateDefinition.any().setValue(BlockStateProperties.WATERLOGGED, false).setValue(INFECTED, false));
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         FluidState fluid = context.getLevel().getFluidState(context.getClickedPos());
-        return defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, fluid.getType() == Fluids.WATER);
+        boolean infected = fluid.is(com.lotusblight.registry.ModFluids.INFECTED_WATER.get());
+        boolean waterlogged = fluid.getType() == Fluids.WATER || infected;
+        return defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, waterlogged).setValue(INFECTED, infected);
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.WATERLOGGED);
+        builder.add(BlockStateProperties.WATERLOGGED, INFECTED);
     }
 
     @Override
     public FluidState getFluidState(BlockState state) {
-        return state.getValue(BlockStateProperties.WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+        if (!state.getValue(BlockStateProperties.WATERLOGGED)) return super.getFluidState(state);
+        return state.getValue(INFECTED) ? com.lotusblight.registry.ModFluids.INFECTED_WATER.get().getSource(false) : Fluids.WATER.getSource(false);
     }
 
     @Override
     public BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-        if (state.getValue(BlockStateProperties.WATERLOGGED)) level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.scheduleTick(pos, state.getValue(INFECTED) ? com.lotusblight.registry.ModFluids.INFECTED_WATER.get() : Fluids.WATER,
+                    (state.getValue(INFECTED) ? com.lotusblight.registry.ModFluids.INFECTED_WATER.get() : Fluids.WATER).getTickDelay(level));
+        }
         return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
     }
 

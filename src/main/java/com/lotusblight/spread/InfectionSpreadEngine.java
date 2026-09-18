@@ -318,7 +318,11 @@ public class InfectionSpreadEngine {
 
         if (level.getFluidState(target).is(ModFluids.INFECTED_WATER.get()) && level.getFluidState(target).isSource()) {
             if (!targetState.is(ModBlocks.LOTUS_ROOTS.get()) && level.random.nextInt(3) != 0) {
-                level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true), 3);
+                // The fluid here is confirmed INFECTED_WATER by the branch condition above - mark
+                // the root as such so it reports the real fluid back (see LotusRootsBlock#INFECTED)
+                // instead of silently reverting this tile's rendered fluid to plain water.
+                level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
+                        .setValue(BlockStateProperties.WATERLOGGED, true).setValue(com.lotusblight.world.LotusRootsBlock.INFECTED, true), 3);
                 bloom(level, target, GREEN);
                 return target;
             }

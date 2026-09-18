@@ -40,6 +40,33 @@ public final class ModFluids {
                 public ResourceLocation getFlowingTexture() {
                     return flowingTexture();
                 }
+
+                // Everything below used to fall through to IClientFluidTypeExtensions.DEFAULT,
+                // which only tints textures/renders the source/flowing model - it does NOT give
+                // the camera any underwater fog/overlay the way vanilla water gets (that's wired
+                // into vanilla's own FogRenderer specifically for FluidTags.WATER, which a custom
+                // Fluid never matches). Standing inside infected water therefore rendered at full
+                // outdoor view distance with only ordinary sky fog - an "x-ray" look where distant
+                // terrain stayed clearly visible through the water instead of the murky close-up
+                // vanilla water gives.
+                @Override
+                public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick,
+                        net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount,
+                        org.joml.Vector3f fluidFogColor) {
+                    return new org.joml.Vector3f(0.08F, 0.20F, 0.10F);
+                }
+
+                @Override
+                public void modifyFogRender(net.minecraft.client.Camera camera, net.minecraft.client.renderer.FogRenderer.FogMode mode,
+                        float renderDistance, float partialTick, float nearDistance, float farDistance, com.mojang.blaze3d.shaders.FogShape shape) {
+                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(-8.0F);
+                    com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(24.0F);
+                }
+
+                @Override
+                public net.minecraft.resources.ResourceLocation getRenderOverlayTexture(net.minecraft.client.Minecraft mc) {
+                    return new net.minecraft.resources.ResourceLocation("textures/misc/underwater.png");
+                }
             });
         }
     });
