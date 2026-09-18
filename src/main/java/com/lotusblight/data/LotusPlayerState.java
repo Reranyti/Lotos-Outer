@@ -103,4 +103,17 @@ public final class LotusPlayerState {
         root.putInt(INNER_VOICE_USES_KEY, root.getInt(INNER_VOICE_USES_KEY) + 1);
         player.getPersistentData().put(ROOT_TAG, root);
     }
+
+    private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
+
+    /** Game-time tick this player's True-Light bonus absorption hearts expire at, or 0 if inactive. */
+    public static long getTrueLightHeartsExpireAt(Player player) {
+        return root(player, false).getLong(TRUE_LIGHT_HEARTS_EXPIRES_KEY);
+    }
+
+    public static void setTrueLightHeartsExpireAt(Player player, long gameTime) {
+        CompoundTag root = root(player, true);
+        root.putLong(TRUE_LIGHT_HEARTS_EXPIRES_KEY, gameTime);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
 }

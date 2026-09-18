@@ -6,6 +6,8 @@ import com.lotusblight.map.ClientPlayerStateCache;
 import com.lotusblight.map.NetworkHandler;
 import com.lotusblight.map.PlayerStateSyncPacket;
 import com.lotusblight.map.ShowInnerVoicePacket;
+import com.lotusblight.effect.TrueLightEffect;
+import com.lotusblight.effect.TrueLightHeartsManager;
 import com.lotusblight.registry.ModEffects;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -39,7 +41,7 @@ public class GlowingBerryItem extends Item {
         ItemStack result = super.finishUsingItem(stack, level, entity);
         if (level.isClientSide || !(entity instanceof ServerPlayer player)) return result;
 
-        player.addEffect(new MobEffectInstance(ModEffects.TRUE_LIGHT.get(), 200, 0));
+        player.addEffect(new MobEffectInstance(ModEffects.TRUE_LIGHT.get(), TrueLightEffect.DURATION_TICKS, 0));
 
         if (LotusPlayerState.canTriggerInnerVoiceFreely(player)) {
             LotusPlayerState.incrementInnerVoiceUses(player);
@@ -48,6 +50,14 @@ public class GlowingBerryItem extends Item {
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                     LotusPlayerState.hasHeardInnerVoice(player)));
+        } else {
+            // No scene left to give — grant/refresh the persistent bonus hearts instead, tied
+            // 1:1 to how long the True Light effect just (re)applied will last.
+            long newExpiry = player.level().getGameTime() + TrueLightEffect.DURATION_TICKS;
+            if (LotusPlayerState.getTrueLightHeartsExpireAt(player) <= 0) {
+                player.setAbsorptionAmount(player.getAbsorptionAmount() + TrueLightHeartsManager.BONUS_ABSORPTION);
+            }
+            LotusPlayerState.setTrueLightHeartsExpireAt(player, newExpiry);
         }
         return result;
     }

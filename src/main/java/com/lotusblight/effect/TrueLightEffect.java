@@ -15,6 +15,9 @@ import net.minecraft.world.entity.player.Player;
  * "seeing clearly" while it lasts.
  */
 public class TrueLightEffect extends MobEffect {
+    /** ~20 minutes 10 seconds — the bonus absorption hearts GlowingBerryItem grants track this exactly. */
+    public static final int DURATION_TICKS = 24200;
+
     public TrueLightEffect() {
         super(MobEffectCategory.BENEFICIAL, 0xFFDD55);
     }
