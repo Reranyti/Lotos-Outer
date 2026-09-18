@@ -438,8 +438,12 @@ public class InfectionSpreadEngine {
         }
     }
 
-    private static final int MINI_TREE_CHANCE = 30;
-    private static final int BLOSSOM_GRASS_CHANCE = 6;
+    // "Заросли, а не декорация" — the mini-biome is supposed to read as a dense, oppressive
+    // thicket (see the reference the user gave: overlapping canopies, thick undergrowth), not
+    // scattered single trees every ~30 conversions. Tripled the odds and widened/heightened the
+    // canopy so trees actually overlap into a real canopy instead of standing apart.
+    private static final int MINI_TREE_CHANCE = 10;
+    private static final int BLOSSOM_GRASS_CHANCE = 4;
 
     /**
      * Self-seeding flora for freshly-converted ground, instead of relying entirely on whatever
@@ -460,16 +464,24 @@ public class InfectionSpreadEngine {
         return false;
     }
 
-    /** A small 2-3 tall lotus-log trunk with a leaf canopy — the mini-biome's own tree, grown rather than converted. */
+    /** A 3-5 tall lotus-log trunk with a thick, multi-layer leaf canopy — the mini-biome's own tree, grown rather than converted. */
     private boolean tryGrowMiniTree(ServerLevel level, BlockPos base) {
-        int trunkHeight = 2 + level.random.nextInt(2);
+        int trunkHeight = 3 + level.random.nextInt(3);
         for (int i = 0; i < trunkHeight; i++) {
             if (!level.getBlockState(base.above(i)).isAir()) return false;
         }
         for (int i = 0; i < trunkHeight; i++) {
             level.setBlock(base.above(i), ModBlocks.LOTUS_LOG.get().defaultBlockState(), 3);
         }
-        BlockPos canopyCenter = base.above(trunkHeight);
+        // Two overlapping canopy layers (wide lower ring + narrower top) so the leaves read as a
+        // thick crown from a distance, not a single flat slab.
+        BlockPos lowerRing = base.above(trunkHeight - 1);
+        for (BlockPos leaf : BlockPos.betweenClosed(lowerRing.offset(-2, 0, -2), lowerRing.offset(2, 1, 2))) {
+            if (level.getBlockState(leaf).isAir()) {
+                level.setBlock(leaf, ModBlocks.LOTUS_LEAVES.get().defaultBlockState(), 3);
+            }
+        }
+        BlockPos canopyCenter = base.above(trunkHeight + 1);
         for (BlockPos leaf : BlockPos.betweenClosed(canopyCenter.offset(-1, 0, -1), canopyCenter.offset(1, 1, 1))) {
             if (level.getBlockState(leaf).isAir()) {
                 level.setBlock(leaf, ModBlocks.LOTUS_LEAVES.get().defaultBlockState(), 3);

@@ -26,7 +26,9 @@ public final class LotusPlayerState {
     private static final String ROOT_TAG = "LotusBlightState";
     private static final String DIALOGUE_BRANCH_KEY = "DialogueBranch";
     private static final String FULL_MAP_VISIBILITY_KEY = "FullMapVisibility";
-    private static final String HEARD_INNER_VOICE_KEY = "HeardInnerVoice";
+    private static final String INNER_VOICE_USES_KEY = "InnerVoiceUses";
+    /** First two berries always show a scene, no conditions attached — an introduction, not a reward. */
+    public static final int INNER_VOICE_FREE_USES = 2;
 
     private LotusPlayerState() {
     }
@@ -78,14 +80,27 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
-    /** Whether the player has ever eaten a glowing_berry — gates the "try eating one" item tooltip hint. */
-    public static boolean hasHeardInnerVoice(Player player) {
-        return root(player, false).getBoolean(HEARD_INNER_VOICE_KEY);
+    /** How many times eating a glowing_berry has shown an inner-voice scene. Gates the tooltip hint (0 = show it). */
+    public static int getInnerVoiceUses(Player player) {
+        return root(player, false).getInt(INNER_VOICE_USES_KEY);
     }
 
-    public static void setHeardInnerVoice(Player player, boolean heard) {
+    public static boolean hasHeardInnerVoice(Player player) {
+        return getInnerVoiceUses(player) > 0;
+    }
+
+    /**
+     * True for the first {@link #INNER_VOICE_FREE_USES} berries — an unconditional introduction.
+     * Beyond that, no scene fires on eating at all; later scenes are meant to be gated behind
+     * specific story triggers (not implemented yet) rather than every berry the player eats.
+     */
+    public static boolean canTriggerInnerVoiceFreely(Player player) {
+        return getInnerVoiceUses(player) < INNER_VOICE_FREE_USES;
+    }
+
+    public static void incrementInnerVoiceUses(Player player) {
         CompoundTag root = root(player, true);
-        root.putBoolean(HEARD_INNER_VOICE_KEY, heard);
+        root.putInt(INNER_VOICE_USES_KEY, root.getInt(INNER_VOICE_USES_KEY) + 1);
         player.getPersistentData().put(ROOT_TAG, root);
     }
 }
