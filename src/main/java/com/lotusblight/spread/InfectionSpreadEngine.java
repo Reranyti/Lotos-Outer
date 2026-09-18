@@ -324,7 +324,12 @@ public class InfectionSpreadEngine {
                 level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
                         .setValue(BlockStateProperties.WATERLOGGED, true).setValue(com.lotusblight.world.LotusRootsBlock.INFECTED, true), 3);
                 bloom(level, target, GREEN);
-                return target;
+                // This tile was already counted as infected the moment it became INFECTED_WATER
+                // (the branch above) - decorating it with roots afterward is the same tile, not
+                // new territory, so it must NOT return a position here or tickOutbreak would
+                // increment infectedBlockCount a second time for it, inflating progress/phase
+                // faster than the infection actually spread.
+                return null;
             }
             BlockPos padPos = target.above();
             BlockPos flowerPos = padPos.above();
