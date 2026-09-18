@@ -108,7 +108,12 @@ public final class RootGrowthEngine {
                 continue;
             }
             if (!queuedOutbreaks.add(outbreak.id())) continue; // at most one pending task per outbreak at a time
-            queue.offer(new RootGrowthTask(outbreak.id(), level.dimension()));
+            // Unlike GuaranteedSpawnManager/LotusEvents' worldgen queues, this previously called
+            // the uncapped offer(T) overload - with drain fixed at MAX_ROOT_TASKS_PER_TICK/tick,
+            // enough concurrently-eligible outbreaks (e.g. many phase 2+ anchors near a player)
+            // grew this queue every sweep with nothing ever rejecting an offer. Capped the same
+            // way the sibling worldgen queues already are.
+            queue.offer(new RootGrowthTask(outbreak.id(), level.dimension()), com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get());
         }
     }
 

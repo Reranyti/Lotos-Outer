@@ -88,13 +88,15 @@ public final class LotusGraftingRodItem extends Item {
         if (SpreadTables.isCleanGrass(state)) {
             BlockState below = level.getBlockState(target.below());
             if (SpreadTables.isInfectedGround(below)) {
+                // infectedGrass() returns null for tall grass/ferns/short grass by design - they
+                // die off rather than convert - but that used to mean this branch did nothing,
+                // leaving them untouched forever even on infected soil (same gap as
+                // InfectionSpreadEngine had).
                 BlockState infected = SpreadTables.infectedGrass(state);
-                if (infected != null) {
-                    level.setBlock(target, infected, 3);
-                    data.incrementChunkCount(new ChunkPos(target), 1);
-                    bloom(level, target, GREEN);
-                    return true;
-                }
+                level.setBlock(target, infected != null ? infected : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                data.incrementChunkCount(new ChunkPos(target), 1);
+                bloom(level, target, GREEN);
+                return true;
             }
             return false;
         }

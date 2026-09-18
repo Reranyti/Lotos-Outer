@@ -11,10 +11,6 @@ import java.util.function.Consumer;
 public final class LotusTaskQueue<T> {
     private final Queue<T> tasks = new ArrayDeque<>();
 
-    public void offer(T task) {
-        if (task != null) tasks.offer(task);
-    }
-
     /** Silently drops the task instead of queuing it once {@code maxSize} pending tasks are already waiting. */
     public void offer(T task, int maxSize) {
         if (task != null && tasks.size() < maxSize) tasks.offer(task);

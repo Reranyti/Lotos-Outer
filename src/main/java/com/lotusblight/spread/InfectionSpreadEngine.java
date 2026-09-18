@@ -338,11 +338,13 @@ public class InfectionSpreadEngine {
             BlockState below = level.getBlockState(target.below());
             if (SpreadTables.isInfectedGround(below)) {
                 BlockState infected = SpreadTables.infectedGrass(targetState);
-                if (infected != null) {
-                    level.setBlock(target, infected, 3);
-                    bloom(level, target, GREEN);
-                    return target;
-                }
+                // infectedGrass() returns null for tall grass/ferns/short grass by design - they
+                // "die off" rather than convert (see its own doc comment) - but null used to mean
+                // this branch did nothing at all, so they just sat there forever, untouched, even
+                // on fully infected soil. Actually remove them instead of silently no-opping.
+                level.setBlock(target, infected != null ? infected : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                bloom(level, target, GREEN);
+                return target;
             }
             return null;
         }

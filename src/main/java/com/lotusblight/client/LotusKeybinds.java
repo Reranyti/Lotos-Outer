@@ -41,11 +41,18 @@ public final class LotusKeybinds {
         @SubscribeEvent
         public static void clientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
+            Minecraft mc = Minecraft.getInstance();
+            // KeyMapping state updates before Forge/vanilla route the key event to the focused
+            // screen, so pressing M/N while typing in an anvil/sign/chat text field still
+            // registers as a click here. Still drain consumeClick() every tick (otherwise a press
+            // made while a screen is open queues up and fires unexpectedly once it closes), but
+            // only act on it when no other screen has focus - matches the guard InnerVoiceOverlay
+            // already uses for Enter for the same reason.
             while (TOGGLE_MAP.consumeClick()) {
-                LotusHudOverlay.toggleHidden();
+                if (mc.screen == null) LotusHudOverlay.toggleHidden();
             }
             while (OPEN_ATLAS.consumeClick()) {
-                Minecraft.getInstance().setScreen(new LotusAtlasScreen());
+                if (mc.screen == null) mc.setScreen(new LotusAtlasScreen());
             }
         }
     }

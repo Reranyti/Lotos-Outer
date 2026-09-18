@@ -61,7 +61,12 @@ public final class TrueLightHeartsManager {
         if (event.isWasDeath()) {
             newPlayer.setAbsorptionAmount(newPlayer.getAbsorptionAmount() + BONUS_ABSORPTION);
         } else if (newPlayer.getAbsorptionAmount() < BONUS_ABSORPTION) {
-            newPlayer.setAbsorptionAmount(newPlayer.getAbsorptionAmount() + BONUS_ABSORPTION);
+            // Top up TO the bonus amount, not add it on top - this branch fires whenever vanilla
+            // absorption might have partially carried over (e.g. an End exit-portal clone), and
+            // adding here would stack with whatever carried over instead of just restoring the
+            // bonus, permanently stranding the difference (the expiry check above only ever
+            // subtracts BONUS_ABSORPTION once).
+            newPlayer.setAbsorptionAmount(BONUS_ABSORPTION);
         }
     }
 }

@@ -36,5 +36,10 @@ public class TrueLightEffect extends MobEffect {
         if (!player.hasEffect(MobEffects.NIGHT_VISION)) {
             player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, true, false));
         }
+        if (!player.hasEffect(MobEffects.REGENERATION)) {
+            // The class doc has always claimed Night Vision/Regeneration - only Night Vision was
+            // ever actually granted here, so True Light never healed the player as documented.
+            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 220, 0, true, false));
+        }
     }
 }
