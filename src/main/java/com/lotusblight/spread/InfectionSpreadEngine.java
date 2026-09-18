@@ -312,8 +312,10 @@ public class InfectionSpreadEngine {
                 bloom(level, target, GREEN);
                 return target;
             }
-            BlockPos flowerPos = target.above();
-            if (level.getBlockState(flowerPos).isAir() && !hasNearbyShoot(level, flowerPos)) {
+            BlockPos padPos = target.above();
+            BlockPos flowerPos = padPos.above();
+            if (level.getBlockState(padPos).isAir() && level.getBlockState(flowerPos).isAir() && !hasNearbyShoot(level, flowerPos)) {
+                level.setBlock(padPos, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
                 level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
                 bloom(level, flowerPos, PINK);
                 return flowerPos;
@@ -370,10 +372,11 @@ public class InfectionSpreadEngine {
         // an anchor, and already used for the equivalent case a few lines up (water source ->
         // shoot). Throttled so it doesn't outbid ground conversion at every single attempt.
         if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER) && level.random.nextInt(3) == 0
-                && !hasNearbyShoot(level, target)) {
-            level.setBlock(target, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
-            bloom(level, target, PINK);
-            return target;
+                && !hasNearbyShoot(level, target) && level.getBlockState(target.above()).isAir()) {
+            level.setBlock(target, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
+            level.setBlock(target.above(), ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
+            bloom(level, target.above(), PINK);
+            return target.above();
         }
 
         return null;

@@ -183,13 +183,29 @@ public final class RootGrowthEngine {
         if (chain.chainLength < CHILD_MIN_CHAIN_LENGTH) return;
         if (level.random.nextDouble() >= CHILD_OUTBREAK_CHANCE) return;
 
-        BlockPos flowerPos = at.above();
-        if (!level.getBlockState(flowerPos).isAir()) return;
+        BlockPos padPos = at.above();
+        BlockPos flowerPos = padPos.above();
+        if (!level.getBlockState(padPos).isAir() || !level.getBlockState(flowerPos).isAir() || hasNearbyShoot(level, flowerPos)) return;
 
         OutbreakRecord child = data.registerOutbreak(flowerPos.immutable(), level.getGameTime(), true);
         childPhaseCaps.put(child.id(), CHILD_MAX_PHASE);
+        level.setBlock(padPos, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
         level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
         level.sendParticles(ROOT_GREEN, flowerPos.getX() + 0.5, flowerPos.getY() + 0.6, flowerPos.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
+    }
+
+    private static final int SHOOT_SPACING = 2;
+
+    /** Same spacing protection InfectionSpreadEngine uses for ordinary spread — this code path spawns shoots independently and was missing it entirely. */
+    private boolean hasNearbyShoot(ServerLevel level, BlockPos pos) {
+        for (BlockPos check : BlockPos.betweenClosed(pos.offset(-SHOOT_SPACING, -1, -SHOOT_SPACING), pos.offset(SHOOT_SPACING, 1, SHOOT_SPACING))) {
+            if (check.equals(pos)) continue;
+            var state = level.getBlockState(check);
+            if (state.is(ModBlocks.LOTUS_SHOOT.get()) || state.is(ModBlocks.INFECTED_LOTUS.get()) || state.is(ModBlocks.LOTUS_HEART.get())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

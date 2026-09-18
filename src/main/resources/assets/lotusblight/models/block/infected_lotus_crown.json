@@ -4,87 +4,18 @@
   "render_type": "minecraft:cutout",
   "textures": {
     "cross": "lotusblight:block/infected_lotus",
-    "pad": "lotusblight:block/lotus_leaves",
     "particle": "lotusblight:block/infected_lotus"
   },
   "elements": [
     {
       "from": [
-        1,
-        0,
-        1
-      ],
-      "to": [
-        15,
-        1.5,
-        15
-      ],
-      "faces": {
-        "up": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#pad"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#pad"
-        },
-        "north": {
-          "uv": [
-            0,
-            0,
-            16,
-            2
-          ],
-          "texture": "#pad"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            16,
-            2
-          ],
-          "texture": "#pad"
-        },
-        "east": {
-          "uv": [
-            0,
-            0,
-            16,
-            2
-          ],
-          "texture": "#pad"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            16,
-            2
-          ],
-          "texture": "#pad"
-        }
-      }
-    },
-    {
-      "from": [
         6.5,
-        1.5,
+        0,
         6.5
       ],
       "to": [
         9.5,
-        4.5,
+        3,
         9.5
       ],
       "faces": {
@@ -147,18 +78,18 @@
     {
       "from": [
         2.5,
-        3,
+        1,
         7.4
       ],
       "to": [
         13.5,
-        9,
+        7,
         8.6
       ],
       "rotation": {
         "origin": [
           8,
-          3,
+          1,
           8
         ],
         "axis": "y",
@@ -188,18 +119,18 @@
     {
       "from": [
         2.5,
-        3,
+        1,
         7.4
       ],
       "to": [
         13.5,
-        9,
+        7,
         8.6
       ],
       "rotation": {
         "origin": [
           8,
-          3,
+          1,
           8
         ],
         "axis": "y",
@@ -229,18 +160,18 @@
     {
       "from": [
         2.5,
-        3,
+        1,
         7.4
       ],
       "to": [
         13.5,
-        9,
+        7,
         8.6
       ],
       "rotation": {
         "origin": [
           8,
-          3,
+          1,
           8
         ],
         "axis": "y",
