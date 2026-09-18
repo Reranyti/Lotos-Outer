@@ -4,18 +4,16 @@ import com.lotusblight.map.ClientMapCache;
 import com.lotusblight.map.MapMarker;
 import journeymap.api.v2.client.IClientAPI;
 import journeymap.api.v2.client.IClientPlugin;
+import journeymap.api.v2.client.event.MappingEvent;
 import journeymap.api.v2.common.JourneyMapPlugin;
+import journeymap.api.v2.common.event.ClientEventRegistry;
 import journeymap.api.v2.common.waypoint.Waypoint;
 import journeymap.api.v2.common.waypoint.WaypointFactory;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 import java.awt.Color;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Replaces the mod's own minimap/atlas (LotusHudOverlay/LotusAtlasScreen)
@@ -28,27 +26,23 @@ import java.util.UUID;
  * @JourneyMapPlugin annotation + its ServiceLoader-style plugin discovery,
  * not through anything lotusblight registers manually.
  *
- * API usage confirmed against TeamJM/journeymap-api's own testmod
- * (branch 1.20.1_2.0, SampleWaypointFactory.java) — WaypointFactory.createWaypoint
- * is a static call, not an instantiated factory (unlike the internal,
- * @ApiStatus.Internal WaypointStore-based constructor mods can't touch).
+ * The first version of this class drove syncWaypoints() from an independent
+ * Forge ClientTickEvent, completely disconnected from JourneyMap's own
+ * lifecycle — waypoints never reliably appeared. JourneyMap's own official
+ * testmod (TeamJM/journeymap-api, ClientEventListener#spawnSampleOverlays)
+ * only ever adds waypoints/overlays from inside its
+ * ClientEventRegistry.MAPPING_EVENT handler on Stage.MAPPING_STARTED, and
+ * clears them via IClientAPI#removeAll when mapping stops. This now follows
+ * that same pattern instead of ticking independently.
  */
 @JourneyMapPlugin(apiVersion = "2.0.0")
 public class LotusJourneyMapPlugin implements IClientPlugin {
 
     private static final String MOD_ID = "lotusblight";
 
-    /**
-     * JourneyMap instantiates this class itself (reflection, no-arg constructor) via its own
-     * plugin discovery — IClientPlugin has no tick/periodic callback, only initialize()/getModId().
-     * Stashing the instance here lets a separate Forge ClientTickEvent handler (TODO: not yet
-     * wired) call syncWaypoints() periodically without needing to locate the JourneyMap-owned
-     * instance any other way.
-     */
     private static LotusJourneyMapPlugin instance;
 
     private IClientAPI journeyMapClientApi;
-    private final Set<UUID> shownWaypointIds = new HashSet<>();
 
     public static LotusJourneyMapPlugin instance() {
         return instance;
@@ -58,6 +52,7 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
     public void initialize(IClientAPI jmClientApi) {
         this.journeyMapClientApi = jmClientApi;
         instance = this;
+        ClientEventRegistry.MAPPING_EVENT.subscribe(MOD_ID, this::onMappingEvent);
     }
 
     @Override
@@ -65,21 +60,32 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
         return MOD_ID;
     }
 
-    /** Called periodically (e.g. from a client tick handler wired elsewhere) whenever ClientMapCache updates. */
-    public void syncWaypoints() {
-        if (journeyMapClientApi == null || Minecraft.getInstance().level == null) {
-            return;
+    private void onMappingEvent(MappingEvent event) {
+        if (event.getStage() == MappingEvent.Stage.MAPPING_STARTED) {
+            syncWaypoints(event.dimension);
+        } else {
+            journeyMapClientApi.removeAll(MOD_ID);
         }
-        ResourceKey<Level> dimension = Minecraft.getInstance().level.dimension();
-        Set<UUID> stillPresent = new HashSet<>();
+    }
+
+    /** Called on MAPPING_STARTED, and again periodically (see JourneyMapSyncTicker) whenever ClientMapCache updates. */
+    public void syncWaypoints() {
+        if (journeyMapClientApi == null) return;
+        ResourceKey<Level> dimension = net.minecraft.client.Minecraft.getInstance().level != null
+                ? net.minecraft.client.Minecraft.getInstance().level.dimension() : null;
+        if (dimension == null) return;
+        syncWaypoints(dimension);
+    }
+
+    private void syncWaypoints(ResourceKey<Level> dimension) {
+        if (journeyMapClientApi == null) return;
+        journeyMapClientApi.removeAll(MOD_ID);
         for (MapMarker marker : ClientMapCache.markers()) {
-            stillPresent.add(marker.id());
             BlockPos pos = marker.pos();
             Waypoint waypoint = WaypointFactory.createWaypoint(MOD_ID, pos, dimension, true);
-            waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.GREEN.getRGB());
+            waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
+            waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
             journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
-            shownWaypointIds.add(marker.id());
         }
-        shownWaypointIds.retainAll(stillPresent);
     }
 }

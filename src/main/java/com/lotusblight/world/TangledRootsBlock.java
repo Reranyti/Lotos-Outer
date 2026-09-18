@@ -1,11 +1,13 @@
 package com.lotusblight.world;
 
+import com.lotusblight.registry.ModEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -33,8 +35,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public final class TangledRootsBlock extends Block implements SimpleWaterloggedBlock {
 
-    /** Thick, low tangle of roots — solid enough to feel like an obstruction without fully blocking the water column. */
-    private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 10.0, 16.0);
+    // Was 10/16 tall - close enough to a full block that it effectively walled off the waterway
+    // instead of just slowing a swim through it. Lowered so there's real clearance above to swim
+    // through, matching the "obstruction, not a wall" intent in the class doc below.
+    private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 6.0, 16.0);
 
     public TangledRootsBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -75,8 +79,14 @@ public final class TangledRootsBlock extends Block implements SimpleWaterloggedB
 
     @Override
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (!level.isClientSide && entity instanceof LivingEntity living) {
+        // Used to only slow the entity down - the wiki/lore have always talked about infected
+        // roots/water spreading spores through contact, but tangled_roots (the one root variant
+        // you actually have to push through) never applied any.
+        if (!level.isClientSide && entity instanceof LivingEntity living && !(entity instanceof Player player && player.getAbilities().invulnerable)) {
             living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1, false, false, true));
+            if (level.random.nextInt(20) == 0) {
+                living.addEffect(new MobEffectInstance(ModEffects.LOTUS_SPORES.get(), 100, 0));
+            }
         }
         super.entityInside(state, level, pos, entity);
     }

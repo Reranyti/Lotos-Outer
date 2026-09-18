@@ -44,7 +44,12 @@ public class LotusMimicBlock extends Block {
                     0.0, 0.03, 0.0);
         }
         level.playSound(null, pos, SoundEvents.SLIME_ATTACK, SoundSource.BLOCKS, 0.65f, 0.75f);
-        level.setBlock(pos, ModBlocks.INFECTED_LOTUS.get().defaultBlockState(), 3);
+        // This used to turn into ModBlocks.INFECTED_LOTUS - the big main anchor pad
+        // (LotusMainBlock), placed here with no OutbreakSavedData registration at all. That's a
+        // real anchor-shaped block (its own BlockEntity, oversized VoxelShape, idle animation)
+        // sitting in the world completely disconnected from the infection system - an orphan.
+        // The trap having "sprung" should just reveal a normal, harmless decorative flower.
+        level.setBlock(pos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
     }
 }
 

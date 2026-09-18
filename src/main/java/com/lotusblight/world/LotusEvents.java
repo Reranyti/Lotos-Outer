@@ -293,6 +293,27 @@ public class LotusEvents {
         event.setCanceled(true);
     }
 
+    /** The real clean counterpart of an infected block, or null if this block isn't something cleansing powder touches. */
+    private net.minecraft.world.level.block.state.BlockState cleanReplacementFor(net.minecraft.world.level.block.state.BlockState infected) {
+        if (infected.is(ModBlocks.INFECTED_SOIL.get()) || infected.is(ModBlocks.LOTUS_DIRT.get())) return Blocks.DIRT.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_SAND.get())) return Blocks.SAND.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_GRAVEL.get())) return Blocks.GRAVEL.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_STONE.get())) return Blocks.STONE.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_TERRACOTTA.get())) return Blocks.TERRACOTTA.defaultBlockState();
+        if (infected.is(ModBlocks.BLOSSOM_GRASS.get())) return Blocks.GRASS_BLOCK.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_LOG.get())) return Blocks.OAK_LOG.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_LEAVES.get())) return Blocks.OAK_LEAVES.defaultBlockState();
+        if (infected.is(ModBlocks.INFECTED_WATER.get())) return Blocks.WATER.defaultBlockState();
+        if (infected.is(ModBlocks.LOTUS_ROOTS.get()) || infected.is(ModBlocks.TANGLED_ROOTS.get())) {
+            // Decorative growth, not real ground - clear it back to whatever it was actually
+            // sitting in (water if waterlogged, air otherwise), never solid dirt.
+            boolean waterlogged = infected.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)
+                    && infected.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED);
+            return waterlogged ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
+        }
+        return null;
+    }
+
     @SubscribeEvent
     public void onPlayerInteract(PlayerInteractEvent.RightClickItem event) {
         if (event.getItemStack().is(ModItems.CLEANSING_POWDER.get()) && event.getEntity().level() instanceof ServerLevel level) {
@@ -300,8 +321,14 @@ public class LotusEvents {
             BlockPos pos = event.getEntity().blockPosition();
             int cleansed = 0;
             for (BlockPos target : BlockPos.betweenClosed(pos.offset(-2, -1, -2), pos.offset(2, 1, 2))) {
-                if (level.getBlockState(target).is(ModBlocks.INFECTED_SOIL.get()) || level.getBlockState(target).is(ModBlocks.INFECTED_WATER.get()) || level.getBlockState(target).is(ModBlocks.LOTUS_ROOTS.get())) {
-                    level.setBlock(target, Blocks.DIRT.defaultBlockState(), 3);
+                // This used to only recognize 3 of the ~10 infected block types, and reverted ALL
+                // of them - including the infected_water FLUID - to solid Blocks.DIRT. Cleansing a
+                // patch of infected river visibly filled it in with land instead of turning it
+                // back into water. Now every infected block type reverts to its real clean
+                // counterpart instead of one wrong catch-all.
+                net.minecraft.world.level.block.state.BlockState cleanState = cleanReplacementFor(level.getBlockState(target));
+                if (cleanState != null) {
+                    level.setBlock(target, cleanState, 3);
                     data.incrementChunkCount(new ChunkPos(target), -1);
                     cleansed++;
                     level.sendParticles(GREEN, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 4, 0.2, 0.2, 0.2, 0.01);
