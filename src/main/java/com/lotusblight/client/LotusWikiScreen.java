@@ -89,6 +89,35 @@ public final class LotusWikiScreen extends Screen {
         return 0xFF000000 | (r << 16) | (gr << 8) | b;
     }
 
+    /**
+     * "Голос проступает сквозь страницу" — a persistent, gently pulsing gold ghost drawn just
+     * behind the normal text (offset by 1px, lower alpha), instead of the plain flash-fade other
+     * pages get. Matches the reference: the ordinary handwritten note with a glowing overlay of
+     * something else reading/speaking through it.
+     */
+    private void drawVoiceOverlayText(GuiGraphics g, List<net.minecraft.util.FormattedCharSequence> lines, int x, int y) {
+        float pulse = (float) (0.5 + 0.5 * Math.sin(System.currentTimeMillis() / 380.0));
+        int ghostAlpha = 0x50 + (int) (pulse * 0x50);
+        int ghostColor = (ghostAlpha << 24) | 0xFFD54F;
+        for (int i = 0; i < lines.size(); i++) {
+            int lineY = y + i * 11;
+            g.drawString(this.font, lines.get(i), x - 1, lineY - 1, ghostColor, false);
+            g.drawString(this.font, lines.get(i), x + 1, lineY + 1, ghostColor, false);
+            g.drawString(this.font, lines.get(i), x, lineY, 0xFFE4E7D8, false);
+        }
+    }
+
+    private void drawSparkles(GuiGraphics g, int left, int top) {
+        int[][] positions = {{40, 60}, {WIDTH - 60, 90}, {60, HEIGHT - 60}, {WIDTH - 90, HEIGHT - 90}, {WIDTH / 2, 40}};
+        for (int i = 0; i < positions.length; i++) {
+            float phase = (System.currentTimeMillis() / 300.0f) + i * 1.3f;
+            float twinkle = (float) (0.4 + 0.6 * Math.abs(Math.sin(phase)));
+            int alpha = (int) (twinkle * 0xFF);
+            int color = (alpha << 24) | 0xFFD54F;
+            g.drawString(this.font, "*", left + positions[i][0], top + positions[i][1], color, false);
+        }
+    }
+
     private void updateButtons() {
         tabButton.setMessage(Component.literal(journalTab ? "-> Вики" : "-> Дневник"));
         prevButton.active = pageIndex > 0;
@@ -109,11 +138,19 @@ public final class LotusWikiScreen extends Screen {
         g.drawString(this.font, heading, left + 18, top + 18, 0xFFF1A9CF, false);
 
         List<String> pages = pages();
-        String pageText = pages.isEmpty() ? "" : pages.get(pageIndex);
+        String rawText = pages.isEmpty() ? "" : pages.get(pageIndex);
+        boolean voiceEntry = rawText.startsWith(LotusWikiLibrary.VOICE_MARKER);
+        String pageText = voiceEntry ? rawText.substring(LotusWikiLibrary.VOICE_MARKER.length()) : rawText;
         var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
-        int textColor = currentTextColor();
-        for (int i = 0; i < lines.size(); i++) {
-            g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);
+
+        if (voiceEntry) {
+            drawSparkles(g, left, top);
+            drawVoiceOverlayText(g, lines, left + 18, top + 46);
+        } else {
+            int textColor = currentTextColor();
+            for (int i = 0; i < lines.size(); i++) {
+                g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);
+            }
         }
 
         String counter = (pageIndex + 1) + " / " + pages.size();
