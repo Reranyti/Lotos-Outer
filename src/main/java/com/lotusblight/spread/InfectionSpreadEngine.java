@@ -305,8 +305,18 @@ public class InfectionSpreadEngine {
 
         BlockState targetState = level.getBlockState(target);
 
-        // Water source -> infected water, followed by an occasional surface shoot.
+        // Clean water source -> infected water. This is the "reincarnation" the wiki always
+        // claimed but nothing ever actually did: INFECTED_WATER is a fully registered fluid
+        // (own bucket, cleansing powder reverses it) that no code path ever placed, so natural
+        // spread visually never touched water at all. Roots/shoots grow only once the water
+        // here is already infected, one tick later.
         if (level.getFluidState(target).is(Fluids.WATER) && level.getFluidState(target).isSource()) {
+            level.setBlock(target, ModBlocks.INFECTED_WATER.get().defaultBlockState(), 3);
+            bloom(level, target, GREEN);
+            return target;
+        }
+
+        if (level.getFluidState(target).is(ModFluids.INFECTED_WATER.get()) && level.getFluidState(target).isSource()) {
             if (!targetState.is(ModBlocks.LOTUS_ROOTS.get()) && level.random.nextInt(3) != 0) {
                 level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true), 3);
                 bloom(level, target, GREEN);

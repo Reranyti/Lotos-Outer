@@ -219,9 +219,15 @@ public final class RootGrowthEngine {
         List<Direction> directions = new ArrayList<>(List.of(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST));
         java.util.Collections.shuffle(directions, new java.util.Random(level.random.nextLong()));
 
+        // Checked in this order (same level, then gently down/up) instead of strictly top-to-
+        // bottom (+1..-2): scanning top-down let the chain jump straight to a candidate 2-3
+        // blocks below the tip whenever the same-level spot didn't happen to pass first, so
+        // consecutive links could differ by 3 blocks of height on a 1-block horizontal step —
+        // reads as the thread skipping through a block instead of winding continuously.
+        int[] dyOrder = {0, -1, 1, -2};
         for (Direction dir : directions) {
             BlockPos base = tip.relative(dir);
-            for (int dy = 1; dy >= -2; dy--) {
+            for (int dy : dyOrder) {
                 BlockPos probe = base.offset(0, dy, 0);
                 if (!level.hasChunkAt(probe)) continue;
 
