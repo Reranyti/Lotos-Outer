@@ -3,6 +3,7 @@ package com.lotusblight.client;
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.dialogue.LotusDialogueLibrary;
 import com.lotusblight.map.ClientPlayerStateCache;
+import com.lotusblight.map.DialogueAnswerPacket;
 import com.lotusblight.map.DialogueChoicePacket;
 import com.lotusblight.map.NetworkHandler;
 import net.minecraft.client.Minecraft;
@@ -34,7 +35,12 @@ public final class LotusDialogueScreen extends Screen {
 
     public LotusDialogueScreen(int phase, BlockHitResult target) {
         super(Component.literal("Разговор с лотосом"));
-        this.phase = Math.max(0, Math.min(3, phase));
+        // Real outbreak phases are 1-4 (see InfectionPhases), but this field and
+        // LotusDialogueLibrary's dialogue tiers are 0-indexed (0-3) - passing the raw 1-4 value
+        // straight through used to shift every real phase one tier too advanced (a brand new
+        // phase-1 "Цветение" outbreak read phase-2 "Захват реки" dialogue, etc.) and made
+        // headerRight()'s phase LABEL disagree with the boss bar for the same outbreak.
+        this.phase = Math.max(0, Math.min(3, phase - 1));
         this.target = target;
         Minecraft client = Minecraft.getInstance();
         this.held = client.player == null ? ItemStack.EMPTY : client.player.getMainHandItem().copy();
@@ -137,6 +143,12 @@ public final class LotusDialogueScreen extends Screen {
                 rebuildButtons();
                 return;
             }
+        } else {
+            // Branch-specific answers used to just advance or close the text with no actual
+            // effect - "Где твой настоящий якорь?"/"Я найду твоё Сердце" asked a real question
+            // and got nothing back. Dispatch to the server so specific answers can grant a real
+            // payoff (see DialogueAnswerPacket), then fall through to the normal advance/close flow.
+            NetworkHandler.CHANNEL.sendToServer(new DialogueAnswerPacket(branch.ordinal(), choice));
         }
         if (choice == primaryAnswers.length - 1) {
             if (this.minecraft != null) this.minecraft.setScreen(null);
@@ -207,13 +219,11 @@ public final class LotusDialogueScreen extends Screen {
         };
     }
 
+    /** Delegates to the canonical phase names instead of keeping its own copy - the duplicate
+     * here had drifted from InfectionPhases' real names ("Захват соседей"/"Мини-биом" vs the
+     * boss bar's "Захват ближников"/"Лотосовый мини-биом") on top of the indexing bug above. */
     private String phaseName() {
-        return switch (phase) {
-            case 1 -> "Захват реки";
-            case 2 -> "Захват соседей";
-            case 3 -> "Мини-биом";
-            default -> "Цветение";
-        };
+        return com.lotusblight.spread.InfectionPhases.phaseName(phase + 1);
     }
 
     @Override

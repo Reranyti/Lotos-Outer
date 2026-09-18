@@ -21,8 +21,11 @@ public final class ModFluids {
             .viscosity(1100)
             .temperature(285)
             .lightLevel(2)
-            .canSwim(false)
-            .canDrown(false)
+            // Both were false - a supposedly dangerous "infected" water that let the player
+            // breathe indefinitely and disabled swim physics, the opposite of threatening.
+            // Matches plain water's own defaults now.
+            .canSwim(true)
+            .canDrown(true)
             .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
             .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)) {
         // Forge 1.20.1 has no RegisterClientExtensionsEvent (that's a later-version API) —

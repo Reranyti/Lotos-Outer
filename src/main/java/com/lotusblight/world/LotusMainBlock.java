@@ -28,7 +28,12 @@ public final class LotusMainBlock extends Block implements EntityBlock {
     // Deliberately oversized past the normal 0-16 block bounds — same trick the old crown
     // collision box already used (-4..20) for the petals; here it's stretched much further so
     // the big pad reads as ~4 blocks wide. Kept low/thin so it stays walkable like a real pad.
-    private static final VoxelShape PAD_SHAPE = Block.box(-16, 0, -16, 32, 3, 32);
+    // The pad geometry is a square plus its 45-degree-rotated twin (see infected_lotus_crown.geo.json)
+    // - the rotated diamond's corners reach further out than a plain square (±28.28 from center
+    // vs ±24 for the old full-square model this shape used to match), so the old -16..32 outline
+    // cut the star's diagonal tips off, making the selection/interaction hitbox look offset from
+    // the visible model.
+    private static final VoxelShape PAD_SHAPE = Block.box(-20, 0, -20, 36, 3, 36);
 
     public LotusMainBlock(BlockBehaviour.Properties properties) {
         super(properties);
