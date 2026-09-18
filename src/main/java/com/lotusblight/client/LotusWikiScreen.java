@@ -23,8 +23,14 @@ public final class LotusWikiScreen extends Screen {
     private static final int WIDTH = 380;
     private static final int HEIGHT = 260;
 
+    /** How long the just-turned page's text stays flashed gold before fading to its normal color — the "Звёздный свет" note feel the user asked for. */
+    private static final long PAGE_FLASH_MS = 450;
+    private static final int FLASH_COLOR = 0xFFFFD54F;
+    private static final int NORMAL_COLOR = 0xFFE4E7D8;
+
     private boolean journalTab;
     private int pageIndex;
+    private long pageShownAtMs;
     private Button prevButton;
     private Button nextButton;
     private Button tabButton;
@@ -49,18 +55,38 @@ public final class LotusWikiScreen extends Screen {
         nextButton = addRenderableWidget(Button.builder(Component.literal(">"), b -> turnPage(1))
                 .bounds(left + WIDTH - 56, top + HEIGHT - 32, 40, 20).build());
         updateButtons();
+        pageShownAtMs = System.currentTimeMillis();
     }
 
     private void switchTab() {
         journalTab = !journalTab;
         pageIndex = 0;
         updateButtons();
+        pageShownAtMs = System.currentTimeMillis();
     }
 
     private void turnPage(int delta) {
         int size = pages().size();
         pageIndex = Math.max(0, Math.min(size - 1, pageIndex + delta));
         updateButtons();
+        pageShownAtMs = System.currentTimeMillis();
+    }
+
+    /** Fresh page's text starts gold ("Звёздный свет"-style) and eases down to its normal color. */
+    private int currentTextColor() {
+        long elapsed = System.currentTimeMillis() - pageShownAtMs;
+        if (elapsed >= PAGE_FLASH_MS) return NORMAL_COLOR;
+        float t = elapsed / (float) PAGE_FLASH_MS;
+        return lerpColor(FLASH_COLOR, NORMAL_COLOR, t);
+    }
+
+    private static int lerpColor(int from, int to, float t) {
+        int fr = (from >> 16) & 0xFF, fg = (from >> 8) & 0xFF, fb = from & 0xFF;
+        int tr = (to >> 16) & 0xFF, tg = (to >> 8) & 0xFF, tb = to & 0xFF;
+        int r = (int) (fr + (tr - fr) * t);
+        int gr = (int) (fg + (tg - fg) * t);
+        int b = (int) (fb + (tb - fb) * t);
+        return 0xFF000000 | (r << 16) | (gr << 8) | b;
     }
 
     private void updateButtons() {
@@ -85,8 +111,9 @@ public final class LotusWikiScreen extends Screen {
         List<String> pages = pages();
         String pageText = pages.isEmpty() ? "" : pages.get(pageIndex);
         var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
+        int textColor = currentTextColor();
         for (int i = 0; i < lines.size(); i++) {
-            g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, 0xFFE4E7D8, false);
+            g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);
         }
 
         String counter = (pageIndex + 1) + " / " + pages.size();
