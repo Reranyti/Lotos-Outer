@@ -117,7 +117,8 @@ public final class EpicenterManager {
         for (int y = top; y >= bottom; y--) {
             BlockPos pos = new BlockPos(x, y, z);
             if (level.getFluidState(pos).is(Fluids.WATER) && level.getFluidState(pos).isSource()
-                    && level.getBlockState(pos.above()).isAir()) {
+                    && level.getBlockState(pos.above()).isAir()
+                    && WaterClearance.hasClearWaterAround(level, pos, WaterClearance.REQUIRED_RADIUS)) {
                 return pos;
             }
         }

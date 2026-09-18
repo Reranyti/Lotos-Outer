@@ -89,7 +89,11 @@ public final class GuaranteedSpawnManager {
             for (int y = top; y >= bottom; y--) {
                 BlockPos pos = new BlockPos(x, y, z);
                 if (level.getFluidState(pos).is(Fluids.WATER) && level.getFluidState(pos).isSource()
-                        && level.getBlockState(pos.above()).isAir()) {
+                        && level.getBlockState(pos.above()).isAir()
+                        // The anchor placed here is the big lily-pad-sized LotusMainBlock, not a
+                        // small decorative shoot — it needs real open water around it or it clips
+                        // into the shore.
+                        && WaterClearance.hasClearWaterAround(level, pos, WaterClearance.REQUIRED_RADIUS)) {
                     return pos;
                 }
             }

@@ -146,8 +146,13 @@ public class LotusEvents {
         int bottom = Math.max(level.getMinBuildHeight() + 1, 32);
         for (int y = top; y >= bottom; y--) {
             BlockPos pos = new BlockPos(x, y, z);
+            // Every caller of this places the big-lily-pad main anchor, not a small shoot —
+            // it needs real open water around it or the pad clips into the shore.
             if (level.getFluidState(pos).is(Fluids.WATER) && level.getFluidState(pos).isSource()
-                    && level.getBlockState(pos.above()).isAir()) return pos;
+                    && level.getBlockState(pos.above()).isAir()
+                    && com.lotusblight.worldgen.WaterClearance.hasClearWaterAround(level, pos, com.lotusblight.worldgen.WaterClearance.REQUIRED_RADIUS)) {
+                return pos;
+            }
         }
         return null;
     }

@@ -510,12 +510,6 @@ public class InfectionSpreadEngine {
      */
     public static boolean promoteAnchorToHeart(ServerLevel level, BlockPos pos) {
         if (!level.getBlockState(pos).is(ModBlocks.INFECTED_LOTUS.get())) return false;
-        for (int i = 1; i < 4; i++) {
-            BlockPos above = pos.above(i);
-            if (level.getBlockState(above).is(ModBlocks.INFECTED_LOTUS.get())) {
-                level.removeBlock(above, false);
-            }
-        }
         level.setBlock(pos, ModBlocks.LOTUS_HEART.get().defaultBlockState(), 3);
         level.sendParticles(PINK, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 40, 1.0, 1.0, 1.0, 0.05);
         level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0f, 0.6f);
