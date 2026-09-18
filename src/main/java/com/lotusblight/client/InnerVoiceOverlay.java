@@ -36,8 +36,10 @@ public final class InnerVoiceOverlay {
     private static final int HINT_COLOR = 0x90FFD54F;
     private static final int BOX_COLOR = 0xC0141414;
     private static final int BOX_BORDER = 0xFFFFD54F;
-    private static final int VIGNETTE = 0x50FFD54F;
-    private static final int VIGNETTE_THICKNESS = 5;
+    private static final int VIGNETTE = 0x60FFD54F;
+    /** Was 5 (a thin hard-edged border, not a vignette at all) - a real vignette needs to be a
+     * large soft gradient reaching well into the screen, not a border a few pixels wide. */
+    private static final int VIGNETTE_THICKNESS = 140;
 
     private static final Deque<String> queue = new ArrayDeque<>();
     private static String activeText;
@@ -123,13 +125,22 @@ public final class InnerVoiceOverlay {
         }
     }
 
-    /** A thin translucent gold border along all four screen edges, gradient-faded inward. */
+    /**
+     * A soft golden vignette reaching well into the screen from all four edges, quadratically
+     * fading toward the center - not a thin bordered frame. Capped to a fraction of the screen
+     * so it never eats the whole view on a small window.
+     */
     private static void drawVignette(GuiGraphics g) {
         int w = g.guiWidth();
         int h = g.guiHeight();
-        for (int i = 0; i < VIGNETTE_THICKNESS; i++) {
-            int alpha = ((VIGNETTE >> 24) & 0xFF) * (VIGNETTE_THICKNESS - i) / VIGNETTE_THICKNESS;
-            int color = (alpha << 24) | (VIGNETTE & 0xFFFFFF);
+        int maxAlpha = (VIGNETTE >> 24) & 0xFF;
+        int rgb = VIGNETTE & 0xFFFFFF;
+        int thickness = Math.min(VIGNETTE_THICKNESS, Math.min(w, h) / 3);
+        for (int i = 0; i < thickness; i++) {
+            float t = (thickness - i) / (float) thickness;
+            int alpha = Math.round(maxAlpha * t * t);
+            if (alpha <= 0) continue;
+            int color = (alpha << 24) | rgb;
             g.fill(i, i, w - i, i + 1, color);
             g.fill(i, h - i - 1, w - i, h - i, color);
             g.fill(i, i, i + 1, h - i, color);
