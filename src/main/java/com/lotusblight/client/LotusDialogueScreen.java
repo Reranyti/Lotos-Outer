@@ -203,7 +203,12 @@ public final class LotusDialogueScreen extends Screen {
             titleLeft += 22;
         }
         graphics.drawString(this.font, Component.literal(asideOpen ? "ПОЛЕВОЙ ЖУРНАЛ" : "ГЛАВНЫЙ ЛОТОС"), titleLeft, top + 18, asideOpen ? 0xFF9AD47D : 0xFFF1A9CF, false);
-        graphics.drawString(this.font, Component.literal(headerRight()), left + 240, top + 18, branchColor(), false);
+        // Was a fixed "left + 240" offset - long combinations like "Фаза: Увядание | Ветка: Альянс"
+        // only had ~120px before the panel's own right edge and overflowed past it. Right-aligning
+        // against the panel's own width means it always fits, growing left instead of overflowing right.
+        String headerRightText = headerRight();
+        int headerRightX = left + width - 14 - this.font.width(headerRightText);
+        graphics.drawString(this.font, Component.literal(headerRightText), headerRightX, top + 18, branchColor(), false);
         graphics.drawString(this.font, Component.literal("В руке: " + held.getHoverName().getString()), left + 18, top + 47, 0xFFB8C8BE, false);
         var lines = this.font.split(Component.literal(lotusText), width - 36);
         for (int i = 0; i < lines.size(); i++) {
