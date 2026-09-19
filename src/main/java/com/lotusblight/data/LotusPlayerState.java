@@ -28,6 +28,8 @@ public final class LotusPlayerState {
     private static final String FULL_MAP_VISIBILITY_KEY = "FullMapVisibility";
     private static final String INNER_VOICE_USES_KEY = "InnerVoiceUses";
     private static final String HAS_TALKED_KEY = "HasTalkedToLotus";
+    private static final String RECEIVED_CLEANSING_POWDER_KEY = "ReceivedCleansingPowderGift";
+    private static final String RECEIVED_GRAFTING_ROD_KEY = "ReceivedGraftingRodGift";
     /** First two berries always show a scene, no conditions attached — an introduction, not a reward. */
     public static final int INNER_VOICE_FREE_USES = 2;
 
@@ -119,6 +121,31 @@ public final class LotusPlayerState {
     public static void incrementInnerVoiceUses(Player player) {
         CompoundTag root = root(player, true);
         root.putInt(INNER_VOICE_USES_KEY, root.getInt(INNER_VOICE_USES_KEY) + 1);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /**
+     * The dialogue's "give me powder" / "give me a grafting rod" answers used to grant the item
+     * on every single click with no gate at all - reopening the dialogue and picking the same
+     * answer repeatedly was an infinite item duplication exploit. These are one-time claims.
+     */
+    public static boolean hasReceivedCleansingPowderGift(Player player) {
+        return root(player, false).getBoolean(RECEIVED_CLEANSING_POWDER_KEY);
+    }
+
+    public static void setReceivedCleansingPowderGift(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(RECEIVED_CLEANSING_POWDER_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static boolean hasReceivedGraftingRodGift(Player player) {
+        return root(player, false).getBoolean(RECEIVED_GRAFTING_ROD_KEY);
+    }
+
+    public static void setReceivedGraftingRodGift(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(RECEIVED_GRAFTING_ROD_KEY, true);
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
