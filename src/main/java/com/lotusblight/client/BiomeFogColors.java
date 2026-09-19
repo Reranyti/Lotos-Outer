@@ -29,6 +29,44 @@ public final class BiomeFogColors {
         put("minecraft:snowy_taiga", 0xE8EDEB);
         put("minecraft:old_growth_pine_taiga", 0xE8EDEB);
         put("minecraft:old_growth_spruce_taiga", 0xE8EDEB);
+        put("minecraft:snowy_plains", 0xE8EDEB);
+        put("minecraft:ice_spikes", 0xE8EDEB, 0x3A6FC9);
+        put("minecraft:grove", 0xE8EDEB);
+        put("minecraft:snowy_slopes", 0xE8EDEB);
+        put("minecraft:frozen_peaks", 0xE8EDEB, 0x6FC9D4);
+        put("minecraft:jagged_peaks", 0xE8EDEB, 0x6FC9D4, 0xC93A3A);
+        put("minecraft:stony_peaks", 0xE8EDEB, 0x8C8C8C);
+        put("minecraft:snowy_beach", 0xE8EDEB, 0xC9B93A);
+        put("minecraft:frozen_river", 0xE8EDEB, 0x3A6FC9);
+        put("minecraft:desert", 0xD4B843);
+        put("minecraft:savanna", 0xD4823A);
+        put("minecraft:savanna_plateau", 0xD4823A, 0xE8EDEB);
+        put("minecraft:badlands", 0x3A2418);
+        put("minecraft:eroded_badlands", 0x2E1C14, 0x120A08);
+        put("minecraft:wooded_badlands", 0x3A2418);
+        put("minecraft:windswept_hills", 0xE8EDEB, 0x6FC9D4);
+        put("minecraft:windswept_gravelly_hills", 0xE8EDEB, 0x8C8C8C);
+        put("minecraft:windswept_forest", 0xE8EDEB, 0x5C4224);
+        put("minecraft:windswept_savanna", 0xE8EDEB, 0xD4823A);
+        put("minecraft:jungle", 0x3F6B33);
+        put("minecraft:sparse_jungle", 0x3F6B33, 0xE8EDEB);
+        put("minecraft:bamboo_jungle", 0x3F6B33, 0xE8EDEB, 0x9ACD32);
+        put("minecraft:swamp", 0x3F6B33, 0x0C140C);
+        put("minecraft:mangrove_swamp", 0x3F6B33, 0x6B1F2E);
+        put("minecraft:river", 0x3A6FC9);
+        put("minecraft:beach", 0x3A6FC9, 0xC9B93A);
+        put("minecraft:stony_shore", 0x8C8C8C, 0x3A6FC9);
+        put("minecraft:mushroom_fields", 0xC93A3A, 0xE8EDEB, 0x5C4224);
+        put("minecraft:ocean", 0x3A6FC9);
+        put("minecraft:deep_ocean", 0x1A3A6B);
+        put("minecraft:warm_ocean", 0xE8EDEB, 0x3A6FC9);
+        put("minecraft:lukewarm_ocean", 0x3A6FC9);
+        put("minecraft:deep_lukewarm_ocean", 0x3A6FC9, 0x0C1420);
+        put("minecraft:cold_ocean", 0xE8EDEB, 0x3A6FC9);
+        put("minecraft:deep_cold_ocean", 0xE8EDEB, 0x3A6FC9, 0x0C1420);
+        put("minecraft:frozen_ocean", 0x6FC9D4, 0x3A6FC9);
+        put("minecraft:deep_frozen_ocean", 0x0C1420, 0x6FC9D4, 0x3A6FC9);
+        put("streamsreflowing:stream", 0xE8EDEB, 0x6FC9D4);
     }
 
     private BiomeFogColors() {}
