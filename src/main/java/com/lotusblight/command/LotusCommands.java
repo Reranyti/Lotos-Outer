@@ -58,13 +58,13 @@ public final class LotusCommands {
                         .executes(ctx -> spawnOutbreak(ctx.getSource(), BlockPos.containing(ctx.getSource().getPosition()), 1))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> spawnOutbreak(ctx.getSource(), BlockPosArgument.getLoadedBlockPos(ctx, "pos"), 1))
-                                .then(Commands.argument("phase", IntegerArgumentType.integer(1, 4))
+                                .then(Commands.argument("phase", IntegerArgumentType.integer(1, com.lotusblight.spread.InfectionPhases.MAX_PHASE))
                                         .executes(ctx -> spawnOutbreak(ctx.getSource(),
                                                 BlockPosArgument.getLoadedBlockPos(ctx, "pos"),
                                                 IntegerArgumentType.getInteger(ctx, "phase"))))))
                 .then(Commands.literal("list").executes(ctx -> listOutbreaks(ctx.getSource())))
                 .then(Commands.literal("setphase")
-                        .then(Commands.argument("phase", IntegerArgumentType.integer(1, 4))
+                        .then(Commands.argument("phase", IntegerArgumentType.integer(1, com.lotusblight.spread.InfectionPhases.MAX_PHASE))
                                 .executes(ctx -> setNearestPhase(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "phase")))
                                 .then(Commands.argument("progress", FloatArgumentType.floatArg(0f, 1f))
                                         .executes(ctx -> setNearestPhase(ctx.getSource(),
@@ -132,7 +132,7 @@ public final class LotusCommands {
         }
         OutbreakSavedData data = OutbreakSavedData.get(source.getLevel());
         int lower = InfectionPhases.minBlockCountForPhase(phase);
-        int upper = phase < 4 ? InfectionPhases.minBlockCountForPhase(phase + 1) - 1 : lower + 120;
+        int upper = phase < InfectionPhases.MAX_PHASE ? InfectionPhases.minBlockCountForPhase(phase + 1) - 1 : lower + 120;
         int blockCount = lower + Math.round(net.minecraft.util.Mth.clamp(progress, 0f, 1f) * (upper - lower));
         // Setting a phase for testing is just numbers - it should never silently swap the anchor
         // for the world's one Heart as a side effect. Use the explicit "heart" command for that.

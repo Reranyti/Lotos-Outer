@@ -25,7 +25,13 @@ public final class InfectionPhases {
      * earned mini-biome milestone. First pass overshot to 500 and made a single deliberately
      * nurtured outbreak feel like it barely progressed at all - split the difference at 350.
      */
-    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 350};
+    /**
+     * Phase 5 ("Под контролем Мирового Лотоса") added on top of the original 4 - per the plan,
+     * getting there from phase 4 should take 3-5x longer than any prior phase transition, since
+     * it's meant to be a rare, momentous breakout rather than a routine milestone. Phase 3->4 was
+     * a 260-block gap; 1400 puts the 4->5 gap at ~1050, roughly 4x that.
+     */
+    private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 350, 1400};
 
     /**
      * Radius (blocks) a spread attempt from this phase may reach from its source block. Phase 4
@@ -36,7 +42,14 @@ public final class InfectionPhases {
      * attempts) - this alone was never going to close that gap, but it needed to stop being an
      * afterthought next to phase 3.
      */
-    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12};
+    /**
+     * Phase 5's radius is deliberately huge, not just "bigger" - per the plan, phase 5 is the
+     * point where the infection stops being locally contained at all and starts genuinely
+     * breaking out across the surface. 500 isn't a hand-picked "correct" number, just large
+     * enough that InfectionSpreadEngine's own radius-based frontier search stops being the
+     * limiting factor in practice.
+     */
+    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 500};
 
     /**
      * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,
@@ -45,19 +58,21 @@ public final class InfectionPhases {
      * "ничего не даёт", no felt danger, no felt growth. Phase 4 in particular needs to be a real
      * step up from phase 3, not a rounding error on the same curve.
      */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 7, 11, 22};
+    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 7, 11, 22, 35};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;
 
+    public static final int MAX_PHASE = 5;
+
     /** Lowest infected-block-count that counts as this phase — used by admin commands that force a phase directly. */
     public static int minBlockCountForPhase(int phase) {
-        return PHASE_UP_THRESHOLD[Math.max(1, Math.min(4, phase))];
+        return PHASE_UP_THRESHOLD[Math.max(1, Math.min(MAX_PHASE, phase))];
     }
 
     public static int phaseForBlockCount(int infectedBlockCount) {
         int phase = 1;
-        for (int p = 2; p <= 4; p++) {
+        for (int p = 2; p <= MAX_PHASE; p++) {
             if (infectedBlockCount >= PHASE_UP_THRESHOLD[p]) {
                 phase = p;
             }
@@ -67,16 +82,16 @@ public final class InfectionPhases {
 
     public static float progressWithinPhase(int phase, int infectedBlockCount) {
         int lower = PHASE_UP_THRESHOLD[phase];
-        int upper = phase < 4 ? PHASE_UP_THRESHOLD[phase + 1] : Math.max(lower + 1, lower + 120);
+        int upper = phase < MAX_PHASE ? PHASE_UP_THRESHOLD[phase + 1] : Math.max(lower + 1, lower + 120);
         return net.minecraft.util.Mth.clamp((infectedBlockCount - lower) / (float) (upper - lower), 0f, 1f);
     }
 
     public static int spreadRadius(int phase) {
-        return SPREAD_RADIUS[Math.max(1, Math.min(4, phase))];
+        return SPREAD_RADIUS[Math.max(1, Math.min(MAX_PHASE, phase))];
     }
 
     public static int attemptsPerTick(int phase) {
-        return ATTEMPTS_PER_TICK[Math.max(1, Math.min(4, phase))];
+        return ATTEMPTS_PER_TICK[Math.max(1, Math.min(MAX_PHASE, phase))];
     }
 
     public static boolean canGrowVineBarrier(int phase) {
@@ -92,7 +107,8 @@ public final class InfectionPhases {
             case 1 -> "Цветение";
             case 2 -> "Захват реки";
             case 3 -> "Захват ближников";
-            default -> "Лотосовый мини-биом";
+            case 4 -> "Лотосовый мини-биом";
+            default -> "Под контролем Мирового Лотоса";
         };
     }
 }
