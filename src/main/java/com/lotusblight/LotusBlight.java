@@ -156,7 +156,8 @@ public class LotusBlight {
     private void registerBlockColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Block event) {
         event.register(com.lotusblight.client.InfectedGroundColor.INSTANCE,
                 ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
-                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get());
+                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get(),
+                ModBlocks.LOTUS_LOG.get(), ModBlocks.LOTUS_LEAVES.get());
     }
 
     /**
@@ -168,7 +169,8 @@ public class LotusBlight {
     private void registerItemColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) {
         event.register((stack, tintIndex) -> 0xFFFFFF,
                 ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
-                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get());
+                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get(),
+                ModBlocks.LOTUS_LOG.get(), ModBlocks.LOTUS_LEAVES.get());
     }
 
     private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
