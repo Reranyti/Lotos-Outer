@@ -91,12 +91,21 @@ public final class BiomeInfectionColors {
 
         colors("hot_dry",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x4098DE,        // red_sand.png
+                InfectedMaterial.SAND, 0x24305C,        // sand.png (real deserts are yellow sand, not red - red_sand is a badlands thing, see override below)
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0x799FBC,        // dirt.png
                 InfectedMaterial.TERRACOTTA, 0x5DABD9,  // orange_terracotta.png
                 InfectedMaterial.LOG, 0x989EA8,         // acacia_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
+
+        // Badlands doesn't actually look like the rest of hot_dry - it's dominated by RED sand
+        // (not yellow) and a rainbow of terracotta color bands, not one flat orange. Blended
+        // across orange/yellow/red/white/brown/plain terracotta instead of picking just one color.
+        for (String badlandsVariant : new String[]{"minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"}) {
+            biomeColor(badlandsVariant,
+                    InfectedMaterial.SAND, 0x4098DE,        // red_sand.png
+                    InfectedMaterial.TERRACOTTA, 0x649BBF); // blend of orange/yellow/red/white/brown/plain terracotta
+        }
 
         colors("hills",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
@@ -120,14 +129,23 @@ public final class BiomeInfectionColors {
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
-                InfectedMaterial.SOIL, 0xC3C6C2,        // mud.png
+                InfectedMaterial.SOIL, 0xC2BEDE,        // grass_block_top.png (tinted with the special swamp grass/foliage color)
                 InfectedMaterial.TERRACOTTA, 0xB2CCDB,  // brown_terracotta.png
                 InfectedMaterial.LOG, 0x92AACC,         // oak_log.png (mangrove_swamp gets its own override below)
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
-        // Mangrove Swamp's own tree is nothing like the rest of swamp_water's oak - only its wood
-        // differs from the group, everything else (stone/sand/gravel/soil/terracotta) is shared.
-        biomeColor("minecraft:mangrove_swamp", InfectedMaterial.LOG, 0xABBCD6); // mangrove_log.png
+        // Birch/Dark Forest have their own distinct wood - not oak like the rest of forest_plains.
+        biomeColor("minecraft:birch_forest", InfectedMaterial.LOG, 0x26282D, InfectedMaterial.LEAVES, 0xBDAAD4);
+        biomeColor("minecraft:old_growth_birch_forest", InfectedMaterial.LOG, 0x26282D, InfectedMaterial.LEAVES, 0xBDAAD4);
+        biomeColor("minecraft:dark_forest", InfectedMaterial.LOG, 0xC3D0E5, InfectedMaterial.LEAVES, 0xD494F1);
+
+        // Mangrove Swamp doesn't actually sit on the rest of swamp_water's grass - it generates on
+        // real MUD, with its own tree (mangrove_log) and its own leaves texture (also a tint mask,
+        // like grass_block_top, tinted with the same special swamp color here).
+        biomeColor("minecraft:mangrove_swamp",
+                InfectedMaterial.SOIL, 0xC3C6C2,    // mud.png
+                InfectedMaterial.LOG, 0xABBCD6,     // mangrove_log.png
+                InfectedMaterial.LEAVES, 0xC9C7E2); // mangrove_leaves.png (tinted with swamp color)
 
         colors("ocean",
                 InfectedMaterial.STONE, 0x9C6368,       // prismarine.png
