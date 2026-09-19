@@ -36,11 +36,12 @@ public final class InnerVoiceOverlay {
     private static final int HINT_COLOR = 0x90FFD54F;
     private static final int BOX_COLOR = 0xC0141414;
     private static final int BOX_BORDER = 0xFFFFD54F;
-    private static final int VIGNETTE = 0x60FFD54F;
+    /** Was 0x60 (96/255) - too saturated/heavy a color for how often the box shows up. */
+    private static final int VIGNETTE = 0x40FFD54F;
     /** Was 5 (a thin hard-edged border, not a vignette at all) - a real vignette needs to be a
      * large soft gradient reaching well into the screen, not a border a few pixels wide. Later
      * pulled back from 140 - that read as too heavy/intrusive for how often the box shows up. */
-    private static final int VIGNETTE_THICKNESS = 100;
+    private static final int VIGNETTE_THICKNESS = 60;
     /** White - the speaker's name is unknown this early in the story ("Неизвестный"); the shimmer
      * toward gold is a visual hint that it's tied to True Light, without spelling that out yet. */
     private static final int SHIMMER_FROM = 0xFFFFFFFF;
@@ -169,9 +170,14 @@ public final class InnerVoiceOverlay {
     }
 
     /**
-     * A soft golden vignette reaching well into the screen from all four edges, quadratically
-     * fading toward the center - not a thin bordered frame. Capped to a fraction of the screen
-     * so it never eats the whole view on a small window.
+     * A soft golden vignette reaching well into the screen from all four edges, fading toward
+     * the center - not a thin bordered frame. Capped to a fraction of the screen so it never eats
+     * the whole view on a small window.
+     *
+     * The falloff used to be quadratic (t*t), which looks strong right at the edge and then dies
+     * off fast a few pixels in - reads as a hard line, not a glow. sqrt(t) keeps it near full
+     * strength for longer and lets it trail off gradually instead, which is what actually reads
+     * as "soft light" rather than a stripe.
      */
     private static void drawVignette(GuiGraphics g) {
         int w = g.guiWidth();
@@ -181,7 +187,7 @@ public final class InnerVoiceOverlay {
         int thickness = Math.min(VIGNETTE_THICKNESS, Math.min(w, h) / 3);
         for (int i = 0; i < thickness; i++) {
             float t = (thickness - i) / (float) thickness;
-            int alpha = Math.round(maxAlpha * t * t);
+            int alpha = Math.round(maxAlpha * (float) Math.sqrt(t));
             if (alpha <= 0) continue;
             int color = (alpha << 24) | rgb;
             g.fill(i, i, w - i, i + 1, color);
