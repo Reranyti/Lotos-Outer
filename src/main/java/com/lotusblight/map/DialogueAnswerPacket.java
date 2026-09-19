@@ -53,17 +53,40 @@ public class DialogueAnswerPacket {
             if (packet.branch == 1) {
                 switch (packet.answerIndex) {
                     case 0 -> revealNearestOutbreak(player, level);
-                    case 1 -> giveItem(player, ModItems.CLEANSING_POWDER.get(), 4, "Порошок принят берегом — держи запас.");
+                    case 1 -> giveCleansingPowderOnce(player);
                     case 2 -> revealHeart(player, level);
                 }
             } else if (packet.branch == 2) {
                 switch (packet.answerIndex) {
-                    case 0 -> giveItem(player, ModItems.LOTUS_GRAFTING_ROD.get(), 1, "Жезл прививки лёг тебе в руку — теперь ты можешь направлять рост сам.");
+                    case 0 -> giveGraftingRodOnce(player);
                     case 1 -> revealNearestOutbreak(player, level);
                 }
             }
         });
         ctx.setPacketHandled(true);
+    }
+
+    /**
+     * Both dialogue reward answers used to grant their item on every single click, no gate at
+     * all - reopening the dialogue and picking the same answer over and over was an infinite
+     * item duplication exploit. Each is now a one-time gift per player (see LotusPlayerState).
+     */
+    private static void giveCleansingPowderOnce(ServerPlayer player) {
+        if (com.lotusblight.data.LotusPlayerState.hasReceivedCleansingPowderGift(player)) {
+            player.displayClientMessage(Component.literal("Берег уже поделился с тобой запасом — новый порошок ищи сам."), false);
+            return;
+        }
+        com.lotusblight.data.LotusPlayerState.setReceivedCleansingPowderGift(player);
+        giveItem(player, ModItems.CLEANSING_POWDER.get(), 4, "Порошок принят берегом — держи запас.");
+    }
+
+    private static void giveGraftingRodOnce(ServerPlayer player) {
+        if (com.lotusblight.data.LotusPlayerState.hasReceivedGraftingRodGift(player)) {
+            player.displayClientMessage(Component.literal("Жезл прививки у тебя уже есть — второй тебе ни к чему."), false);
+            return;
+        }
+        com.lotusblight.data.LotusPlayerState.setReceivedGraftingRodGift(player);
+        giveItem(player, ModItems.LOTUS_GRAFTING_ROD.get(), 1, "Жезл прививки лёг тебе в руку — теперь ты можешь направлять рост сам.");
     }
 
     private static void giveItem(ServerPlayer player, net.minecraft.world.item.Item item, int count, String message) {
