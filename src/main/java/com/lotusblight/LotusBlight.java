@@ -111,6 +111,7 @@ public class LotusBlight {
         context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
+        MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MossyGlandSpreadEngine());
         MinecraftForge.EVENT_BUS.register(new BarrierEvents());
         MinecraftForge.EVENT_BUS.register(new RootGrowthEngine());
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.GuardianManager());

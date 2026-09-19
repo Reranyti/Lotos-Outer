@@ -47,7 +47,8 @@ public final class LotusCommands {
                 .requires(source -> source.hasPermission(2))
                 .then(outbreakCommands())
                 .then(branchCommands())
-                .then(mapCommands()));
+                .then(mapCommands())
+                .then(glandCommands()));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------
@@ -167,6 +168,36 @@ public final class LotusCommands {
         OutbreakSavedData.get(source.getLevel()).removeOutbreak(nearest.id());
         source.sendSuccess(() -> Component.literal("Очаг в " + nearest.pos().toShortString() + " удалён из реестра (блоки остались — сноси вручную)."), true);
         return 1;
+    }
+
+    // ---- /lotus gland ... (Mossy Glands - see MossyGlandSpreadEngine) ----------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> glandCommands() {
+        return Commands.literal("gland")
+                .then(Commands.literal("spawn")
+                        .executes(ctx -> spawnGland(ctx.getSource(), BlockPos.containing(ctx.getSource().getPosition())))
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> spawnGland(ctx.getSource(), BlockPosArgument.getLoadedBlockPos(ctx, "pos")))))
+                .then(Commands.literal("list").executes(ctx -> listGlands(ctx.getSource())));
+    }
+
+    private static int spawnGland(CommandSourceStack source, BlockPos pos) {
+        ServerLevel level = source.getLevel();
+        com.lotusblight.data.MossyGlandSavedData.get(level).registerGland(pos, level.getGameTime());
+        source.sendSuccess(() -> Component.literal("Мшистая железа посажена в " + pos.toShortString() + "."), true);
+        return 1;
+    }
+
+    private static int listGlands(CommandSourceStack source) {
+        var glands = com.lotusblight.data.MossyGlandSavedData.get(source.getLevel()).asList();
+        if (glands.isEmpty()) {
+            source.sendSuccess(() -> Component.literal("Мшистых желёз нет."), false);
+            return 0;
+        }
+        for (var gland : glands) {
+            source.sendSuccess(() -> Component.literal(gland.pos().toShortString() + " — обращено блоков: " + gland.convertedBlockCount()), false);
+        }
+        return glands.size();
     }
 
     private static OutbreakRecord nearest(CommandSourceStack source) {
