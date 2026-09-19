@@ -104,6 +104,7 @@ public class LotusBlight {
         TABS.register(modBus);
         modBus.addListener(this::addVanillaCreativeItems);
         modBus.addListener(this::registerRenderers);
+        modBus.addListener(this::registerRenderLayers);
         context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
@@ -132,6 +133,17 @@ public class LotusBlight {
 
     private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
+    }
+
+    /**
+     * The heart's model switched from a cube_all (the painted icon texture wallpapered across
+     * all 6 faces, which is what made it look flat/tiled) to a floating cross emblem, matching
+     * how vanilla flowers use a single icon texture. That needs cutout rendering instead of the
+     * default solid layer, or the texture's transparent background renders as solid black.
+     */
+    private void registerRenderLayers(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+                ModBlocks.LOTUS_HEART.get(), net.minecraft.client.renderer.RenderType.cutout()));
     }
 
     private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {

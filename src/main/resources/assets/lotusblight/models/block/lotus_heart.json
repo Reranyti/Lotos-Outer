@@ -1,6 +1,29 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "ambientocclusion": false,
   "textures": {
-    "all": "lotusblight:block/lotus_heart"
-  }
+    "particle": "lotusblight:block/lotus_heart",
+    "cross": "lotusblight:block/lotus_heart"
+  },
+  "elements": [
+    {
+      "from": [0.8, 0, 8],
+      "to": [15.2, 16, 8],
+      "shade": false,
+      "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": true },
+      "faces": {
+        "north": { "uv": [0, 0, 16, 16], "texture": "#cross", "tintindex": 0 },
+        "south": { "uv": [0, 0, 16, 16], "texture": "#cross", "tintindex": 0 }
+      }
+    },
+    {
+      "from": [0.8, 0, 8],
+      "to": [15.2, 16, 8],
+      "shade": false,
+      "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": -45, "rescale": true },
+      "faces": {
+        "north": { "uv": [0, 0, 16, 16], "texture": "#cross", "tintindex": 0 },
+        "south": { "uv": [0, 0, 16, 16], "texture": "#cross", "tintindex": 0 }
+      }
+    }
+  ]
 }
