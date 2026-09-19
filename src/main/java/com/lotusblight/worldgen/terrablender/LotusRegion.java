@@ -61,7 +61,11 @@ public class LotusRegion extends Region {
                 // sliver smaller than the infection's own mini-biome.
                 .temperature(Temperature.span(Temperature.ICY, Temperature.NEUTRAL))
                 .humidity(Humidity.span(Humidity.ARID, Humidity.NEUTRAL))
-                .continentalness(Continentalness.span(Continentalness.NEAR_INLAND, Continentalness.FAR_INLAND))
+                // Was NEAR_INLAND-FAR_INLAND, sharing the NEAR_INLAND band with lotus_marsh's own
+                // COAST-NEAR_INLAND span - the two biomes could generate directly adjacent to each
+                // other at that boundary. Starting at MID_INLAND leaves a real gap (ordinary
+                // vanilla terrain) between the infection's biome and Blessing's.
+                .continentalness(Continentalness.span(Continentalness.MID_INLAND, Continentalness.FAR_INLAND))
                 .erosion(Erosion.span(Erosion.EROSION_0, Erosion.EROSION_4))
                 .depth(Depth.SURFACE)
                 .weirdness(Weirdness.FULL_RANGE)
