@@ -36,6 +36,8 @@ public final class BiomeInfectionColors {
     private static final Map<ResourceLocation, String> BIOME_GROUP = new HashMap<>();
     private static final Map<String, EnumMap<InfectedMaterial, Integer>> GROUP_COLORS = new HashMap<>();
     private static final Set<ResourceLocation> GRADIENT_OVERRIDE = new HashSet<>();
+    /** Per-biome, per-material overrides (e.g. Dark Forest's own wood/terracotta differs from the rest of forest_plains) - everything NOT overridden here still falls through to the biome's group color. */
+    private static final Map<ResourceLocation, EnumMap<InfectedMaterial, Integer>> BIOME_OVERRIDE = new HashMap<>();
 
     static {
         group("forest_plains", "minecraft:plains", "minecraft:sunflower_plains", "minecraft:forest",
@@ -65,56 +67,76 @@ public final class BiomeInfectionColors {
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted with plains grass color, since the raw texture is a near-grey biome-tint mask)
-                InfectedMaterial.TERRACOTTA, 0x67A1BB); // terracotta.png
+                InfectedMaterial.TERRACOTTA, 0x67A1BB,  // terracotta.png
+                InfectedMaterial.LOG, 0x92AACC,         // oak_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (tinted with default foliage color, same mask situation as grass_block_top)
 
         colors("taiga",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
-                InfectedMaterial.TERRACOTTA, 0x2D4D5E); // white_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0x2D4D5E,  // white_terracotta.png
+                InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("cold",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0x060101,        // snow.png
-                InfectedMaterial.TERRACOTTA, 0x78949D); // light_gray_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0x78949D,  // light_gray_terracotta.png
+                InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("hot_dry",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x4098DE,        // red_sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0x799FBC,        // dirt.png
-                InfectedMaterial.TERRACOTTA, 0x5DABD9); // orange_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0x5DABD9,  // orange_terracotta.png
+                InfectedMaterial.LOG, 0x989EA8,         // acacia_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("hills",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
-                InfectedMaterial.TERRACOTTA, 0xC5D5DB); // gray_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0xC5D5DB,  // gray_terracotta.png
+                InfectedMaterial.LOG, 0x92AACC,         // oak_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("jungle",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
-                InfectedMaterial.TERRACOTTA, 0xB3ACD5); // green_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0xB3ACD5,  // green_terracotta.png
+                InfectedMaterial.LOG, 0xAABBE6,         // jungle_log.png
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("swamp_water",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0xC3C6C2,        // mud.png
-                InfectedMaterial.TERRACOTTA, 0xB2CCDB); // brown_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0xB2CCDB,  // brown_terracotta.png
+                InfectedMaterial.LOG, 0x92AACC,         // oak_log.png (mangrove_swamp gets its own override below)
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
+
+        // Mangrove Swamp's own tree is nothing like the rest of swamp_water's oak - only its wood
+        // differs from the group, everything else (stone/sand/gravel/soil/terracotta) is shared.
+        biomeColor("minecraft:mangrove_swamp", InfectedMaterial.LOG, 0xABBCD6); // mangrove_log.png
 
         colors("ocean",
                 InfectedMaterial.STONE, 0x9C6368,       // prismarine.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png
                 InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
                 InfectedMaterial.SOIL, 0x799FBC,        // dirt.png
-                InfectedMaterial.TERRACOTTA, 0xA8A4A4); // cyan_terracotta.png
+                InfectedMaterial.TERRACOTTA, 0xA8A4A4,  // cyan_terracotta.png
+                InfectedMaterial.LOG, 0x92AACC,         // oak_log.png (no real trees in ocean, filler)
+                InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
     }
 
     private BiomeInfectionColors() {}
@@ -139,7 +161,19 @@ public final class BiomeInfectionColors {
         }
     }
 
+    /** One biome's own color for specific materials only - everything else it still inherits from its group. */
+    private static void biomeColor(String biomeId, Object... materialColorPairs) {
+        EnumMap<InfectedMaterial, Integer> map = BIOME_OVERRIDE.computeIfAbsent(new ResourceLocation(biomeId), b -> new EnumMap<>(InfectedMaterial.class));
+        for (int i = 0; i < materialColorPairs.length; i += 2) {
+            map.put((InfectedMaterial) materialColorPairs[i], (Integer) materialColorPairs[i + 1]);
+        }
+    }
+
     public static int colorFor(ResourceLocation biomeId, InfectedMaterial material) {
+        EnumMap<InfectedMaterial, Integer> ownColors = BIOME_OVERRIDE.get(biomeId);
+        if (ownColors != null && ownColors.containsKey(material)) {
+            return ownColors.get(material);
+        }
         if (GRADIENT_OVERRIDE.contains(biomeId)) {
             int[] gradient = BiomeFogColors.gradientFor(biomeId);
             if (gradient != null) {
