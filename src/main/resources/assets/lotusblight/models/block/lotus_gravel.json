@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "lotusblight:block/template_tinted_cube_all",
   "textures": {
     "all": "lotusblight:block/lotus_gravel"
   }
