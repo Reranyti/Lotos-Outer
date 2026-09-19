@@ -40,11 +40,14 @@ public final class GuaranteedSpawnManager {
      * nearly every pond - once each one matured, the entire marsh filled with its own lotus heart
      * at roughly the same time.
      */
-    private static final double OUTBREAK_COVERAGE_RADIUS = 160.0;
+    // Was 160 - each outbreak is now a much bigger commitment (wider spread radius, a guaranteed
+    // mini-biome burst at phase 4), so anchors need real distance between them or the world fills
+    // up with overlapping heavyweight outbreaks instead of a few genuinely significant ones.
+    private static final double OUTBREAK_COVERAGE_RADIUS = 320.0;
     /** Not every loaded chunk is sampled — keeps the periodic scan cheap and matches the throttling style used elsewhere.
-     *  Widened from 6 to 14: at 6, every water body within ~4 chunks of a player's flight path got
-     *  its own full anchor, which read as "lotuses everywhere" rather than distinct outbreaks. */
-    private static final int CHUNK_SAMPLE_RATE = 14;
+     *  Widened from 6 to 14, then to 40: outbreaks are now rare-but-significant landmarks, not
+     *  something a player should run into "smothering" them within their first few minutes. */
+    private static final int CHUNK_SAMPLE_RATE = 40;
     private static final int WATER_SEARCH_ATTEMPTS = 20;
 
     private static final LotusTaskQueue<GlobalPos> PENDING_WATER_CHECKS = new LotusTaskQueue<>();

@@ -27,6 +27,7 @@ public final class LotusPlayerState {
     private static final String DIALOGUE_BRANCH_KEY = "DialogueBranch";
     private static final String FULL_MAP_VISIBILITY_KEY = "FullMapVisibility";
     private static final String INNER_VOICE_USES_KEY = "InnerVoiceUses";
+    private static final String HAS_TALKED_KEY = "HasTalkedToLotus";
     /** First two berries always show a scene, no conditions attached — an introduction, not a reward. */
     public static final int INNER_VOICE_FREE_USES = 2;
 
@@ -95,7 +96,24 @@ public final class LotusPlayerState {
      * specific story triggers (not implemented yet) rather than every berry the player eats.
      */
     public static boolean canTriggerInnerVoiceFreely(Player player) {
-        return getInnerVoiceUses(player) < INNER_VOICE_FREE_USES;
+        return hasTalkedToLotus(player) && getInnerVoiceUses(player) < INNER_VOICE_FREE_USES;
+    }
+
+    /**
+     * Whether this player has ever actually opened a conversation with the Lotus (see
+     * DialogueOpenedPacket, sent once from LotusDialogueScreen). Eating a glowing_berry used to
+     * trigger the inner-voice scene for a player's very first two berries regardless of whether
+     * they'd ever spoken to the Lotus at all - the voice was "revealing itself" before the player
+     * had any context for why a voice would be speaking to them in the first place.
+     */
+    public static boolean hasTalkedToLotus(Player player) {
+        return root(player, false).getBoolean(HAS_TALKED_KEY);
+    }
+
+    public static void setHasTalkedToLotus(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HAS_TALKED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
     }
 
     public static void incrementInnerVoiceUses(Player player) {

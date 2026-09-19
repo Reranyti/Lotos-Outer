@@ -69,7 +69,10 @@ public final class RootGrowthEngine {
     private static final int MAX_CHAIN_LENGTH = 24;
     private static final int MAX_ROOTS_PER_OUTBREAK = 48;
 
-    private static final double CHILD_OUTBREAK_CHANCE = 0.05;
+    // Was 0.05 - each outbreak now carries much more weight (bigger radius/attempts, a real
+    // mini-biome burst on phase 4), so there need to be fewer of them, not more, to avoid
+    // smothering the player early and to keep any one anchor feeling significant.
+    private static final double CHILD_OUTBREAK_CHANCE = 0.015;
     private static final int CHILD_MIN_CHAIN_LENGTH = 3;
     private static final int CHILD_MAX_PHASE = 2;
 
@@ -184,6 +187,15 @@ public final class RootGrowthEngine {
      * moment it's registered, directly above the root tip that spawned it, so a mini-lotus is
      * always a visible flower first and a growth source second.
      */
+    /**
+     * hasNearbyShoot alone only ruled out placing a child within 2 blocks of another shoot/anchor
+     * — nothing stopped a winding root chain from looping back near its OWN parent (or another
+     * outbreak entirely) and registering a second full anchor a few blocks away, reading in-world
+     * as "2-3 main lotuses on one square meter". GuaranteedSpawnManager already keeps its own
+     * anchors this far apart (OUTBREAK_COVERAGE_RADIUS); children need the same real check.
+     */
+    private static final double CHILD_MIN_DISTANCE_FROM_OUTBREAK = 40.0;
+
     private void maybeSpawnChildOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord parent, RootChainState chain, BlockPos at) {
         if (chain.chainLength < CHILD_MIN_CHAIN_LENGTH) return;
         if (level.random.nextDouble() >= CHILD_OUTBREAK_CHANCE) return;
@@ -191,6 +203,7 @@ public final class RootGrowthEngine {
         BlockPos padPos = at.above();
         BlockPos flowerPos = padPos.above();
         if (!level.getBlockState(padPos).isAir() || !level.getBlockState(flowerPos).isAir() || hasNearbyShoot(level, flowerPos)) return;
+        if (data.nearestOutbreak(flowerPos, CHILD_MIN_DISTANCE_FROM_OUTBREAK, false) != null) return;
 
         OutbreakRecord child = data.registerOutbreak(flowerPos.immutable(), level.getGameTime(), true);
         childPhaseCaps.put(child.id(), CHILD_MAX_PHASE);

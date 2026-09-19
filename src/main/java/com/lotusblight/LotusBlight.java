@@ -16,6 +16,9 @@ import com.lotusblight.spread.BarrierEvents;
 import com.lotusblight.spread.roots.RootGrowthEngine;
 import com.lotusblight.worldgen.GuaranteedSpawnManager;
 import com.lotusblight.advancement.SingleBiomeWorldTrigger;
+import com.lotusblight.advancement.TwoInfectionsTrigger;
+import com.lotusblight.advancement.SurvivorOfTheBloomTrigger;
+import com.lotusblight.advancement.TheHeartWaitsTrigger;
 import com.lotusblight.map.journeymap.JourneyMapSyncTicker;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraftforge.api.distmarker.Dist;
@@ -48,6 +51,7 @@ public class LotusBlight {
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.LOTUS_SEED.get());
                 output.accept(ModItems.LOTUS_WIKI.get());
+                output.accept(ModItems.SCIENTIST_PAGE.get());
                 output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
                 output.accept(ModItems.LOTUS_MAP.get());
                 output.accept(ModItems.INFECTED_WATER_BUCKET.get());
@@ -111,6 +115,9 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
+        CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);
+        CriteriaTriggers.register(SurvivorOfTheBloomTrigger.INSTANCE);
+        CriteriaTriggers.register(TheHeartWaitsTrigger.INSTANCE);
         MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes

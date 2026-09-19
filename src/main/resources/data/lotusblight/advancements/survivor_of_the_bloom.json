@@ -10,6 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "endured_spores": {"trigger": "minecraft:effects_changed", "conditions": {"effects": {"lotusblight:lotus_spores": {"amplifier": {"min": 1}}}}}
+    "endured": {"trigger": "lotusblight:survivor_of_the_bloom"}
   }
 }

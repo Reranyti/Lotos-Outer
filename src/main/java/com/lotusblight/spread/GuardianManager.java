@@ -58,6 +58,8 @@ public final class GuardianManager {
     private static final String GUARDIAN_PHASE_KEY = "LotusGuardianPhase";
     private static final int PHASE3_POWDER_DROPS = 2;
     private static final int PHASE4_POWDER_DROPS = 5;
+    /** 1-in-8 per guardian kill — rare enough to feel like a real find, not a guaranteed second drop alongside the powder. */
+    private static final int SCIENTIST_PAGE_DROP_CHANCE = 8;
 
     private static final int SWEEP_INTERVAL_TICKS = 100;
     private static final int MIN_GUARDIAN_PHASE = 3;
@@ -177,6 +179,16 @@ public final class GuardianManager {
         ItemEntity drop = new ItemEntity(wolf.level(), wolf.getX(), wolf.getY(), wolf.getZ(),
                 new ItemStack(ModItems.CLEANSING_POWDER.get(), count));
         event.getDrops().add(drop);
+
+        // Separate low-probability roll, not a second guaranteed drop alongside the powder above -
+        // "Страницы дневника Объекта Ноль" (see ScientistPageItem/ObjectZeroPages) needs to read as
+        // a rare find from actually fighting a guardian, the mod's one source of combat risk, not
+        // just another guaranteed reward that dilutes the powder's own payoff.
+        if (wolf.level().getRandom().nextInt(SCIENTIST_PAGE_DROP_CHANCE) == 0) {
+            ItemEntity pageDrop = new ItemEntity(wolf.level(), wolf.getX(), wolf.getY(), wolf.getZ(),
+                    com.lotusblight.item.ScientistPageItem.createRandomStack(wolf.level().getRandom()));
+            event.getDrops().add(pageDrop);
+        }
     }
 
     /**

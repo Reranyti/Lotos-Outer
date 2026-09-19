@@ -27,18 +27,25 @@ public final class InfectionPhases {
      */
     private static final int[] PHASE_UP_THRESHOLD = {0, 0, 24, 90, 350};
 
-    /** Radius (blocks) a spread attempt from this phase may reach from its source block. */
-    private static final int[] SPREAD_RADIUS = {0, 3, 4, 5, 5};
+    /**
+     * Radius (blocks) a spread attempt from this phase may reach from its source block. Phase 4
+     * used to be 5 - barely different from phase 3's own 5, so "reaching the mini-biome" changed
+     * almost nothing about how far the infection could actually reach per attempt. A 100%-phase-4
+     * outbreak still read as "a drop in the ocean" against the real TerraBlender-generated biome
+     * (which places its trees across the whole chunk at once, not through bounded per-tick
+     * attempts) - this alone was never going to close that gap, but it needed to stop being an
+     * afterthought next to phase 3.
+     */
+    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12};
 
     /**
      * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,
-     * 10s by default - not literally per tick despite the name). First boosted from {1,2,3,4} to
-     * {2,4,6,7} to fix phase 1/2 reading as "почти пусты"; feedback after that pass was still
-     * "прогресс ощущается нищенски" - the early phases should feel like a smaller version of the
-     * mini-biome's density, not a thin preview of it. Raised again, keeping the same escalating
-     * shape phase 4 already had.
+     * 10s by default - not literally per tick despite the name). Raised twice already for "прогресс
+     * ощущается нищенски"; still not enough - even standing right next to a maxed-out outbreak
+     * "ничего не даёт", no felt danger, no felt growth. Phase 4 in particular needs to be a real
+     * step up from phase 3, not a rounding error on the same curve.
      */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 6, 8, 9};
+    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 7, 11, 22};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;

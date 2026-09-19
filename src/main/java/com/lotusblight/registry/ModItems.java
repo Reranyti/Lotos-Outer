@@ -8,6 +8,7 @@ import com.lotusblight.item.LotusMapItem;
 import com.lotusblight.item.LotusSeerLensItem;
 import com.lotusblight.item.LotusSeedItem;
 import com.lotusblight.item.LotusWikiItem;
+import com.lotusblight.item.ScientistPageItem;
 import com.lotusblight.item.LotusPickaxeItem;
 import com.lotusblight.item.GlowingBerryItem;
 import net.minecraft.world.item.ArmorItem;
@@ -30,6 +31,8 @@ public final class ModItems {
     public static final RegistryObject<Item> INFECTED_WATER_BUCKET = ITEMS.register("infected_water_bucket", () -> new BucketItem(ModFluids.INFECTED_WATER, new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET)));
     public static final RegistryObject<Item> LOTUS_MAP = ITEMS.register("lotus_map", () -> new LotusMapItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LOTUS_WIKI = ITEMS.register("lotus_wiki", () -> new LotusWikiItem(new Item.Properties()));
+    // --- Discoverable lore item: rare guardian drop, not handed out at spawn (see GuardianManager#onDrops) ---
+    public static final RegistryObject<Item> SCIENTIST_PAGE = ITEMS.register("scientist_page", () -> new ScientistPageItem(new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_MIMIC_ITEM = ITEMS.register("lotus_mimic", () -> new BlockItem(ModBlocks.LOTUS_MIMIC.get(), new Item.Properties()));
     public static final RegistryObject<Item> CLEANSING_POWDER = ITEMS.register("cleansing_powder", () -> new Item(new Item.Properties().stacksTo(64)));
     public static final RegistryObject<Item> INFECTED_LOTUS_ITEM = ITEMS.register("infected_lotus", () -> new BlockItem(ModBlocks.INFECTED_LOTUS.get(), new Item.Properties()));

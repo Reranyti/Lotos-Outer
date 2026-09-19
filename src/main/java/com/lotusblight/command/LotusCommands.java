@@ -9,6 +9,7 @@ import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.spread.InfectionPhases;
 import com.lotusblight.spread.InfectionSpreadEngine;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -64,7 +65,11 @@ public final class LotusCommands {
                 .then(Commands.literal("list").executes(ctx -> listOutbreaks(ctx.getSource())))
                 .then(Commands.literal("setphase")
                         .then(Commands.argument("phase", IntegerArgumentType.integer(1, 4))
-                                .executes(ctx -> setNearestPhase(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "phase")))))
+                                .executes(ctx -> setNearestPhase(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "phase")))
+                                .then(Commands.argument("progress", FloatArgumentType.floatArg(0f, 1f))
+                                        .executes(ctx -> setNearestPhase(ctx.getSource(),
+                                                IntegerArgumentType.getInteger(ctx, "phase"),
+                                                FloatArgumentType.getFloat(ctx, "progress"))))))
                 .then(Commands.literal("heart").executes(ctx -> forceHeart(ctx.getSource())))
                 .then(Commands.literal("remove").executes(ctx -> removeNearest(ctx.getSource())));
     }
@@ -81,9 +86,11 @@ public final class LotusCommands {
                 .withPhase(phase)
                 .withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(phase));
         data.updateOutbreak(record);
-        if (phase >= 4) {
-            InfectionSpreadEngine.promoteAnchorToHeart(level, pos);
-        }
+        // Setting/spawning phase 4 for testing used to unconditionally call promoteAnchorToHeart -
+        // silently swapping the anchor for the one-and-only Heart in the world just because you
+        // wanted to preview phase 4's numbers/density. That's a real, consequential side effect
+        // (see OutbreakSavedData#claimHeart) that should only ever happen through the explicit
+        // "heart" command below, never as a side effect of setting a number for a test.
         source.sendSuccess(() -> Component.literal("Очаг создан в " + pos.toShortString() + ", фаза " + phase + "."), true);
         return 1;
     }
@@ -107,17 +114,30 @@ public final class LotusCommands {
     }
 
     private static int setNearestPhase(CommandSourceStack source, int phase) {
+        return setNearestPhase(source, phase, 0.0f);
+    }
+
+    /**
+     * progress 0.0 lands exactly on this phase's own minimum block count (the old, only, behaviour
+     * - straight to the very start of the phase, never partway through it or near its end). 1.0
+     * lands just short of the NEXT phase's threshold. Phase 4 has no upper threshold to interpolate
+     * against, so progress there scales against InfectionPhases#progressWithinPhase's own 120-block
+     * span instead.
+     */
+    private static int setNearestPhase(CommandSourceStack source, int phase, float progress) {
         OutbreakRecord nearest = nearest(source);
         if (nearest == null) {
             source.sendFailure(Component.literal("Рядом нет очагов."));
             return 0;
         }
         OutbreakSavedData data = OutbreakSavedData.get(source.getLevel());
-        data.updateOutbreak(nearest.withPhase(phase).withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(phase)));
-        if (phase >= 4) {
-            InfectionSpreadEngine.promoteAnchorToHeart(source.getLevel(), nearest.pos());
-        }
-        source.sendSuccess(() -> Component.literal("Очаг в " + nearest.pos().toShortString() + " переведён на фазу " + phase + "."), true);
+        int lower = InfectionPhases.minBlockCountForPhase(phase);
+        int upper = phase < 4 ? InfectionPhases.minBlockCountForPhase(phase + 1) - 1 : lower + 120;
+        int blockCount = lower + Math.round(net.minecraft.util.Mth.clamp(progress, 0f, 1f) * (upper - lower));
+        // Setting a phase for testing is just numbers - it should never silently swap the anchor
+        // for the world's one Heart as a side effect. Use the explicit "heart" command for that.
+        data.updateOutbreak(nearest.withPhase(phase).withInfectedBlockCount(blockCount));
+        source.sendSuccess(() -> Component.literal("Очаг в " + nearest.pos().toShortString() + " переведён на фазу " + phase + " (" + Math.round(progress * 100) + "%)."), true);
         return 1;
     }
 

@@ -10,12 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "deep_marsh": {
-      "trigger": "minecraft:location",
-      "conditions": {
-        "biomes": "lotusblight:lotus_marsh",
-        "position": {"y": {"max": 40}}
-      }
-    }
+    "found_heart": {"trigger": "lotusblight:the_heart_waits"}
   }
 }

@@ -1,7 +1,6 @@
 {
   "variants": {
-    "": {
-      "model": "lotusblight:block/glow_berries"
-    }
+    "berries=true": { "model": "lotusblight:block/glow_berries" },
+    "berries=false": { "model": "lotusblight:block/glow_berries" }
   }
 }

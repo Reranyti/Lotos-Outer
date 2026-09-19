@@ -58,7 +58,11 @@ public class InfectionSpreadEngine {
 
     private static final DustParticleOptions GREEN = new DustParticleOptions(new Vector3f(0.2f, 0.95f, 0.35f), 1.0f);
     private static final DustParticleOptions PINK = new DustParticleOptions(new Vector3f(1.0f, 0.2f, 0.55f), 1.0f);
-    private static final int FRONTIER_CAP = 48;
+    // Was 48 - with the much wider phase 3/4 SPREAD_RADIUS (InfectionPhases), a 48-slot recent-
+    // positions window meant the frontier was almost entirely refilled by the LAST few dozen
+    // conversions, so new spread kept re-rolling neighbours of the same small recent cluster
+    // instead of actually fanning out across the wider radius it was now allowed to reach.
+    private static final int FRONTIER_CAP = 220;
     private static final double SPORE_RADIUS = 3.5;
 
     /**
@@ -188,6 +192,10 @@ public class InfectionSpreadEngine {
         if (newPhase > outbreak.phase()) {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
+            announcePhaseUp(level, outbreak.pos(), newPhase);
+            if (newPhase >= 4) {
+                guaranteeMiniBiomeGrowth(level, outbreak.pos());
+            }
             maybeSpawnHeart(level, data, outbreak, newPhase);
         }
         data.updateOutbreak(updated);
@@ -496,6 +504,52 @@ public class InfectionSpreadEngine {
         return false;
     }
 
+    // Scaled up alongside phase 4's SPREAD_RADIUS (12) and ATTEMPTS_PER_TICK (22) - outbreaks are
+    // deliberately rarer now (see GuaranteedSpawnManager/RootGrowthEngine's spawn-chance cuts), so
+    // each one reaching phase 4 needs to actually deliver a real mini-biome, not a token gesture.
+    private static final int GUARANTEED_GROWTH_RADIUS = 26;
+    private static final int GUARANTEED_TREE_ATTEMPTS = 30;
+    private static final int GUARANTEED_GRASS_ATTEMPTS = 70;
+
+    /**
+     * Reaching phase 4 used to just raise MINI_TREE_CHANCE's odds and leave the actual canopy to
+     * however many spread attempts happened to land on infected ground with air above afterward -
+     * a freshly-matured outbreak could sit there reading as barely-there for minutes (or, on a
+     * quiet/low-traffic outbreak, indefinitely) while EpicenterManager's hand-placed guaranteed
+     * epicenter looked like a real thicket from the moment it existed. This forces a burst of the
+     * same trees/grass right when phase 4 is first reached, so "just hit the mini-biom" reads as
+     * one immediately, not as a promise the RNG gets around to eventually.
+     */
+    private void guaranteeMiniBiomeGrowth(ServerLevel level, BlockPos anchor) {
+        int treesPlanted = 0;
+        for (int i = 0; i < GUARANTEED_TREE_ATTEMPTS * 4 && treesPlanted < GUARANTEED_TREE_ATTEMPTS; i++) {
+            BlockPos above = randomGroundAbove(level, anchor);
+            if (above != null && tryGrowMiniTree(level, above)) {
+                treesPlanted++;
+            }
+        }
+        for (int i = 0; i < GUARANTEED_GRASS_ATTEMPTS; i++) {
+            BlockPos above = randomGroundAbove(level, anchor);
+            if (above != null && level.getBlockState(above).isAir()) {
+                level.setBlock(above, ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);
+            }
+        }
+    }
+
+    /** A random air block directly above infected/clean ground within GUARANTEED_GROWTH_RADIUS, or null if the sampled spot isn't usable. */
+    private BlockPos randomGroundAbove(ServerLevel level, BlockPos anchor) {
+        int dx = level.random.nextInt(GUARANTEED_GROWTH_RADIUS * 2 + 1) - GUARANTEED_GROWTH_RADIUS;
+        int dz = level.random.nextInt(GUARANTEED_GROWTH_RADIUS * 2 + 1) - GUARANTEED_GROWTH_RADIUS;
+        BlockPos candidate = anchor.offset(dx, 0, dz);
+        if (!level.hasChunkAt(candidate)) return null;
+        int surfaceY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, candidate.getX(), candidate.getZ());
+        BlockPos ground = new BlockPos(candidate.getX(), surfaceY - 1, candidate.getZ());
+        if (Math.abs(ground.getY() - anchor.getY()) > 6) return null; // stay near the anchor's own elevation
+        BlockState below = level.getBlockState(ground);
+        if (!SpreadTables.isInfectedGround(below) && !SpreadTables.isCleanGround(below)) return null;
+        return ground.above();
+    }
+
     /** A 3-5 tall lotus-log trunk with a thick, multi-layer leaf canopy — the mini-biome's own tree, grown rather than converted. */
     private boolean tryGrowMiniTree(ServerLevel level, BlockPos base) {
         int trunkHeight = 3 + level.random.nextInt(3);
@@ -520,6 +574,25 @@ public class InfectionSpreadEngine {
             }
         }
         return true;
+    }
+
+    private static final double PHASE_UP_ANNOUNCE_RADIUS = 64.0;
+
+    /**
+     * A phase-up already got particles + a sound at the anchor, but nothing actually told the
+     * player WHAT just happened - easy to miss entirely, or notice the boss bar's number changed
+     * without registering it as an event. An action-bar line naming the new phase makes each
+     * escalation a felt beat instead of something only visible if you happen to be staring at the
+     * boss bar right at that moment.
+     */
+    private void announcePhaseUp(ServerLevel level, BlockPos pos, int newPhase) {
+        double rangeSq = PHASE_UP_ANNOUNCE_RADIUS * PHASE_UP_ANNOUNCE_RADIUS;
+        Component message = Component.literal("Очаг перешёл в фазу " + newPhase + ": " + InfectionPhases.phaseName(newPhase) + "!");
+        for (ServerPlayer player : level.players()) {
+            if (player.blockPosition().distSqr(pos) <= rangeSq) {
+                player.displayClientMessage(message, true);
+            }
+        }
     }
 
     /**

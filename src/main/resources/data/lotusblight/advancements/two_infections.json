@@ -10,14 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "both_sides": {
-      "trigger": "minecraft:inventory_changed",
-      "conditions": {
-        "items": [
-          {"items": ["lotusblight:infected_lotus"]},
-          {"items": ["lotusblight:blessing_nodule"]}
-        ]
-      }
-    }
+    "both_sides": {"trigger": "lotusblight:two_infections"}
   }
 }

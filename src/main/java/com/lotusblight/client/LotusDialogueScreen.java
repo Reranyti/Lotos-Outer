@@ -5,6 +5,7 @@ import com.lotusblight.dialogue.LotusDialogueLibrary;
 import com.lotusblight.map.ClientPlayerStateCache;
 import com.lotusblight.map.DialogueAnswerPacket;
 import com.lotusblight.map.DialogueChoicePacket;
+import com.lotusblight.map.DialogueOpenedPacket;
 import com.lotusblight.map.NetworkHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -48,6 +49,7 @@ public final class LotusDialogueScreen extends Screen {
         this.branch = toBranch(ClientPlayerStateCache.dialogueBranch());
         this.branchWasPreLocked = branch != LotusDialogueLibrary.Branch.UNDECIDED;
         setConversation(branchWasPreLocked ? 1 : 0);
+        NetworkHandler.CHANNEL.sendToServer(new DialogueOpenedPacket());
     }
 
     private static LotusDialogueLibrary.Branch toBranch(int stored) {

@@ -44,5 +44,6 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, PlayerStateSyncPacket.class, PlayerStateSyncPacket::encode, PlayerStateSyncPacket::decode, PlayerStateSyncPacket::handle);
         CHANNEL.registerMessage(id++, ShowInnerVoicePacket.class, ShowInnerVoicePacket::encode, ShowInnerVoicePacket::decode, ShowInnerVoicePacket::handle);
         CHANNEL.registerMessage(id++, DialogueAnswerPacket.class, DialogueAnswerPacket::encode, DialogueAnswerPacket::decode, DialogueAnswerPacket::handle);
+        CHANNEL.registerMessage(id++, DialogueOpenedPacket.class, DialogueOpenedPacket::encode, DialogueOpenedPacket::decode, DialogueOpenedPacket::handle);
     }
 }
