@@ -68,9 +68,37 @@ public final class InfectionFogRenderer {
     public static void onFogColor(ViewportEvent.ComputeFogColor event) {
         float density = currentDensity();
         if (density <= 0f) return;
-        event.setRed(lerp(event.getRed(), SICK_R, density));
-        event.setGreen(lerp(event.getGreen(), SICK_G, density));
-        event.setBlue(lerp(event.getBlue(), SICK_B, density));
+        float[] sick = sickColorForCurrentBiome(density);
+        event.setRed(lerp(event.getRed(), sick[0], density));
+        event.setGreen(lerp(event.getGreen(), sick[1], density));
+        event.setBlue(lerp(event.getBlue(), sick[2], density));
+    }
+
+    /**
+     * Was one fixed green everywhere - BiomeFogColors now dictates a gradient per biome (sampled
+     * across its stops by density, so the fog visibly shifts tone the deeper into an outbreak you
+     * are, not just gets thicker). Falls back to the original fixed green for any biome that
+     * doesn't have a dictated gradient yet.
+     */
+    private static float[] sickColorForCurrentBiome(float density) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player != null) {
+            var biome = player.level().getBiome(player.blockPosition());
+            var biomeId = biome.unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+            if (biomeId != null) {
+                int[] gradient = BiomeFogColors.gradientFor(biomeId);
+                if (gradient != null) {
+                    int color = BiomeFogColors.sample(gradient, density);
+                    return new float[]{
+                            ((color >> 16) & 0xFF) / 255f,
+                            ((color >> 8) & 0xFF) / 255f,
+                            (color & 0xFF) / 255f
+                    };
+                }
+            }
+        }
+        return new float[]{SICK_R, SICK_G, SICK_B};
     }
 
     @SubscribeEvent
