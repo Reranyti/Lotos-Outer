@@ -105,6 +105,8 @@ public class LotusBlight {
         modBus.addListener(this::addVanillaCreativeItems);
         modBus.addListener(this::registerRenderers);
         modBus.addListener(this::registerRenderLayers);
+        modBus.addListener(this::registerBlockColors);
+        modBus.addListener(this::registerItemColors);
         context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
@@ -144,6 +146,29 @@ public class LotusBlight {
     private void registerRenderLayers(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
         event.enqueueWork(() -> net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
                 ModBlocks.LOTUS_HEART.get(), net.minecraft.client.renderer.RenderType.cutout()));
+    }
+
+    /**
+     * The 5 infected ground blocks get a per-biome color accent (see InfectedGroundColor) instead
+     * of a fixed hand-painted look everywhere - reuses the same grass color vanilla already
+     * computes for every biome, so it works on any biome (vanilla or modded) with no new data.
+     */
+    private void registerBlockColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Block event) {
+        event.register(com.lotusblight.client.InfectedGroundColor.INSTANCE,
+                ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
+                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get());
+    }
+
+    /**
+     * A model face with a tintindex renders solid black in item/inventory form unless something
+     * is registered here too - there's no world/biome to sample from in an inventory slot, so this
+     * just registers a flat white (no-op) multiplier, matching InfectedGroundColor's own
+     * no-context fallback.
+     */
+    private void registerItemColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> 0xFFFFFF,
+                ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
+                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get());
     }
 
     private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
