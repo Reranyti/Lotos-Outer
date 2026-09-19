@@ -83,6 +83,42 @@ public class LotusBlight {
                 output.accept(ModItems.LOTUS_SEER_LENS.get());
             }).build());
 
+    /**
+     * Every block that only ever appears via worldgen or the spread engines - never crafted, only
+     * found (or, for testing, grabbed here) - separate from the main tab's mix of tools/food/lore
+     * items, so they're all in one place to browse or place for testing.
+     */
+    public static final RegistryObject<CreativeModeTab> WORLD_BLOCKS_TAB = TABS.register("world_blocks_tab", () -> CreativeModeTab.builder()
+            .title(net.minecraft.network.chat.Component.translatable("itemGroup.lotusblight.world_blocks_tab"))
+            .icon(() -> ModItems.LOTUS_HEART_ITEM.get().getDefaultInstance())
+            .displayItems((parameters, output) -> {
+                output.accept(ModBlocks.LOTUS_HEART.get());
+                output.accept(ModBlocks.INFECTED_LOTUS.get());
+                output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
+                output.accept(ModItems.LOTUS_SHOOT_ITEM.get());
+                output.accept(ModItems.INFECTED_WATER_BUCKET.get());
+                output.accept(ModBlocks.INFECTED_SOIL.get());
+                output.accept(ModItems.LOTUS_STONE_ITEM.get());
+                output.accept(ModItems.LOTUS_SAND_ITEM.get());
+                output.accept(ModItems.LOTUS_GRAVEL_ITEM.get());
+                output.accept(ModItems.LOTUS_TERRACOTTA_ITEM.get());
+                output.accept(ModItems.LOTUS_DIRT_ITEM.get());
+                output.accept(ModItems.LOTUS_ORE_ITEM.get());
+                output.accept(ModBlocks.LOTUS_ROOTS.get());
+                output.accept(ModItems.TANGLED_ROOTS_ITEM.get());
+                output.accept(ModItems.LIANA_BARRIER_ITEM.get());
+                output.accept(ModItems.LIANA_WEAK_POINT_ITEM.get());
+                output.accept(ModItems.BLOSSOM_GRASS_ITEM.get());
+                output.accept(ModItems.GLOW_BERRIES_ITEM.get());
+                output.accept(ModItems.LOTUS_LOG_ITEM.get());
+                output.accept(ModItems.LOTUS_LEAVES_ITEM.get());
+                output.accept(ModItems.BLESSING_NODULE_ITEM.get());
+                output.accept(ModItems.BLESSING_SOIL_ITEM.get());
+                output.accept(ModItems.BLESSING_SAND_ITEM.get());
+                output.accept(ModItems.BLESSING_LOG_ITEM.get());
+                output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
+            }).build());
+
     public LotusBlight(FMLJavaModLoadingContext context) {
         IEventBus modBus = context.getModEventBus();
         ModFluids.FLUID_TYPES.register(modBus);

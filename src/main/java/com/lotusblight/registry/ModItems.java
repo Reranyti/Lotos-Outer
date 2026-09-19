@@ -38,6 +38,15 @@ public final class ModItems {
     public static final RegistryObject<Item> INFECTED_LOTUS_ITEM = ITEMS.register("infected_lotus", () -> new BlockItem(ModBlocks.INFECTED_LOTUS.get(), new Item.Properties()));
     public static final RegistryObject<Item> INFECTED_SOIL_ITEM = ITEMS.register("infected_soil", () -> new BlockItem(ModBlocks.INFECTED_SOIL.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_ORE_ITEM = ITEMS.register("lotus_ore", () -> new BlockItem(ModBlocks.LOTUS_ORE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_STONE_ITEM = ITEMS.register("lotus_stone", () -> new BlockItem(ModBlocks.LOTUS_STONE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_SAND_ITEM = ITEMS.register("lotus_sand", () -> new BlockItem(ModBlocks.LOTUS_SAND.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_TERRACOTTA_ITEM = ITEMS.register("lotus_terracotta", () -> new BlockItem(ModBlocks.LOTUS_TERRACOTTA.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_GRAVEL_ITEM = ITEMS.register("lotus_gravel", () -> new BlockItem(ModBlocks.LOTUS_GRAVEL.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_DIRT_ITEM = ITEMS.register("lotus_dirt", () -> new BlockItem(ModBlocks.LOTUS_DIRT.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LOTUS_SHOOT_ITEM = ITEMS.register("lotus_shoot", () -> new BlockItem(ModBlocks.LOTUS_SHOOT.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LIANA_BARRIER_ITEM = ITEMS.register("liana_barrier", () -> new BlockItem(ModBlocks.LIANA_BARRIER.get(), new Item.Properties()));
+    public static final RegistryObject<Item> LIANA_WEAK_POINT_ITEM = ITEMS.register("liana_weak_point", () -> new BlockItem(ModBlocks.LIANA_WEAK_POINT.get(), new Item.Properties()));
+    public static final RegistryObject<Item> TANGLED_ROOTS_ITEM = ITEMS.register("tangled_roots", () -> new BlockItem(ModBlocks.TANGLED_ROOTS.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_ALLOY = ITEMS.register("lotus_alloy", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_PICKAXE = ITEMS.register("lotus_pickaxe", () -> new LotusPickaxeItem(Tiers.DIAMOND, 4, -2.7f, new Item.Properties().durability(900)));
     public static final RegistryObject<Item> LOTUS_ROOTS_ITEM = ITEMS.register("lotus_roots", () -> new BlockItem(ModBlocks.LOTUS_ROOTS.get(), new Item.Properties()));
