@@ -2,8 +2,6 @@ package com.lotusblight.effect;
 
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
@@ -24,6 +22,10 @@ public class TrueLightEffect extends MobEffect {
 
     @Override
     public boolean isDurationEffectTick(int duration, int amplifier) {
+        // Only needs to run often enough to catch freshly (re)applied Lotus Spores - Night
+        // Vision/Regeneration are granted once for the full duration in GlowingBerryItem instead
+        // of being topped up here in short bursts, which used to read as constant screen flicker
+        // every time a top-up briefly lapsed.
         return duration % 20 == 0;
     }
 
@@ -32,14 +34,6 @@ public class TrueLightEffect extends MobEffect {
         if (!(entity instanceof Player player)) return;
         if (player.hasEffect(com.lotusblight.registry.ModEffects.LOTUS_SPORES.get())) {
             player.removeEffect(com.lotusblight.registry.ModEffects.LOTUS_SPORES.get());
-        }
-        if (!player.hasEffect(MobEffects.NIGHT_VISION)) {
-            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 220, 0, true, false));
-        }
-        if (!player.hasEffect(MobEffects.REGENERATION)) {
-            // The class doc has always claimed Night Vision/Regeneration - only Night Vision was
-            // ever actually granted here, so True Light never healed the player as documented.
-            player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 220, 0, true, false));
         }
     }
 }

@@ -7,8 +7,8 @@
     "fog_color": 12638463,
     "water_color": 3079693,
     "water_fog_color": 1967341,
-    "grass_color": 4358144,
-    "foliage_color": 4358144,
+    "grass_color": 3312760,
+    "foliage_color": 2654880,
     "mood_sound": {"sound": "minecraft:ambient.cave", "tick_delay": 6000, "block_search_extent": 8, "offset": 2.0}
   },
   "carvers": {},
@@ -22,7 +22,7 @@
     ["lotusblight:lotus_ore"],
     [],
     [],
-    ["lotusblight:lotus_water_flower"],
+    ["lotusblight:lotus_mega_tree", "lotusblight:lotus_tree", "lotusblight:blossom_grass_patch", "lotusblight:lotus_water_flower"],
     []
   ],
   "spawners": {},

@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:follow_the_current",
+  "parent": "lotusblight:first_bloom",
   "display": {
     "icon": {"item": "lotusblight:lotus_seed"},
     "title": {"translate": "advancements.lotusblight.too_much_beauty.title"},

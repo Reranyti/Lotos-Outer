@@ -38,13 +38,21 @@ public final class InnerVoiceOverlay {
     private static final int BOX_BORDER = 0xFFFFD54F;
     private static final int VIGNETTE = 0x60FFD54F;
     /** Was 5 (a thin hard-edged border, not a vignette at all) - a real vignette needs to be a
-     * large soft gradient reaching well into the screen, not a border a few pixels wide. */
-    private static final int VIGNETTE_THICKNESS = 140;
+     * large soft gradient reaching well into the screen, not a border a few pixels wide. Later
+     * pulled back from 140 - that read as too heavy/intrusive for how often the box shows up. */
+    private static final int VIGNETTE_THICKNESS = 100;
+    /** White - the speaker's name is unknown this early in the story ("Неизвестный"); the shimmer
+     * toward gold is a visual hint that it's tied to True Light, without spelling that out yet. */
+    private static final int SHIMMER_FROM = 0xFFFFFFFF;
 
     private static final Deque<String> queue = new ArrayDeque<>();
     private static String activeText;
     private static long lineExpireAtMs;
     private static SimpleSoundInstance musicInstance;
+    // font.split() result for activeText, recomputed only when the text or wrap width changes
+    // instead of every frame the box is on screen (e.g. across the full LINE_TIMEOUT_MS).
+    private static List<net.minecraft.util.FormattedCharSequence> cachedLines;
+    private static int cachedLinesWidth = -1;
 
     private InnerVoiceOverlay() {}
 
@@ -64,6 +72,7 @@ public final class InnerVoiceOverlay {
 
     private static void advance() {
         activeText = queue.poll();
+        cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
         if (activeText == null && musicInstance != null) {
             Minecraft.getInstance().getSoundManager().stop(musicInstance);
@@ -100,7 +109,12 @@ public final class InnerVoiceOverlay {
         int portrait = 28;
         int textLeftPad = portrait + 16;
         int width = Math.min(360, g.guiWidth() - 24);
-        List<net.minecraft.util.FormattedCharSequence> lines = mc.font.split(Component.literal(activeText), width - textLeftPad - 8);
+        int wrapWidth = width - textLeftPad - 8;
+        if (cachedLines == null || cachedLinesWidth != wrapWidth) {
+            cachedLines = mc.font.split(Component.literal(activeText), wrapWidth);
+            cachedLinesWidth = wrapWidth;
+        }
+        List<net.minecraft.util.FormattedCharSequence> lines = cachedLines;
         int boxHeight = Math.max(portrait + 12, 20 + lines.size() * 10);
         int left = (g.guiWidth() - width) / 2;
         int top = g.guiHeight() - boxHeight - 64;
@@ -114,8 +128,10 @@ public final class InnerVoiceOverlay {
         // Was the player's own username - the portrait is deliberately the player's own face
         // (it's their own inner voice, not an NPC), but labeling it with their username made the
         // line read as something the player said themselves in chat, not a voice speaking to them.
-        String name = "[Внутренний голос]";
-        g.drawString(mc.font, name, left + textLeftPad, top + 6, NAME_COLOR, true);
+        // Renamed again to "Неизвестный" (Unknown) - the story hasn't revealed who/what this voice
+        // actually is yet, and the white-to-gold shimmer hints at the True Light connection early
+        // players won't consciously clock, without naming it outright.
+        drawShimmerText(g, mc, "Неизвестный", left + textLeftPad, top + 6);
         for (int i = 0; i < lines.size(); i++) {
             g.drawString(mc.font, lines.get(i), left + textLeftPad, top + 18 + i * 10, TEXT_COLOR, true);
         }
@@ -123,6 +139,33 @@ public final class InnerVoiceOverlay {
             String hint = "[Enter] продолжить";
             g.drawString(mc.font, hint, left + width - mc.font.width(hint) - 8, top + boxHeight - 10, HINT_COLOR, false);
         }
+    }
+
+    /**
+     * Draws text one character at a time with a traveling white-to-gold wave running across it -
+     * each character's own phase is offset from its neighbours so the color visibly sweeps left
+     * to right instead of the whole word pulsing in sync.
+     */
+    private static void drawShimmerText(GuiGraphics g, Minecraft mc, String text, int x, int y) {
+        long time = System.currentTimeMillis();
+        int cx = x;
+        for (int i = 0; i < text.length(); i++) {
+            String ch = String.valueOf(text.charAt(i));
+            double phase = time / 260.0 - i * 0.5;
+            float t = (float) (Math.sin(phase) * 0.5 + 0.5);
+            g.drawString(mc.font, ch, cx, y, lerpColor(SHIMMER_FROM, NAME_COLOR, t), true);
+            cx += mc.font.width(ch);
+        }
+    }
+
+    private static int lerpColor(int from, int to, float t) {
+        int fa = (from >> 24) & 0xFF, fr = (from >> 16) & 0xFF, fg = (from >> 8) & 0xFF, fb = from & 0xFF;
+        int ta = (to >> 24) & 0xFF, tr = (to >> 16) & 0xFF, tg = (to >> 8) & 0xFF, tb = to & 0xFF;
+        int a = (int) (fa + (ta - fa) * t);
+        int r = (int) (fr + (tr - fr) * t);
+        int gg = (int) (fg + (tg - fg) * t);
+        int b = (int) (fb + (tb - fb) * t);
+        return (a << 24) | (r << 16) | (gg << 8) | b;
     }
 
     /**

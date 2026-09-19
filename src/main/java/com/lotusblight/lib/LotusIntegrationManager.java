@@ -3,14 +3,18 @@ package com.lotusblight.lib;
 import net.minecraftforge.fml.ModList;
 
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /** Discovers optional Forge integrations without hard-linking their classes. */
 public final class LotusIntegrationManager {
     private final Map<String, LotusIntegration> integrations = new LinkedHashMap<>();
     private final Map<String, LotusIntegrationSpec> specs = new LinkedHashMap<>();
+    // Priority order is fixed once registration (a handful of calls at mod init) settles, so it's
+    // sorted once here instead of every server tick forever.
+    private List<LotusIntegration> tickOrderCache;
 
     public void register(LotusIntegration integration) {
         if (integration != null) {
@@ -23,6 +27,7 @@ public final class LotusIntegrationManager {
         if (!integrations.containsKey(spec.modId()) || specs.get(spec.modId()).priority() <= spec.priority()) {
             integrations.put(spec.modId(), integration);
             specs.put(spec.modId(), spec);
+            tickOrderCache = null;
         }
     }
 
@@ -35,9 +40,15 @@ public final class LotusIntegrationManager {
     }
 
     public void tick() {
-        integrations.values().stream()
-                .sorted(Comparator.<LotusIntegration>comparingInt(i -> specs.get(i.modId()).priority()).reversed())
-                .filter(LotusIntegration::enabled)
-                .forEach(LotusIntegration::onServerTick);
+        if (tickOrderCache == null) {
+            tickOrderCache = integrations.values().stream()
+                    .sorted(Comparator.<LotusIntegration>comparingInt(i -> specs.get(i.modId()).priority()).reversed())
+                    .toList();
+        }
+        for (LotusIntegration integration : tickOrderCache) {
+            if (integration.enabled()) {
+                integration.onServerTick();
+            }
+        }
     }
 }

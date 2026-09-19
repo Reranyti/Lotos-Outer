@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:first_bloom",
+  "parent": "lotusblight:field_research",
   "display": {
     "icon": {"item": "lotusblight:infected_water_bucket"},
     "title": {"translate": "advancements.lotusblight.follow_the_current.title"},

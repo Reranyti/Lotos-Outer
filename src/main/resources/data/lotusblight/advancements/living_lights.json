@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:red_in_green",
+  "parent": "lotusblight:first_bloom",
   "display": {
     "icon": {"item": "lotusblight:glowing_berry"},
     "title": {"translate": "advancements.lotusblight.living_lights.title"},
@@ -10,6 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "berries": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:glowing_berry"]}]}}
+    "berry": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:glowing_berry"]}]}}
   }
 }

@@ -2,6 +2,7 @@ package com.lotusblight.item;
 
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.dialogue.InnerVoiceLibrary;
+import com.lotusblight.map.ChatOverhaulBranchColor;
 import com.lotusblight.map.ClientPlayerStateCache;
 import com.lotusblight.map.NetworkHandler;
 import com.lotusblight.map.PlayerStateSyncPacket;
@@ -13,6 +14,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -32,6 +34,9 @@ import java.util.List;
  * (not implemented yet), so eating just feeds you until one fires.
  */
 public class GlowingBerryItem extends Item {
+    /** Blocks eating another berry mid-scene/mid-flicker instead of relying on hunger to gate it - alwaysEat() bypasses hunger entirely. */
+    private static final int EAT_COOLDOWN_TICKS = 100;
+
     public GlowingBerryItem(Properties properties) {
         super(properties);
     }
@@ -41,7 +46,14 @@ public class GlowingBerryItem extends Item {
         ItemStack result = super.finishUsingItem(stack, level, entity);
         if (level.isClientSide || !(entity instanceof ServerPlayer player)) return result;
 
+        player.getCooldowns().addCooldown(this, EAT_COOLDOWN_TICKS);
         player.addEffect(new MobEffectInstance(ModEffects.TRUE_LIGHT.get(), TrueLightEffect.DURATION_TICKS, 0));
+        // Granted once for the full duration instead of TrueLightEffect topping it up every second
+        // - repeatedly removing/re-adding Night Vision mid-duration was what read as constant
+        // screen flicker instead of one clean 20-minute effect.
+        player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, TrueLightEffect.DURATION_TICKS, 0, true, false));
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, TrueLightEffect.DURATION_TICKS, 0, true, false));
+        ChatOverhaulBranchColor.applyTrueLightColor(player);
 
         if (LotusPlayerState.canTriggerInnerVoiceFreely(player)) {
             LotusPlayerState.incrementInnerVoiceUses(player);

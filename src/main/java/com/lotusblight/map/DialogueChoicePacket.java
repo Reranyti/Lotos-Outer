@@ -40,6 +40,7 @@ public class DialogueChoicePacket {
                 return;
             }
             LotusPlayerState.setDialogueBranch(player, packet.branch);
+            ChatOverhaulBranchColor.applyBranchColor(player, packet.branch);
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                     LotusPlayerState.hasHeardInnerVoice(player)));

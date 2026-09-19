@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:follow_the_current",
+  "parent": "lotusblight:field_research",
   "display": {
     "icon": {"item": "lotusblight:cleansing_powder"},
     "title": {"translate": "advancements.lotusblight.clean_the_river.title"},
@@ -10,6 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "powder": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["lotusblight:cleansing_powder"]}]}}
+    "used_powder": {"trigger": "minecraft:item_used_on_block", "conditions": {"item": {"items": ["lotusblight:cleansing_powder"]}}}
   }
 }

@@ -46,6 +46,14 @@ public final class MapSyncManager {
     private static final Map<UUID, Long> lastSyncTick = new HashMap<>();
     /** Lazily-resolved "is this outbreak's anchor a lotus_heart block" cache, keyed by outbreak id. */
     private static final Map<UUID, Boolean> heartAnchorCache = new HashMap<>();
+    /**
+     * Chunk -> nearest outbreak id, shared across every player's sync instead of recomputed per
+     * player per sync. Outbreak anchors never move once registered, so a chunk's nearest owner
+     * only ever changes when a new outbreak is registered (never on phase/progress updates) -
+     * tracking the outbreak count is enough to know when to invalidate.
+     */
+    private static final Map<ChunkPos, UUID> nearestOwnerCache = new HashMap<>();
+    private static int nearestOwnerCacheOutbreakCount = -1;
 
     private MapSyncManager() {
     }
@@ -121,26 +129,39 @@ public final class MapSyncManager {
             visibleIds.add(record.id());
         }
 
+        if (allOutbreaks.size() != nearestOwnerCacheOutbreakCount) {
+            // A new outbreak can only ever make some chunk's nearest owner CLOSER, never farther -
+            // the cheapest correct response is to drop the whole cache and let it rebuild lazily
+            // below, rather than track which chunks are actually affected.
+            nearestOwnerCache.clear();
+            nearestOwnerCacheOutbreakCount = allOutbreaks.size();
+        }
+
         List<Long> result = new ArrayList<>();
         for (ChunkPos chunkPos : infected) {
-            OutbreakRecord nearest = null;
-            long nearestDistSq = Long.MAX_VALUE;
-            long chunkCenterX = (long) (chunkPos.getMinBlockX() + 8);
-            long chunkCenterZ = (long) (chunkPos.getMinBlockZ() + 8);
-            for (OutbreakRecord candidate : allOutbreaks) {
-                long dx = candidate.pos().getX() - chunkCenterX;
-                long dz = candidate.pos().getZ() - chunkCenterZ;
-                long distSq = dx * dx + dz * dz;
-                if (distSq < nearestDistSq) {
-                    nearestDistSq = distSq;
-                    nearest = candidate;
-                }
-            }
-            if (nearest != null && visibleIds.contains(nearest.id())) {
+            UUID ownerId = nearestOwnerCache.computeIfAbsent(chunkPos, cp -> nearestOwnerId(cp, allOutbreaks));
+            if (ownerId != null && visibleIds.contains(ownerId)) {
                 result.add(chunkPos.toLong());
             }
         }
         return result;
+    }
+
+    private static UUID nearestOwnerId(ChunkPos chunkPos, List<OutbreakRecord> allOutbreaks) {
+        OutbreakRecord nearest = null;
+        long nearestDistSq = Long.MAX_VALUE;
+        long chunkCenterX = (long) (chunkPos.getMinBlockX() + 8);
+        long chunkCenterZ = (long) (chunkPos.getMinBlockZ() + 8);
+        for (OutbreakRecord candidate : allOutbreaks) {
+            long dx = candidate.pos().getX() - chunkCenterX;
+            long dz = candidate.pos().getZ() - chunkCenterZ;
+            long distSq = dx * dx + dz * dz;
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearest = candidate;
+            }
+        }
+        return nearest == null ? null : nearest.id();
     }
 
     @SubscribeEvent

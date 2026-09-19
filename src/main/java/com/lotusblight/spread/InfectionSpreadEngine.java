@@ -466,20 +466,28 @@ public class InfectionSpreadEngine {
     // thicket (see the reference the user gave: overlapping canopies, thick undergrowth), not
     // scattered single trees every ~30 conversions. Tripled the odds and widened/heightened the
     // canopy so trees actually overlap into a real canopy instead of standing apart.
-    private static final int MINI_TREE_CHANCE = 10;
+    private static final int MINI_TREE_CHANCE_PHASE4 = 10;
+    private static final int MINI_TREE_CHANCE_PHASE3 = 20;
     private static final int BLOSSOM_GRASS_CHANCE = 4;
 
     /**
      * Self-seeding flora for freshly-converted ground, instead of relying entirely on whatever
-     * vanilla grass/trees happened to already be standing there. Phase 4 ground has a chance to
-     * grow its own small lotus-log tree from scratch; any infected phase >= 2 ground has a chance
-     * to grow blossom grass directly, not just via the separate "grass converts if soil below is
-     * infected" rule (which only ever recolors pre-existing grass). Returns true if it planted
-     * anything, so the caller doesn't also drop a root on the same spot.
+     * vanilla grass/trees happened to already be standing there. Used to gate the mini-tree behind
+     * phase 4 only, which — on top of ATTEMPTS_PER_TICK's own phase 1-3 numbers — made everything
+     * before the mini-biome read as thin ("нищенски") next to it instead of a smaller version of
+     * the same density. Phase 3 now grows the same trees too, just rarer, so the canopy visibly
+     * fills in a step before the mini-biome rather than appearing all at once. Any infected
+     * phase >= 2 ground has a chance to grow blossom grass directly, not just via the separate
+     * "grass converts if soil below is infected" rule (which only ever recolors pre-existing
+     * grass). Returns true if it planted anything, so the caller doesn't also drop a root on the
+     * same spot.
      */
     private boolean growOwnVegetation(ServerLevel level, int phase, BlockPos above) {
-        if (phase >= 4 && level.random.nextInt(MINI_TREE_CHANCE) == 0) {
-            return tryGrowMiniTree(level, above);
+        if (phase >= 3) {
+            int chance = phase >= 4 ? MINI_TREE_CHANCE_PHASE4 : MINI_TREE_CHANCE_PHASE3;
+            if (level.random.nextInt(chance) == 0) {
+                return tryGrowMiniTree(level, above);
+            }
         }
         if (phase >= 2 && level.random.nextInt(BLOSSOM_GRASS_CHANCE) == 0) {
             level.setBlock(above, ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);

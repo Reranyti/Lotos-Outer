@@ -12,3 +12,10 @@ Manually-placed compile-time-only jars consumed via Gradle's `flatDir` repositor
   JourneyMap version no longer uses). If JourneyMap publishes a proper
   Maven artifact for this later, switch to that instead of this manual copy.
   To regenerate: unzip the jarjar entry out of any journeymap-forge-1.20.1-6.x.jar.
+
+- `chatoverhaul-1.0-1.20.1.jar` — "Chat Overhaul" (modId `chatoverhaul`), a
+  small third-party mod (author GrapeGG) that redraws chat with centered
+  messages, player heads, and per-player nickname colors. Used by
+  `ChatOverhaulBranchColor` to tint a player's chat name to match their
+  locked-in dialogue branch. No public Maven artifact found; placed here as
+  the distributed jar itself.

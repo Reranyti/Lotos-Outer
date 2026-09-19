@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -193,7 +194,13 @@ public final class LotusDialogueScreen extends Screen {
         graphics.fill(left - 3, top - 3, left + width + 3, top + height + 3, 0xFF17251B);
         graphics.fill(left, top, left + width, top + height, 0xF20B100D);
         graphics.fill(left + 10, top + 10, left + width - 10, top + 36, 0xFF263C2B);
-        graphics.drawString(this.font, Component.literal(asideOpen ? "ПОЛЕВОЙ ЖУРНАЛ" : "ГЛАВНЫЙ ЛОТОС"), left + 18, top + 18, asideOpen ? 0xFF9AD47D : 0xFFF1A9CF, false);
+        int titleLeft = left + 18;
+        ResourceLocation icon = asideOpen ? null : branchIcon();
+        if (icon != null) {
+            graphics.blit(icon, titleLeft, top + 14, 0, 0, 18, 18, 18, 18);
+            titleLeft += 22;
+        }
+        graphics.drawString(this.font, Component.literal(asideOpen ? "ПОЛЕВОЙ ЖУРНАЛ" : "ГЛАВНЫЙ ЛОТОС"), titleLeft, top + 18, asideOpen ? 0xFF9AD47D : 0xFFF1A9CF, false);
         graphics.drawString(this.font, Component.literal(headerRight()), left + 240, top + 18, branchColor(), false);
         graphics.drawString(this.font, Component.literal("В руке: " + held.getHoverName().getString()), left + 18, top + 47, 0xFFB8C8BE, false);
         var lines = this.font.split(Component.literal(lotusText), width - 36);
@@ -208,6 +215,20 @@ public final class LotusDialogueScreen extends Screen {
             case ALLIANCE -> "Фаза: " + phaseName() + " | Ветка: Альянс";
             case RESISTANCE -> "Фаза: " + phaseName() + " | Ветка: Война";
             default -> "Фаза: " + phaseName();
+        };
+    }
+
+    /**
+     * True Light and Lotoniriya are already documented as thematic opposites (see
+     * TrueLightEffect's own class doc: "clarity instead of confusion") - RESISTANCE gets the
+     * gold True Light icon, ALLIANCE gets the red Lotoniriya icon. Null (no icon) while UNDECIDED,
+     * since the player hasn't actually chosen a side yet.
+     */
+    private ResourceLocation branchIcon() {
+        return switch (branch) {
+            case ALLIANCE -> new ResourceLocation("lotusblight", "textures/mob_effect/lotoniriya.png");
+            case RESISTANCE -> new ResourceLocation("lotusblight", "textures/mob_effect/true_light.png");
+            default -> null;
         };
     }
 
