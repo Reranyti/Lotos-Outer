@@ -314,11 +314,15 @@ public class LotusEvents {
 
     /** The real clean counterpart of an infected block, or null if this block isn't something cleansing powder touches. */
     private net.minecraft.world.level.block.state.BlockState cleanReplacementFor(net.minecraft.world.level.block.state.BlockState infected) {
-        if (infected.is(ModBlocks.INFECTED_SOIL.get()) || infected.is(ModBlocks.LOTUS_DIRT.get())) return Blocks.DIRT.defaultBlockState();
-        if (infected.is(ModBlocks.LOTUS_SAND.get())) return Blocks.SAND.defaultBlockState();
-        if (infected.is(ModBlocks.LOTUS_GRAVEL.get())) return Blocks.GRAVEL.defaultBlockState();
-        if (infected.is(ModBlocks.LOTUS_STONE.get())) return Blocks.STONE.defaultBlockState();
-        if (infected.is(ModBlocks.LOTUS_TERRACOTTA.get())) return Blocks.TERRACOTTA.defaultBlockState();
+        // Used to send every infected ground block back to one fixed hardcoded vanilla block
+        // (lotus_stone -> plain STONE, lotus_terracotta -> plain TERRACOTTA, ...) regardless of
+        // what was actually there before - cleansing a granite mountain or orange-terracotta
+        // badlands turned it into plain grey stone / plain tan terracotta. LOTUS_ORIGIN (see
+        // InfectedGroundBlock/SpreadTables) now remembers the exact source block, so this looks it
+        // up for real instead of guessing at the category's single "representative" vanilla block.
+        net.minecraft.world.level.block.state.BlockState origin = com.lotusblight.spread.SpreadTables.originalGroundBlock(infected);
+        if (origin != null) return origin;
+        if (infected.is(ModBlocks.LOTUS_DIRT.get())) return Blocks.DIRT.defaultBlockState();
         if (infected.is(ModBlocks.BLOSSOM_GRASS.get())) return Blocks.GRASS_BLOCK.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LOG.get())) return Blocks.OAK_LOG.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LEAVES.get())) return Blocks.OAK_LEAVES.defaultBlockState();

@@ -1,6 +1,54 @@
 {
   "variants": {
-    "": {
+    "lotus_origin=0": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=1": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=2": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=3": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=4": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=5": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=6": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=7": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=8": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=9": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=10": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=11": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=12": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=13": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=14": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=15": {
+      "model": "lotusblight:block/infected_soil"
+    },
+    "lotus_origin=16": {
       "model": "lotusblight:block/infected_soil"
     }
   }
