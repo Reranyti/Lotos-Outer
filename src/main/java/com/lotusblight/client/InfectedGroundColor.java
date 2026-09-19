@@ -32,12 +32,14 @@ public final class InfectedGroundColor implements BlockColor {
         // No world context (inventory/item-frame render) - fall back to the texture's own color
         // untouched (white multiplier) rather than guessing at a biome.
         if (!(level instanceof LevelReader reader) || pos == null) return BiomeInfectionColors.NO_TINT;
+        InfectedMaterial material = InfectedMaterial.of(state.getBlock());
+        if (material == null) return BiomeInfectionColors.NO_TINT;
         Holder<Biome> biome = reader.getBiome(pos);
         net.minecraft.resources.ResourceLocation biomeId = biome.unwrapKey()
                 .map(net.minecraft.resources.ResourceKey::location)
                 .orElse(null);
         if (biomeId == null) return BiomeInfectionColors.NO_TINT;
-        int biomeColor = BiomeInfectionColors.colorFor(biomeId);
+        int biomeColor = BiomeInfectionColors.colorFor(biomeId, material);
         return blendTowardWhite(biomeColor, BLEND_STRENGTH);
     }
 
