@@ -21,7 +21,9 @@ public record OutbreakRecord(
         int infectedBlockCount
 ) {
     public static final int MIN_PHASE = 1;
-    public static final int MAX_PHASE = 4;
+    /** Kept in sync with InfectionPhases.MAX_PHASE by hand - was hardcoded 4, which silently
+     * clamped phase 5 back down to 4 on every save (withPhase is called on every spread tick). */
+    public static final int MAX_PHASE = com.lotusblight.spread.InfectionPhases.MAX_PHASE;
 
     public OutbreakRecord withPhase(int newPhase) {
         return new OutbreakRecord(id, pos, Math.max(MIN_PHASE, Math.min(MAX_PHASE, newPhase)), progress, hidden, createdGameTime, infectedBlockCount);
