@@ -75,6 +75,9 @@ public final class InnerVoiceOverlay {
         activeText = queue.poll();
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
+        if (activeText != null) {
+            InnerVoiceChatBridge.postLine(activeText);
+        }
         if (activeText == null && musicInstance != null) {
             Minecraft.getInstance().getSoundManager().stop(musicInstance);
             musicInstance = null;
