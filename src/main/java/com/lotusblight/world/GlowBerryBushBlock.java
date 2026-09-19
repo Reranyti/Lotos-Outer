@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.CaveVines;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -31,8 +32,16 @@ import org.joml.Vector3f;
  * BERRIES (reusing vanilla's own BERRIES boolean, same as cave vines) now
  * gates the harvest: empty until a random tick regrows it, same shape as
  * vanilla's own glow berry vines.
+ *
+ * Implements CaveVines (a plain interface with static helpers, not a class to
+ * extend) instead of reimplementing that logic from scratch - not for its
+ * use() (that hardcodes dropping vanilla's own Items.GLOW_BERRIES, no good
+ * for our own GLOW_BERRY_FOOD), but for hasGlowBerries()/emission(), so this
+ * block gets vanilla's real behavior of only glowing at full brightness while
+ * berries are actually present instead of a flat light level regardless of
+ * state (see ModBlocks' registration for the emission() wiring).
  */
-public class GlowBerryBushBlock extends BushBlock {
+public class GlowBerryBushBlock extends BushBlock implements CaveVines {
     private static final DustParticleOptions GLOW = new DustParticleOptions(new Vector3f(0.78f, 1.0f, 0.35f), 0.45f);
     /** Roughly one regrowth attempt every ~13 in-game minutes on average per bush (matches vanilla cave vine's own pacing order of magnitude). */
     private static final int REGROW_CHANCE = 1;
