@@ -67,6 +67,7 @@ public class LotusBlight {
                 output.accept(ModItems.GLOW_BERRIES_ITEM.get());
                 output.accept(ModItems.BLESSING_NODULE_ITEM.get());
                 output.accept(ModItems.BLESSING_SOIL_ITEM.get());
+                output.accept(ModItems.BLESSING_SAND_ITEM.get());
                 output.accept(ModItems.LOTUS_LOG_ITEM.get());
                 output.accept(ModItems.LOTUS_LEAVES_ITEM.get());
                 output.accept(ModItems.BLESSING_LOG_ITEM.get());
