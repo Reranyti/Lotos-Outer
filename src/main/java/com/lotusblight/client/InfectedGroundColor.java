@@ -23,7 +23,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class InfectedGroundColor implements BlockColor {
     public static final InfectedGroundColor INSTANCE = new InfectedGroundColor();
 
-    private static final float BLEND_STRENGTH = 0.35f;
+    /** Was 0.35 - with all the effort that went into picking distinct per-biome/per-material colors, that read as barely-there ("чуть светлее чем обычная"), not an actual color difference. */
+    private static final float BLEND_STRENGTH = 0.75f;
 
     private InfectedGroundColor() {}
 
