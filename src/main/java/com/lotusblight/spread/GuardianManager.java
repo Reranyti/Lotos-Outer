@@ -262,21 +262,35 @@ public final class GuardianManager {
     private void onAllianceGuardianKilled(ServerPlayer player) {
         int total = LotusPlayerState.incrementAllianceGuardianKills(player);
         if (total != ALLIANCE_BETRAYAL_KILL_COUNT) return;
-        triggerBetrayal(player, "— Двадцать моих стражей. Ты слышал предупреждение и всё равно шёл до конца.\n"
-                + "Больше ты не часть нас. Считай это войной.");
+        triggerBetrayal(player);
     }
 
-    /** Same one-way switch onto the traitor path as a guardian-kill betrayal, just reached via a different door. */
-    private static void triggerBetrayal(ServerPlayer player, String message) {
+    /**
+     * "ты будешь испепелён мной. Если выживешь то лотос не захватит тебя" - the one-way switch onto
+     * the traitor path, reached either by killing 20 guardians or by hitting
+     * ALLIANCE_CLEANSE_BETRAYAL_USES. Plays out as a real ordeal, not just a chat message: the
+     * "Нудная лекция" cutscene (see WorldLotusLectureOverlay - screen shake, hijacked mouse look),
+     * paired with actual incineration (Blindness + fire damage the player has to survive).
+     */
+    private static final int INCINERATION_DURATION_TICKS = 20 * 8;
+    private static final float INCINERATION_DAMAGE = 8.0f;
+
+    private static void triggerBetrayal(ServerPlayer player) {
         if (!LotusPlayerState.betrayAlliance(player)) return;
 
         com.lotusblight.advancement.AllianceGuardianSlaughterTrigger.INSTANCE.trigger(player);
+        LotusPlayerState.setHeardWorldLotusLecture(player);
+        com.lotusblight.advancement.WorldLotusLectureTrigger.INSTANCE.trigger(player);
         ChatOverhaulBranchColor.applyBranchColor(player, LotusPlayerState.BRANCH_RESISTANCE);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                 LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                 LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),
                 LotusPlayerState.getAllianceCleanseUses(player)));
-        player.displayClientMessage(Component.literal(message), false);
+
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new com.lotusblight.map.ShowWorldLotusLecturePacket());
+        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, INCINERATION_DURATION_TICKS, 0));
+        player.setSecondsOnFire(INCINERATION_DURATION_TICKS / 20);
+        player.hurt(player.damageSources().onFire(), INCINERATION_DAMAGE);
     }
 
     private static final int ALLIANCE_CLEANSE_LOTONIRIYA_USES = 20;
@@ -302,8 +316,7 @@ public final class GuardianManager {
             player.addEffect(new MobEffectInstance(MobEffects.WITHER, CLEANSE_WITHER_DURATION_TICKS, 0));
         }
         if (uses == ALLIANCE_CLEANSE_BETRAYAL_USES) {
-            triggerBetrayal(player, "— Тридцать раз. Ты предпочёл лечить себя, а не быть с нами.\n"
-                    + "Больше ты не часть нас. Считай это войной.");
+            triggerBetrayal(player);
         }
     }
 
