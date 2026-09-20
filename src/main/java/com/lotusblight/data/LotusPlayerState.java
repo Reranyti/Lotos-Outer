@@ -92,13 +92,24 @@ public final class LotusPlayerState {
         return getInnerVoiceUses(player) > 0;
     }
 
+    /** Berries eaten before the voice is allowed to speak at all (bug #9 - it was firing on the very first berry, before the player had even chosen a side against the lotus). */
+    private static final int INNER_VOICE_SILENT_BERRIES = 2;
+
     /**
-     * True for the first {@link #INNER_VOICE_FREE_USES} berries — an unconditional introduction.
-     * Beyond that, no scene fires on eating at all; later scenes are meant to be gated behind
-     * specific story triggers (not implemented yet) rather than every berry the player eats.
+     * The voice is the mysterious "Неизвестный" pushing the player toward fighting the infection -
+     * it makes no sense for it to speak to a player who hasn't even committed to opposing the
+     * lotus yet (bug #9: "сначала тебе нужно быть против лотоса"). Silent for the first
+     * {@link #INNER_VOICE_SILENT_BERRIES} berries regardless of branch, then an unconditional
+     * introduction for the next {@link #INNER_VOICE_FREE_USES} berries once on the RESISTANCE
+     * branch specifically. Beyond that, no scene fires on eating at all; later scenes are meant to
+     * be gated behind specific story triggers (not implemented yet) rather than every berry eaten.
      */
     public static boolean canTriggerInnerVoiceFreely(Player player) {
-        return hasTalkedToLotus(player) && getInnerVoiceUses(player) < INNER_VOICE_FREE_USES;
+        int uses = getInnerVoiceUses(player);
+        return hasTalkedToLotus(player)
+                && getDialogueBranch(player) == BRANCH_RESISTANCE
+                && uses >= INNER_VOICE_SILENT_BERRIES
+                && uses < INNER_VOICE_SILENT_BERRIES + INNER_VOICE_FREE_USES;
     }
 
     /**
