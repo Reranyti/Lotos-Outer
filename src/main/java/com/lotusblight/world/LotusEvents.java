@@ -343,7 +343,10 @@ public class LotusEvents {
             OutbreakSavedData data = OutbreakSavedData.get(level);
             BlockPos pos = event.getEntity().blockPosition();
             int cleansed = 0;
-            for (BlockPos target : BlockPos.betweenClosed(pos.offset(-2, -1, -2), pos.offset(2, 1, 2))) {
+            // Was -1..+1 (3 blocks tall, centered on the player's feet) - never reached anything
+            // above head height at all (bug #8). -2..+3 covers from just below feet to well above
+            // a player's head.
+            for (BlockPos target : BlockPos.betweenClosed(pos.offset(-2, -2, -2), pos.offset(2, 3, 2))) {
                 // This used to only recognize 3 of the ~10 infected block types, and reverted ALL
                 // of them - including the infected_water FLUID - to solid Blocks.DIRT. Cleansing a
                 // patch of infected river visibly filled it in with land instead of turning it
