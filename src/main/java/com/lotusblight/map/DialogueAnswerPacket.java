@@ -77,7 +77,7 @@ public class DialogueAnswerPacket {
             return;
         }
         com.lotusblight.data.LotusPlayerState.setReceivedCleansingPowderGift(player);
-        giveItem(player, ModItems.CLEANSING_POWDER.get(), 4, "Порошок принят берегом — держи запас.");
+        giveItem(player, ModItems.CLEANSING_POWDER.get(), 2, "Порошок принят берегом — держи запас.");
     }
 
     private static void giveGraftingRodOnce(ServerPlayer player) {

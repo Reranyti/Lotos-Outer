@@ -3,10 +3,13 @@ package com.lotusblight.client;
 import com.lotusblight.LotusBlight;
 import com.lotusblight.map.ClientMapCache;
 import com.lotusblight.map.MapMarker;
+import com.lotusblight.world.InfectedGroundBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ViewportEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -61,7 +64,47 @@ public final class InfectionFogRenderer {
             float density = intensityCapForPhase(marker.phase()) * (float) (1.0 - dist / range);
             if (density > best) best = density;
         }
-        return Math.min(1f, best);
+        // The marker-based falloff above measures distance to an outbreak's original ANCHOR
+        // point, and only counts outbreaks the player has actually discovered on the map. A large
+        // phase 5 outbreak's real infected footprint sprawls far past rangeForPhase's 56-block cap
+        // from that one anchor, and standing deep in undiscovered territory got zero fog at all -
+        // "тумана нет" even while physically surrounded by infected ground. This local sample
+        // answers "is the block under and around me actually infected right now", independent of
+        // anchor distance or discovery, so the air itself reads as infected instead of only the
+        // horizon changing color.
+        return Math.max(best, localGroundDensity);
+    }
+
+    private static volatile float localGroundDensity = 0f;
+    private static final int LOCAL_SAMPLE_INTERVAL_TICKS = 10;
+    private static int ticksSinceLocalSample = LOCAL_SAMPLE_INTERVAL_TICKS;
+
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (++ticksSinceLocalSample < LOCAL_SAMPLE_INTERVAL_TICKS) return;
+        ticksSinceLocalSample = 0;
+
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null || player.level() == null) {
+            localGroundDensity = 0f;
+            return;
+        }
+        BlockPos center = player.blockPosition();
+        int infected = 0;
+        int sampled = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-4, -2, -4), center.offset(4, 1, 4))) {
+            sampled++;
+            if (player.level().getBlockState(pos).getBlock() instanceof InfectedGroundBlock) {
+                infected++;
+            }
+        }
+        // Requires a real patch underfoot (not just one stray infected block at the sample's edge)
+        // before it counts as "standing in it" - a third of the sampled volume is enough to read as
+        // genuinely infected ground rather than the outbreak's thin leading edge.
+        float fraction = sampled == 0 ? 0f : (float) infected / sampled;
+        localGroundDensity = Math.min(1f, fraction / 0.33f);
     }
 
     @SubscribeEvent
