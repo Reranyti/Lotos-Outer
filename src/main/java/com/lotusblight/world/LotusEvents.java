@@ -4,6 +4,7 @@ import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.spread.InfectionPhases;
 import com.lotusblight.registry.ModBlocks;
+import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModItems;
 import com.lotusblight.item.LotusWikiItem;
 import net.minecraftforge.api.distmarker.Dist;
@@ -396,16 +397,44 @@ public class LotusEvents {
     public void onBlockBreak(net.minecraftforge.event.level.BlockEvent.BreakEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         if (cleanReplacementFor(event.getState()) == null) return;
+        decrementInfectedCount(level, event.getPos(), 1);
+    }
 
-        OutbreakSavedData data = OutbreakSavedData.get(level);
-        BlockPos pos = event.getPos();
-        data.incrementChunkCount(new ChunkPos(pos), -1);
-        OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
-        if (nearest != null) {
-            int newCount = Math.max(0, nearest.infectedBlockCount() - 1);
-            int newPhase = InfectionPhases.phaseForBlockCount(newCount);
-            float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
-            data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
+    /**
+     * Same gap as onBlockBreak above, for the other two common ways infected ground disappears
+     * without going through cleansing powder: bucketing up infected water (BreakEvent never fires
+     * for fluids at all) and explosions (BreakEvent doesn't fire for those either - Forge has a
+     * dedicated event for exactly this). "ЗАКРЫВАЙ ВСЕ ДЫРЫ СРАЗУ" - these two are the practical
+     * remaining gaps; a command like /setblock or /fill bypassing both is still possible, but
+     * that's an admin/debug action, not something normal play does organically.
+     */
+    @SubscribeEvent
+    public void onFillBucket(net.minecraftforge.event.entity.player.FillBucketEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        if (!(event.getTarget() instanceof net.minecraft.world.phys.BlockHitResult hit)) return;
+        BlockPos pos = hit.getBlockPos();
+        if (!level.getFluidState(pos).is(ModFluids.INFECTED_WATER.get())) return;
+        decrementInfectedCount(level, pos, 1);
+    }
+
+    @SubscribeEvent
+    public void onExplosion(net.minecraftforge.event.level.ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        for (BlockPos pos : event.getAffectedBlocks()) {
+            if (cleanReplacementFor(level.getBlockState(pos)) != null) {
+                decrementInfectedCount(level, pos, 1);
+            }
         }
+    }
+
+    private void decrementInfectedCount(ServerLevel level, BlockPos pos, int amount) {
+        OutbreakSavedData data = OutbreakSavedData.get(level);
+        data.incrementChunkCount(new ChunkPos(pos), -amount);
+        OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
+        if (nearest == null) return;
+        int newCount = Math.max(0, nearest.infectedBlockCount() - amount);
+        int newPhase = InfectionPhases.phaseForBlockCount(newCount);
+        float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
+        data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
     }
 }
