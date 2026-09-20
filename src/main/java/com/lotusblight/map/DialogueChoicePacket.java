@@ -49,7 +49,7 @@ public class DialogueChoicePacket {
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                     LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),
-                    LotusPlayerState.hasCleansedAsAlly(player)));
+                    LotusPlayerState.getAllianceCleanseUses(player)));
         });
         ctx.setPacketHandled(true);
     }
