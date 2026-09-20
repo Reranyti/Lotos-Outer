@@ -44,13 +44,9 @@ import java.util.UUID;
  * a short distance from the parent — a mini-lotus that starts its own
  * (capped) growth without instantly matching the parent's scale.
  *
- * Data-model note: {@link OutbreakRecord} has no "max phase" field and nothing
- * else needs one, so rather than extending the shared record/SavedData this
- * class keeps its own lightweight {@code childPhaseCaps} map (outbreak id ->
- * max phase) and actively re-clamps any capped outbreak's phase every pass.
- * This is intentionally decoupled from {@code InfectionSpreadEngine} (not
- * edited here) — the cap is enforced independently, after the fact, so it
- * works regardless of who advanced the phase.
+ * A child outbreak's phase cap now lives on {@link OutbreakRecord#maxPhaseCap} itself, persisted
+ * so it survives restarts and self-enforcing since {@link OutbreakRecord#withPhase} clamps against
+ * it directly - InfectionSpreadEngine never needs to know a cap exists at all.
  *
  * Work is budgeted through {@link LotusTaskQueue} / {@link LotusLib#process}
  * exactly like the worldgen/spread queues elsewhere in the mod: at most one
@@ -79,7 +75,6 @@ public final class RootGrowthEngine {
     private final LotusTaskQueue<RootGrowthTask> queue = new LotusTaskQueue<>();
     private final Set<UUID> queuedOutbreaks = new HashSet<>();
     private final Map<UUID, RootChainState> chains = new HashMap<>();
-    private final Map<UUID, Integer> childPhaseCaps = new HashMap<>();
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -97,7 +92,6 @@ public final class RootGrowthEngine {
 
     private void sweepLevel(ServerLevel level) {
         OutbreakSavedData data = OutbreakSavedData.get(level);
-        enforcePhaseCaps(level, data);
 
         double activeBlocks = com.lotusblight.LotusConfig.ACTIVE_CHUNK_RADIUS.get() * 16.0;
         double activeRangeSq = activeBlocks * activeBlocks;
@@ -125,19 +119,6 @@ public final class RootGrowthEngine {
             if (player.blockPosition().distSqr(pos) <= rangeSq) return true;
         }
         return false;
-    }
-
-    private void enforcePhaseCaps(ServerLevel level, OutbreakSavedData data) {
-        if (childPhaseCaps.isEmpty()) return;
-        for (Map.Entry<UUID, Integer> entry : childPhaseCaps.entrySet()) {
-            OutbreakRecord record = data.getOutbreak(entry.getKey());
-            if (record == null) continue;
-            int cap = entry.getValue();
-            if (record.phase() > cap) {
-                float clampedProgress = Math.min(record.progress(), 0.99f);
-                data.updateOutbreak(record.withPhase(cap).withProgress(clampedProgress));
-            }
-        }
     }
 
     private void growOnce(MinecraftServer server, RootGrowthTask task) {
@@ -206,7 +187,7 @@ public final class RootGrowthEngine {
         if (data.nearestOutbreak(flowerPos, CHILD_MIN_DISTANCE_FROM_OUTBREAK, false) != null) return;
 
         OutbreakRecord child = data.registerOutbreak(flowerPos.immutable(), level.getGameTime(), true);
-        childPhaseCaps.put(child.id(), CHILD_MAX_PHASE);
+        data.updateOutbreak(child.withMaxPhaseCap(CHILD_MAX_PHASE));
         level.setBlock(padPos, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
         level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
         level.sendParticles(ROOT_GREEN, flowerPos.getX() + 0.5, flowerPos.getY() + 0.6, flowerPos.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
