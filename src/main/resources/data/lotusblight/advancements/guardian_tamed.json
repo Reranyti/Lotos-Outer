@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:field_research",
+  "parent": "lotusblight:lotus_alloy_crafted",
   "display": {
     "icon": {"item": "lotusblight:lotus_alloy"},
     "title": {"translate": "advancements.lotusblight.guardian_tamed.title"},
