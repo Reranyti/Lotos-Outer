@@ -1,6 +1,8 @@
 package com.lotusblight.spread;
 
 import com.lotusblight.LotusConfig;
+import com.lotusblight.advancement.GuardianPackTamedTrigger;
+import com.lotusblight.advancement.GuardianTamedTrigger;
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
@@ -239,15 +241,58 @@ public final class GuardianManager {
         }
     }
 
+    private static final String NEUTRALIZED_BY_KEY = "LotusNeutralizedBy";
+    /** "Повелитель лотоса...или пушистых хвостов?" - fires once a player's lifetime tamed-guardian count reaches this. */
+    public static final int PACK_ADVANCEMENT_SIZE = 13;
+
     /**
-     * A tagged guardian is a hostile Wolf, not a pet - block every interaction with it (taming
-     * with bones, sitting, breeding, etc. all go through this same entry point on a Wolf) instead
-     * of letting a player right-click it into becoming a tame ally mid-fight.
+     * A tagged guardian is a hostile Wolf, not a pet by default - block every interaction with it
+     * (taming with bones, sitting, breeding, etc. all go through this same entry point on a Wolf)
+     * so a player can't just right-click it into becoming a tame ally mid-fight.
+     *
+     * RESISTANCE gets a real, deliberate path around that instead: hand a still-hostile guardian a
+     * lotus_alloy ingot first - it stops targeting whoever fed it (tracked per-wolf, not a blanket
+     * "guardians are friendly now") without becoming an ally yet. THEN a bone on that same,
+     * already-calmed guardian actually tames it. Once tamed it's a normal Wolf pet again (own
+     * hostile goals stripped), not a guardian anymore.
      */
     @SubscribeEvent
     public void onInteract(PlayerInteractEvent.EntityInteract event) {
-        if (event.getTarget() instanceof Wolf wolf && wolf.getTags().contains(GUARDIAN_TAG)) {
+        if (!(event.getTarget() instanceof Wolf wolf) || !wolf.getTags().contains(GUARDIAN_TAG)) return;
+        if (wolf.isTame()) return; // already someone's pet (a past guardian) - let normal Wolf interactions through
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
             event.setCanceled(true);
+            return;
+        }
+        event.setCanceled(true);
+
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
+        ItemStack held = player.getItemInHand(event.getHand());
+
+        if (held.is(ModItems.LOTUS_ALLOY.get())) {
+            wolf.getPersistentData().putUUID(NEUTRALIZED_BY_KEY, player.getUUID());
+            wolf.setTarget(null);
+            if (!player.getAbilities().instabuild) held.shrink(1);
+            player.displayClientMessage(Component.literal("Страж принюхивается к слитку и больше не видит в тебе врага."), true);
+            return;
+        }
+
+        boolean neutralizedByThisPlayer = wolf.getPersistentData().hasUUID(NEUTRALIZED_BY_KEY)
+                && wolf.getPersistentData().getUUID(NEUTRALIZED_BY_KEY).equals(player.getUUID());
+        if (held.is(net.minecraft.world.item.Items.BONE) && neutralizedByThisPlayer) {
+            wolf.removeTag(GUARDIAN_TAG);
+            wolf.goalSelector.removeAllGoals(goal -> goal instanceof MeleeAttackGoal);
+            wolf.targetSelector.removeAllGoals(goal -> goal instanceof NearestAttackableTargetGoal);
+            wolf.tame(player);
+            wolf.setCustomNameVisible(false);
+            if (!player.getAbilities().instabuild) held.shrink(1);
+            player.displayClientMessage(Component.literal("Страж лотоса признал тебя своим."), true);
+
+            GuardianTamedTrigger.INSTANCE.trigger(player);
+            int total = LotusPlayerState.incrementTamedGuardianCount(player);
+            if (total == PACK_ADVANCEMENT_SIZE) {
+                GuardianPackTamedTrigger.INSTANCE.trigger(player);
+            }
         }
     }
 
