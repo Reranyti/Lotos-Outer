@@ -2,6 +2,7 @@ package com.lotusblight.world;
 
 import com.lotusblight.registry.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -10,7 +11,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.CaveVines;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -55,6 +58,25 @@ public class GlowBerryBushBlock extends BushBlock implements CaveVines {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
         builder.add(BlockStateProperties.BERRIES);
+    }
+
+    /**
+     * Was a plain BushBlock check (needs dirt/grass-like ground directly below) - fine for the
+     * Blessing patches it originally grew in, but the sand-pillar waypoint (see
+     * BlessingSandPillarFeature) pins this to the SIDE of a blessing_sand column, clinging to it
+     * the way a real vine clings to a wall rather than growing up from soil. Accepts either: the
+     * original ground-below case, or any solid horizontal neighbor.
+     */
+    @Override
+    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+        if (super.canSurvive(state, level, pos)) return true;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockGetter getter = level;
+            if (getter.getBlockState(pos.relative(direction)).isFaceSturdy(getter, pos.relative(direction), direction.getOpposite())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

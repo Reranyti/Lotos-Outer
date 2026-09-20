@@ -30,7 +30,7 @@
     ],
     [],
     [],
-    ["minecraft:glow_lichen", "lotusblight:dwarf_blessing_tree", "lotusblight:glow_berry_bush"],
+    ["minecraft:glow_lichen", "lotusblight:dwarf_blessing_tree", "lotusblight:glow_berry_bush", "lotusblight:blessing_sand_pillar"],
     []
   ],
   "spawners": {},
