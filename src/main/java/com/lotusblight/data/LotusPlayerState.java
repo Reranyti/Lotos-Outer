@@ -160,6 +160,31 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String SCIENTIST_PAGES_FOUND_KEY = "ScientistPagesFound";
+
+    /**
+     * "Постоянный дроп после получения страниц дневника" - ScientistPageItem#createRandomStack
+     * picked a fully random variant every single guardian kill with no memory of what the player
+     * already had, so the "rare find" reward degenerated into an endless stream of duplicates once
+     * a player had already seen all 5 (or even just gotten unlucky and seen the same one twice).
+     * Tracked as a bitmask (one bit per ObjectZeroPages variant index) so GuardianManager can pick
+     * a variant the killer doesn't have yet, and stop dropping once they've found all of them.
+     */
+    public static boolean hasFoundScientistPage(Player player, int variant) {
+        return (root(player, false).getInt(SCIENTIST_PAGES_FOUND_KEY) & (1 << variant)) != 0;
+    }
+
+    public static void markScientistPageFound(Player player, int variant) {
+        CompoundTag root = root(player, true);
+        root.putInt(SCIENTIST_PAGES_FOUND_KEY, root.getInt(SCIENTIST_PAGES_FOUND_KEY) | (1 << variant));
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static boolean hasFoundAllScientistPages(Player player, int totalVariants) {
+        int mask = root(player, false).getInt(SCIENTIST_PAGES_FOUND_KEY);
+        return mask == (1 << totalVariants) - 1;
+    }
+
     private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
 
     /** Game-time tick this player's True-Light bonus absorption hearts expire at, or 0 if inactive. */
