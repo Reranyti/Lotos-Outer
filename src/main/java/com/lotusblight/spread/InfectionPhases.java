@@ -43,13 +43,16 @@ public final class InfectionPhases {
      * afterthought next to phase 3.
      */
     /**
-     * Phase 5's radius is deliberately huge, not just "bigger" - per the plan, phase 5 is the
-     * point where the infection stops being locally contained at all and starts genuinely
-     * breaking out across the surface. 500 isn't a hand-picked "correct" number, just large
-     * enough that InfectionSpreadEngine's own radius-based frontier search stops being the
-     * limiting factor in practice.
+     * Was 500 - a genuine bug, not just an aggressive number. randomNeighbour() samples UNIFORMLY
+     * across the full radius, so a 500-block radius meant almost every attempt landed in an
+     * unloaded chunk and silently failed (hasChunkAt check) - phase 5 looked like it did
+     * literally nothing ("даже на 5 стадии изменений нет"). "No longer locally contained" instead
+     * comes from removing the frontier size cap at phase 5 (see FRONTIER_CAP's use in
+     * InfectionSpreadEngine#pushFrontier) so growth keeps accumulating outward indefinitely
+     * instead of being trimmed back to a small recent window - not from one huge single-attempt
+     * radius that mostly wastes its own attempts.
      */
-    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 500};
+    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 16};
 
     /**
      * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,
