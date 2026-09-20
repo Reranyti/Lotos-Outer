@@ -179,8 +179,13 @@ public class LotusEvents {
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (player.getPersistentData().getBoolean("LotusBlightStarterGiven")) return;
-        player.getPersistentData().putBoolean("LotusBlightStarterGiven", true);
+        // Was player.getPersistentData() (per-entity NBT) - bug #14, the kit reappearing on
+        // relog/version updates even on an existing world. A world-level SavedData (see its own
+        // class doc) is guaranteed loaded before this event can fire; per-entity persistent data's
+        // load-vs-event-fire ordering isn't something a one-time grant should depend on.
+        com.lotusblight.data.StarterKitSavedData starterKit = com.lotusblight.data.StarterKitSavedData.get(player.serverLevel());
+        if (starterKit.hasReceived(player.getUUID())) return;
+        starterKit.markReceived(player.getUUID());
         player.getInventory().add(new ItemStack(ModItems.LOTUS_SEED.get(), 3));
         player.getInventory().add(LotusWikiItem.createStack());
         player.displayClientMessage(Component.literal("Три семени лотоса и книга-вики появились у тебя. Ты сам решаешь, куда пустить корни."), false);

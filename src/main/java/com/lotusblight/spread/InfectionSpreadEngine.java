@@ -79,6 +79,26 @@ public class InfectionSpreadEngine {
     private final Map<UUID, Deque<BlockPos>> frontiers = new HashMap<>();
     private final Map<UUID, ServerBossEvent> bossBars = new HashMap<>();
 
+    private static InfectionSpreadEngine instance;
+
+    public InfectionSpreadEngine() {
+        instance = this;
+    }
+
+    /**
+     * For /lotus timewarp (see LotusCommands) - a SAFE alternative to actually speeding up the
+     * game (real "tick warp" means re-entering the server's own tick loop from inside itself,
+     * which risks corrupting whatever it's mid-iteration over; not worth the risk for a testing
+     * convenience). This just runs extra passes of this engine's own real tick logic in a tight
+     * loop, skipping the normal SPREAD_INTERVAL_TICKS wait between them.
+     */
+    public static void forceTicks(ServerLevel level, int passes) {
+        if (instance == null) return;
+        for (int i = 0; i < passes; i++) {
+            instance.tickLevel(level);
+        }
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -193,7 +213,11 @@ public class InfectionSpreadEngine {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
             announcePhaseUp(level, outbreak.pos(), newPhase);
-            if (newPhase >= 4) {
+            // Was ">= 4" - fired a SECOND full burst (up to 30 trees + 70 grass patches) when an
+            // outbreak advanced from phase 4 to phase 5, on top of the one it already got reaching
+            // phase 4 - looked like trees spawning themselves out of nowhere (bug #6). Only the
+            // exact transition into phase 4 should trigger this, not every phase at or above it.
+            if (newPhase == 4) {
                 guaranteeMiniBiomeGrowth(level, outbreak.pos());
             }
             maybeSpawnHeart(level, data, outbreak, newPhase);
