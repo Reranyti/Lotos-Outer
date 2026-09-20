@@ -28,9 +28,13 @@ import java.util.UUID;
  * radius and attempts fixed rather than escalating.
  */
 public class MossyGlandSpreadEngine {
-    private static final int RADIUS = 6;
-    private static final int ATTEMPTS_PER_TICK = 6;
-    private static final int FRONTIER_CAP = 150;
+    // Was 6/6 - reported as "разрастается медленно"/"надо мега быстро" (bugs #18, #21), barely
+    // noticeable against how much ground there is to convert. Radius and attempts both raised
+    // well past the main infection's own phase 4 numbers (12/22) - Mossy Glands are meant to read
+    // as an aggressive, fast-spreading anomaly once found, not a slower cousin of the real infection.
+    private static final int RADIUS = 14;
+    private static final int ATTEMPTS_PER_TICK = 40;
+    private static final int FRONTIER_CAP = 400;
     /** Chance (1 in N) a successful ground conversion also grows a single azalea-family plant on top - real vanilla blocks, no new art, per the "vanilla but it multiplies" design. */
     private static final int AZALEA_CHANCE = 10;
 
