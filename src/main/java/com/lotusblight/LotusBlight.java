@@ -9,6 +9,7 @@ import com.lotusblight.registry.ModSounds;
 import com.lotusblight.registry.ModVillagers;
 import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModBiomes;
+import com.lotusblight.registry.ModFeatures;
 import net.minecraftforge.common.BiomeManager;
 import com.lotusblight.world.LotusEvents;
 import com.lotusblight.spread.InfectionSpreadEngine;
@@ -122,6 +123,7 @@ public class LotusBlight {
         ModFluids.FLUID_TYPES.register(modBus);
         ModFluids.FLUIDS.register(modBus);
         ModBlocks.BLOCKS.register(modBus);
+        ModFeatures.FEATURES.register(modBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModEffects.EFFECTS.register(modBus);
