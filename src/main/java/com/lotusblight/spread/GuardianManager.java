@@ -9,6 +9,7 @@ import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.map.ChatOverhaulBranchColor;
 import com.lotusblight.map.NetworkHandler;
 import com.lotusblight.map.PlayerStateSyncPacket;
+import com.lotusblight.registry.ModEffects;
 import com.lotusblight.registry.ModItems;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.core.BlockPos;
@@ -16,6 +17,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
@@ -122,7 +125,7 @@ public final class GuardianManager {
                             com.lotusblight.data.LotusPlayerState.getDialogueBranch(player),
                             com.lotusblight.data.LotusPlayerState.hasFullMapVisibility(player),
                             com.lotusblight.data.LotusPlayerState.hasHeardInnerVoice(player), true,
-                            com.lotusblight.data.LotusPlayerState.hasCleansedAsAlly(player)));
+                            com.lotusblight.data.LotusPlayerState.getAllianceCleanseUses(player)));
         }
     }
 
@@ -259,6 +262,12 @@ public final class GuardianManager {
     private void onAllianceGuardianKilled(ServerPlayer player) {
         int total = LotusPlayerState.incrementAllianceGuardianKills(player);
         if (total != ALLIANCE_BETRAYAL_KILL_COUNT) return;
+        triggerBetrayal(player, "— Двадцать моих стражей. Ты слышал предупреждение и всё равно шёл до конца.\n"
+                + "Больше ты не часть нас. Считай это войной.");
+    }
+
+    /** Same one-way switch onto the traitor path as a guardian-kill betrayal, just reached via a different door. */
+    private static void triggerBetrayal(ServerPlayer player, String message) {
         if (!LotusPlayerState.betrayAlliance(player)) return;
 
         com.lotusblight.advancement.AllianceGuardianSlaughterTrigger.INSTANCE.trigger(player);
@@ -266,10 +275,36 @@ public final class GuardianManager {
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                 LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                 LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),
-                LotusPlayerState.hasCleansedAsAlly(player)));
-        player.displayClientMessage(Component.literal(
-                "— Двадцать моих стражей. Ты слышал предупреждение и всё равно шёл до конца.\n"
-                        + "Больше ты не часть нас. Считай это войной."), false);
+                LotusPlayerState.getAllianceCleanseUses(player)));
+        player.displayClientMessage(Component.literal(message), false);
+    }
+
+    private static final int ALLIANCE_CLEANSE_LOTONIRIYA_USES = 20;
+    private static final int ALLIANCE_CLEANSE_WITHER_USES = 24;
+    private static final int ALLIANCE_CLEANSE_BETRAYAL_USES = 30;
+    /** Same duration LotusMimicBlock already uses for a Lotoniriya application - kept consistent instead of a new one-off number. */
+    private static final int LOTONIRIYA_DURATION_TICKS = 20 * 18;
+    private static final int CLEANSE_WITHER_DURATION_TICKS = 20 * 10;
+
+    /**
+     * The escalating punishment spec for an ALLIANCE player who keeps cleansing her own infection:
+     * 18 uses turns the dialogue warning blunt (see LotusDialogueLibrary#cleanseWarningLine), 20
+     * applies Lotoniriya immediately, 24 reapplies it and adds Regeneration-stripping + a 10s Wither,
+     * 30 is a full betrayal onto the traitor path - the same one-way switch a guardian-kill
+     * betrayal reaches, just through cleansing instead of combat.
+     */
+    public static void onAllianceCleanseUsesChanged(ServerPlayer player, int uses) {
+        if (uses == ALLIANCE_CLEANSE_LOTONIRIYA_USES || uses == ALLIANCE_CLEANSE_WITHER_USES) {
+            player.addEffect(new MobEffectInstance(ModEffects.LOTONIRIYA.get(), LOTONIRIYA_DURATION_TICKS, 0, false, true, true));
+        }
+        if (uses == ALLIANCE_CLEANSE_WITHER_USES) {
+            player.removeEffect(MobEffects.REGENERATION);
+            player.addEffect(new MobEffectInstance(MobEffects.WITHER, CLEANSE_WITHER_DURATION_TICKS, 0));
+        }
+        if (uses == ALLIANCE_CLEANSE_BETRAYAL_USES) {
+            triggerBetrayal(player, "— Тридцать раз. Ты предпочёл лечить себя, а не быть с нами.\n"
+                    + "Больше ты не часть нас. Считай это войной.");
+        }
     }
 
     private static final double ALLY_DEFENSE_RADIUS = 24.0;

@@ -163,11 +163,21 @@ public final class LotusDialogueLibrary {
                 + "Они хорошо помогают мне исследовать местность и искать лучшие блоки для распространения. Береги их — они тоже часть нас.";
     }
 
+    /** Uses count at which the soft warning stops and the Lotus starts speaking plainly. */
+    public static final int CLEANSE_BLUNT_WARNING_USES = 18;
+
     /**
      * The ALLIANCE-side mirror of guardianLoreLine() — a player who joined the Lotus but keeps
      * cleansing her own infected blocks gets warned once, before it escalates into anything worse.
+     * Past {@link #CLEANSE_BLUNT_WARNING_USES} uses the tone drops the metaphor entirely — real
+     * in-world consequences start at GuardianManager's own thresholds right after this point, so
+     * the dialogue needs to stop sounding like a polite request before that happens.
      */
-    public static String cleanseWarningLine() {
+    public static String cleanseWarningLine(int uses) {
+        if (uses >= CLEANSE_BLUNT_WARNING_USES) {
+            return "— Хватит. Серьёзно. Так не делай.\n\n"
+                    + "Ты примкнул к нам, а не к себе. Каждый твой порошок — это моя же рана, которую ты сам себе наносишь. Я не буду просить ещё раз так же вежливо.";
+        }
         return "— Лечение? Гм... мне не очень нравится, когда ты примкнул к нам, а сам лечишь свои же куски.\n\n"
                 + "Может, ты не будешь этого делать? Это было предупреждением.";
     }

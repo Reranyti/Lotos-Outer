@@ -188,7 +188,7 @@ public final class LotusDialogueScreen extends Screen {
             case JOURNAL -> LotusDialogueLibrary.scientistNote(phase);
             case VILLAGE -> LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
             case GUARDIAN_WARNING -> LotusDialogueLibrary.guardianLoreLine();
-            case CLEANSE_WARNING -> LotusDialogueLibrary.cleanseWarningLine();
+            case CLEANSE_WARNING -> LotusDialogueLibrary.cleanseWarningLine(ClientPlayerStateCache.allianceCleanseUses());
         };
         // Every other place that changes lotusText (setConversation, confirmBranch, the "Нет, я ещё
         // подумаю" button) pairs it with rebuildButtons() right after - this was the one spot that

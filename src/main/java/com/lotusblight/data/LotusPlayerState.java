@@ -291,22 +291,30 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
-    private static final String HAS_CLEANSED_AS_ALLY_KEY = "HasCleansedAsAlly";
+    private static final String ALLIANCE_CLEANSE_USES_KEY = "AllianceCleanseUses";
 
     /**
-     * Set the first time an ALLIANCE player cleanses an infected block with powder (see
-     * LotusEvents#onPlayerInteract) - unlocks the "(!) Лечение?" dialogue aside, the ALLIANCE-side
-     * mirror of hasSeenGuardian's guardian warning: the Lotus objecting to an ally still fighting
-     * her infection, before it escalates into anything worse.
+     * How many times an ALLIANCE player has used cleansing powder while on that branch (see
+     * LotusEvents#onPlayerInteract). Drives an escalating response from the Lotus instead of a
+     * single flag: the "(!) Лечение?" dialogue aside unlocks on the very first use (soft warning),
+     * turns blunt at 18, and 20/24/30 trigger real in-world consequences - see
+     * GuardianManager.ALLIANCE_CLEANSE_* thresholds for the actual effects.
      */
-    public static boolean hasCleansedAsAlly(Player player) {
-        return root(player, false).getBoolean(HAS_CLEANSED_AS_ALLY_KEY);
+    public static int getAllianceCleanseUses(Player player) {
+        return root(player, false).getInt(ALLIANCE_CLEANSE_USES_KEY);
     }
 
-    public static void setCleansedAsAlly(Player player) {
+    public static boolean hasCleansedAsAlly(Player player) {
+        return getAllianceCleanseUses(player) > 0;
+    }
+
+    /** Returns the new total. */
+    public static int incrementAllianceCleanseUses(Player player) {
         CompoundTag root = root(player, true);
-        root.putBoolean(HAS_CLEANSED_AS_ALLY_KEY, true);
+        int newCount = root.getInt(ALLIANCE_CLEANSE_USES_KEY) + 1;
+        root.putInt(ALLIANCE_CLEANSE_USES_KEY, newCount);
         player.getPersistentData().put(ROOT_TAG, root);
+        return newCount;
     }
 
     private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
