@@ -126,6 +126,26 @@ public final class LotusDialogueLibrary {
         return List.of("(Заглянуть в свой журнал)", "А что там с деревней ниже по реке?");
     }
 
+    /** Only unlocked once {@link com.lotusblight.data.LotusPlayerState#hasSeenGuardian} is true — see LotusDialogueScreen. */
+    public static List<String> asideAnswers(boolean guardianSeen) {
+        if (!guardianSeen) return asideAnswers();
+        List<String> base = new java.util.ArrayList<>(asideAnswers());
+        base.add("(!) Стражи?");
+        return base;
+    }
+
+    /**
+     * "Часть лотоса ненавидит, когда собаки ЛЮБЯТ" — the World Lotus warning a player, the first
+     * time they can even ask, not to kill her guardians before they've had a chance to. Framed as
+     * lore rather than a system message on purpose: a warning that arrives as a threat reads very
+     * differently from one that arrives as trust.
+     */
+    public static String guardianLoreLine() {
+        return "— Стражи? А, ты про них. Это мои верные собаки — они мне помогают меня защищать. Правда хорошо?\n\n"
+                + "Не бойся, для тебя они безопасны. Может, даже лучше будет их приручить...\n\n"
+                + "Они хорошо помогают мне исследовать местность и искать лучшие блоки для распространения. Береги их — они тоже часть нас.";
+    }
+
     public static List<String> playerAnswers(Branch branch) {
         if (branch == Branch.RESISTANCE) return List.of("Где твой настоящий якорь?", "Я очищу этот берег.", "Я найду твоё Сердце.");
         if (branch == Branch.ALLIANCE) return List.of("Что мне с этим делать?", "Как помочь корням расти?", "Хорошо. Я слушаю.");

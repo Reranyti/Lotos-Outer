@@ -16,26 +16,29 @@ public class PlayerStateSyncPacket {
     private final int dialogueBranch;
     private final boolean fullMapVisibility;
     private final boolean heardInnerVoice;
+    private final boolean hasSeenGuardian;
 
-    public PlayerStateSyncPacket(int dialogueBranch, boolean fullMapVisibility, boolean heardInnerVoice) {
+    public PlayerStateSyncPacket(int dialogueBranch, boolean fullMapVisibility, boolean heardInnerVoice, boolean hasSeenGuardian) {
         this.dialogueBranch = dialogueBranch;
         this.fullMapVisibility = fullMapVisibility;
         this.heardInnerVoice = heardInnerVoice;
+        this.hasSeenGuardian = hasSeenGuardian;
     }
 
     public static void encode(PlayerStateSyncPacket packet, FriendlyByteBuf buf) {
         buf.writeVarInt(packet.dialogueBranch);
         buf.writeBoolean(packet.fullMapVisibility);
         buf.writeBoolean(packet.heardInnerVoice);
+        buf.writeBoolean(packet.hasSeenGuardian);
     }
 
     public static PlayerStateSyncPacket decode(FriendlyByteBuf buf) {
-        return new PlayerStateSyncPacket(buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
+        return new PlayerStateSyncPacket(buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(PlayerStateSyncPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ClientPlayerStateCache.update(packet.dialogueBranch, packet.fullMapVisibility, packet.heardInnerVoice));
+        ctx.enqueueWork(() -> ClientPlayerStateCache.update(packet.dialogueBranch, packet.fullMapVisibility, packet.heardInnerVoice, packet.hasSeenGuardian));
         ctx.setPacketHandled(true);
     }
 }
