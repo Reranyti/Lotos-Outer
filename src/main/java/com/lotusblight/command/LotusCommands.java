@@ -48,7 +48,10 @@ public final class LotusCommands {
                 .then(outbreakCommands())
                 .then(branchCommands())
                 .then(mapCommands())
-                .then(glandCommands()));
+                .then(glandCommands())
+                .then(Commands.literal("timewarp")
+                        .then(Commands.argument("passes", IntegerArgumentType.integer(1, 500))
+                                .executes(ctx -> timewarp(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "passes"))))));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------
@@ -198,6 +201,22 @@ public final class LotusCommands {
             source.sendSuccess(() -> Component.literal(gland.pos().toShortString() + " — обращено блоков: " + gland.convertedBlockCount()), false);
         }
         return glands.size();
+    }
+
+    /**
+     * A SAFE stand-in for "speed up the whole game" (bug #17) - real tick-warp means re-entering
+     * MinecraftServer's own tick loop from inside itself (risks corrupting whatever internal
+     * iteration is already mid-flight), which isn't worth the risk for a testing convenience. This
+     * just runs extra passes of our own spread engines back-to-back and advances the day/night
+     * clock, instead of touching the server's actual tick loop.
+     */
+    private static int timewarp(CommandSourceStack source, int passes) {
+        ServerLevel level = source.getLevel();
+        level.setDayTime(level.getDayTime() + passes * 24000L / 500);
+        InfectionSpreadEngine.forceTicks(level, passes);
+        com.lotusblight.spread.MossyGlandSpreadEngine.forceTicks(level, passes);
+        source.sendSuccess(() -> Component.literal("Прогнано " + passes + " проходов заражения (без реального ускорения тика сервера)."), true);
+        return passes;
     }
 
     private static OutbreakRecord nearest(CommandSourceStack source) {

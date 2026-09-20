@@ -40,6 +40,20 @@ public class MossyGlandSpreadEngine {
 
     private final Map<UUID, Deque<BlockPos>> frontiers = new HashMap<>();
 
+    private static MossyGlandSpreadEngine instance;
+
+    public MossyGlandSpreadEngine() {
+        instance = this;
+    }
+
+    /** For /lotus timewarp - see InfectionSpreadEngine#forceTicks for why this doesn't touch the real server tick loop. */
+    public static void forceTicks(ServerLevel level, int passes) {
+        if (instance == null) return;
+        for (int i = 0; i < passes; i++) {
+            instance.tickLevel(level);
+        }
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
