@@ -201,6 +201,96 @@ public final class LotusPlayerState {
         return newCount;
     }
 
+    private static final String ALLIANCE_GUARDIAN_KILLS_KEY = "AllianceGuardianKills";
+    private static final String IS_TRAITOR_KEY = "IsTraitor";
+    private static final String HEARD_WORLD_LOTUS_LECTURE_KEY = "HeardWorldLotusLecture";
+    private static final String TRAITOR_BOSS_DEFEATED_KEY = "TraitorBossDefeated";
+
+    /**
+     * "Часть лотоса ненавидит, когда собаки ЛЮБЯТ" - an ALLIANCE player who keeps killing their
+     * own side's guardians anyway is offered a permanent, deliberate switch onto the hidden
+     * traitor path once this hits GuardianManager#ALLIANCE_BETRAYAL_KILL_COUNT (20). Only counted
+     * while actually on ALLIANCE - see GuardianManager#onDrops.
+     */
+    public static int getAllianceGuardianKills(Player player) {
+        return root(player, false).getInt(ALLIANCE_GUARDIAN_KILLS_KEY);
+    }
+
+    public static int incrementAllianceGuardianKills(Player player) {
+        CompoundTag root = root(player, true);
+        int newCount = root.getInt(ALLIANCE_GUARDIAN_KILLS_KEY) + 1;
+        root.putInt(ALLIANCE_GUARDIAN_KILLS_KEY, newCount);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return newCount;
+    }
+
+    /** The hidden third path - a RESISTANCE branch reached specifically by betraying ALLIANCE, not by choosing it directly in dialogue. */
+    public static boolean isTraitor(Player player) {
+        return root(player, false).getBoolean(IS_TRAITOR_KEY);
+    }
+
+    public static void setTraitor(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(IS_TRAITOR_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /**
+     * The literal "action → branch flips" design the user asked for: no separate confirmation
+     * dialog, because the "(!) Стражи?" dialogue aside (see LotusDialogueLibrary#guardianLoreLine)
+     * already warns any player who has met a guardian that killing them matters, BEFORE they can
+     * rack up 20 kills by accident. By the time this fires the player was told. Overrides the
+     * normal one-way lock setDialogueBranch enforces, since this is the one legitimate case of a
+     * branch actually changing after being set. No-op if not currently ALLIANCE (can't betray a
+     * side you were never on) or already flagged as a traitor (fires once).
+     */
+    public static boolean betrayAlliance(Player player) {
+        if (getDialogueBranch(player) != BRANCH_ALLIANCE || isTraitor(player)) return false;
+        CompoundTag root = root(player, true);
+        root.putInt(DIALOGUE_BRANCH_KEY, BRANCH_RESISTANCE);
+        root.putBoolean(IS_TRAITOR_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return true;
+    }
+
+    public static boolean hasHeardWorldLotusLecture(Player player) {
+        return root(player, false).getBoolean(HEARD_WORLD_LOTUS_LECTURE_KEY);
+    }
+
+    public static void setHeardWorldLotusLecture(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HEARD_WORLD_LOTUS_LECTURE_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static boolean hasDefeatedTraitorBoss(Player player) {
+        return root(player, false).getBoolean(TRAITOR_BOSS_DEFEATED_KEY);
+    }
+
+    public static void setDefeatedTraitorBoss(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(TRAITOR_BOSS_DEFEATED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    private static final String HAS_SEEN_GUARDIAN_KEY = "HasSeenGuardian";
+
+    /**
+     * Set the first time a guardian wolf comes within sight range of this player (see
+     * GuardianManager#markGuardianSeen) - unlocks the "(!) Стражи?" dialogue aside so the World
+     * Lotus can warn the player not to kill her guardians BEFORE they've had a chance to, instead
+     * of only reacting after 20 kills already happened.
+     */
+    public static boolean hasSeenGuardian(Player player) {
+        return root(player, false).getBoolean(HAS_SEEN_GUARDIAN_KEY);
+    }
+
+    public static void setSeenGuardian(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HAS_SEEN_GUARDIAN_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
 
     /** Game-time tick this player's True-Light bonus absorption hearts expire at, or 0 if inactive. */

@@ -105,7 +105,7 @@ public final class MapSyncManager {
 
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MapSyncPacket(markers, infectedChunkKeys));
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
-                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility, LotusPlayerState.hasHeardInnerVoice(serverPlayer)));
+                new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility, LotusPlayerState.hasHeardInnerVoice(serverPlayer), LotusPlayerState.hasSeenGuardian(serverPlayer)));
 
         // Mossy Glands aren't secret like hidden outbreaks - there are only NATURAL_GLAND_COUNT of
         // them and just finding them at all was the reported problem (bug #21), so every player

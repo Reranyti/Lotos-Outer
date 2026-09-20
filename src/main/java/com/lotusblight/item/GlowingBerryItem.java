@@ -61,7 +61,7 @@ public class GlowingBerryItem extends Item {
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowInnerVoicePacket(scene));
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
-                    LotusPlayerState.hasHeardInnerVoice(player)));
+                    LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player)));
         } else {
             // No scene left to give — grant/refresh the persistent bonus hearts instead, tied
             // 1:1 to how long the True Light effect just (re)applied will last.

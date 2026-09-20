@@ -124,6 +124,8 @@ public class LotusBlight {
         ModFluids.FLUIDS.register(modBus);
         ModBlocks.BLOCKS.register(modBus);
         ModFeatures.FEATURES.register(modBus);
+        com.lotusblight.registry.ModEntities.ENTITY_TYPES.register(modBus);
+        modBus.addListener(this::registerEntityAttributes);
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModEffects.EFFECTS.register(modBus);
@@ -163,6 +165,9 @@ public class LotusBlight {
         CriteriaTriggers.register(com.lotusblight.advancement.GuardianTamedTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.GuardianPackTamedTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.LotusAlloyCraftedTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.AllianceGuardianSlaughterTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.WorldLotusLectureTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.TraitorBossDefeatedTrigger.INSTANCE);
         MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes
@@ -177,6 +182,12 @@ public class LotusBlight {
 
     private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
+        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.client.renderer.entity.WolfRenderer::new);
+    }
+
+    /** Forge requires every living entity type to have a registered attribute supplier or it crashes the instant one is spawned. Reuses vanilla Wolf's own attribute map - same base stats, GuardianManager-style code tunes health/damage per instance afterward. */
+    private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
+        event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
     }
 
     /**

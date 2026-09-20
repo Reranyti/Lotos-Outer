@@ -7,5 +7,23 @@
         "stream": true
       }
     ]
+  },
+  "world_lotus_lecture": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "lotusblight:world_lotus_lecture",
+        "stream": true
+      }
+    ]
+  },
+  "traitor_boss_theme": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "lotusblight:traitor_boss_theme",
+        "stream": true
+      }
+    ]
   }
 }

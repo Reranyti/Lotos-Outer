@@ -13,5 +13,13 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> INNER_VOICE_THEME = SOUNDS.register("inner_voice_theme",
             () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "inner_voice_theme")));
 
+    /** Plays once, right as the World Lotus's lecture scene opens (see the traitor-branch flow). */
+    public static final RegistryObject<SoundEvent> WORLD_LOTUS_LECTURE = SOUNDS.register("world_lotus_lecture",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "world_lotus_lecture")));
+
+    /** The traitor-branch boss fight's own theme. */
+    public static final RegistryObject<SoundEvent> TRAITOR_BOSS_THEME = SOUNDS.register("traitor_boss_theme",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "traitor_boss_theme")));
+
     private ModSounds() {}
 }
