@@ -103,7 +103,7 @@ public class LotusEvents {
             if (!level.getBlockState(pos).isAir()) pos = pos.above();
             if (!level.getBlockState(pos).isAir()) continue;
             level.setBlock(pos.below(), ModBlocks.BLESSING_SOIL.get().defaultBlockState(), 3);
-            level.setBlock(pos, RANDOM.nextBoolean() ? ModBlocks.BLESSING_NODULE.get().defaultBlockState() : ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);
+            level.setBlock(pos, ModBlocks.BLESSING_NODULE.get().defaultBlockState(), 3);
             if (RANDOM.nextInt(3) == 0) level.setBlock(pos.east(), ModBlocks.GLOW_BERRIES.get().defaultBlockState(), 3);
         }
     }
@@ -330,7 +330,6 @@ public class LotusEvents {
         net.minecraft.world.level.block.state.BlockState origin = com.lotusblight.spread.SpreadTables.originalGroundBlock(infected);
         if (origin != null) return origin;
         if (infected.is(ModBlocks.LOTUS_DIRT.get())) return Blocks.DIRT.defaultBlockState();
-        if (infected.is(ModBlocks.BLOSSOM_GRASS.get())) return Blocks.GRASS_BLOCK.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LOG.get())) return Blocks.OAK_LOG.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LEAVES.get())) return Blocks.OAK_LEAVES.defaultBlockState();
         if (infected.is(ModBlocks.INFECTED_WATER.get())) return Blocks.WATER.defaultBlockState();

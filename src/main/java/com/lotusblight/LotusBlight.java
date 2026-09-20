@@ -63,7 +63,6 @@ public class LotusBlight {
                 output.accept(ModBlocks.INFECTED_LOTUS.get());
                 output.accept(ModBlocks.INFECTED_SOIL.get());
                 output.accept(ModBlocks.LOTUS_ROOTS.get());
-                output.accept(ModItems.BLOSSOM_GRASS_ITEM.get());
                 output.accept(ModItems.GLOW_BERRIES_ITEM.get());
                 output.accept(ModItems.BLESSING_NODULE_ITEM.get());
                 output.accept(ModItems.BLESSING_SOIL_ITEM.get());
@@ -108,7 +107,6 @@ public class LotusBlight {
                 output.accept(ModItems.TANGLED_ROOTS_ITEM.get());
                 output.accept(ModItems.LIANA_BARRIER_ITEM.get());
                 output.accept(ModItems.LIANA_WEAK_POINT_ITEM.get());
-                output.accept(ModItems.BLOSSOM_GRASS_ITEM.get());
                 output.accept(ModItems.GLOW_BERRIES_ITEM.get());
                 output.accept(ModItems.LOTUS_LOG_ITEM.get());
                 output.accept(ModItems.LOTUS_LEAVES_ITEM.get());

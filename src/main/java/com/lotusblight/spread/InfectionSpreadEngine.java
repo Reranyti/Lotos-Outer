@@ -502,7 +502,6 @@ public class InfectionSpreadEngine {
     // canopy so trees actually overlap into a real canopy instead of standing apart.
     private static final int MINI_TREE_CHANCE_PHASE4 = 10;
     private static final int MINI_TREE_CHANCE_PHASE3 = 20;
-    private static final int BLOSSOM_GRASS_CHANCE = 4;
 
     /**
      * Self-seeding flora for freshly-converted ground, instead of relying entirely on whatever
@@ -530,10 +529,6 @@ public class InfectionSpreadEngine {
                 return tryGrowMiniTree(level, above);
             }
         }
-        if (phase >= 2 && level.random.nextInt(BLOSSOM_GRASS_CHANCE) == 0) {
-            level.setBlock(above, ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);
-            return true;
-        }
         return false;
     }
 
@@ -542,7 +537,6 @@ public class InfectionSpreadEngine {
     // each one reaching phase 4 needs to actually deliver a real mini-biome, not a token gesture.
     private static final int GUARANTEED_GROWTH_RADIUS = 26;
     private static final int GUARANTEED_TREE_ATTEMPTS = 30;
-    private static final int GUARANTEED_GRASS_ATTEMPTS = 70;
 
     /**
      * Reaching phase 4 used to just raise MINI_TREE_CHANCE's odds and leave the actual canopy to
@@ -559,12 +553,6 @@ public class InfectionSpreadEngine {
             BlockPos above = randomGroundAbove(level, anchor);
             if (above != null && tryGrowMiniTree(level, above)) {
                 treesPlanted++;
-            }
-        }
-        for (int i = 0; i < GUARANTEED_GRASS_ATTEMPTS; i++) {
-            BlockPos above = randomGroundAbove(level, anchor);
-            if (above != null && level.getBlockState(above).isAir()) {
-                level.setBlock(above, ModBlocks.BLOSSOM_GRASS.get().defaultBlockState(), 3);
             }
         }
     }
