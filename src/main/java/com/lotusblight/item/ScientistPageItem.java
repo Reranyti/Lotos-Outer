@@ -1,5 +1,6 @@
 package com.lotusblight.item;
 
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.dialogue.ObjectZeroPages;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -15,6 +16,7 @@ import net.minecraftforge.fml.DistExecutor;
 
 import net.minecraft.util.RandomSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,6 +41,27 @@ public class ScientistPageItem extends Item {
         ItemStack stack = new ItemStack(com.lotusblight.registry.ModItems.SCIENTIST_PAGE.get());
         CompoundTag tag = stack.getOrCreateTag();
         tag.putInt(VARIANT_TAG, random.nextInt(ObjectZeroPages.VARIANTS.size()));
+        return stack;
+    }
+
+    /**
+     * "Постоянный дроп после получения страниц дневника" - a fully random pick every time meant a
+     * player could rack up duplicate copies of the same page forever and never see the other 4.
+     * Prefers a variant this specific player hasn't found yet; returns null once they genuinely
+     * have all 5 (GuardianManager then just skips the drop entirely instead of handing out an
+     * inevitable duplicate).
+     */
+    public static ItemStack createStackForFinder(RandomSource random, Player finder) {
+        int total = ObjectZeroPages.VARIANTS.size();
+        if (LotusPlayerState.hasFoundAllScientistPages(finder, total)) return null;
+        List<Integer> missing = new ArrayList<>();
+        for (int i = 0; i < total; i++) {
+            if (!LotusPlayerState.hasFoundScientistPage(finder, i)) missing.add(i);
+        }
+        int variant = missing.get(random.nextInt(missing.size()));
+        LotusPlayerState.markScientistPageFound(finder, variant);
+        ItemStack stack = new ItemStack(com.lotusblight.registry.ModItems.SCIENTIST_PAGE.get());
+        stack.getOrCreateTag().putInt(VARIANT_TAG, variant);
         return stack;
     }
 

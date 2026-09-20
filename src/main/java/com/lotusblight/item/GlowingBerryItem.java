@@ -76,7 +76,13 @@ public class GlowingBerryItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        if (!ClientPlayerStateCache.heardInnerVoice()) {
+        // "до сих пор до едения ягод запись от света появляется" - this hint kept promising
+        // "something to hear" to players who structurally never could: canTriggerInnerVoiceFreely
+        // only ever fires on the RESISTANCE branch (see its own doc). An ALLIANCE player was shown
+        // this exact same "eat and listen" hint forever, no matter how many berries they ate, since
+        // heardInnerVoice() can never become true for them under the current design.
+        boolean canEverHear = ClientPlayerStateCache.dialogueBranch() != LotusPlayerState.BRANCH_ALLIANCE;
+        if (canEverHear && !ClientPlayerStateCache.heardInnerVoice()) {
             tooltip.add(Component.literal("Съешь — кажется, тебе есть что услышать.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         }
     }
