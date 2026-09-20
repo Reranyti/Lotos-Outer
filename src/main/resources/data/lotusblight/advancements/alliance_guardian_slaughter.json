@@ -1,0 +1,15 @@
+{
+  "parent": "lotusblight:follow_the_current",
+  "display": {
+    "icon": {"item": "minecraft:bone"},
+    "title": {"translate": "advancements.lotusblight.alliance_guardian_slaughter.title"},
+    "description": {"translate": "advancements.lotusblight.alliance_guardian_slaughter.description"},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "betrayed": {"trigger": "lotusblight:alliance_guardian_slaughter"}
+  }
+}

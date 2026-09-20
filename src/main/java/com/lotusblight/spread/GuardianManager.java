@@ -6,7 +6,11 @@ import com.lotusblight.advancement.GuardianTamedTrigger;
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
+import com.lotusblight.map.ChatOverhaulBranchColor;
+import com.lotusblight.map.NetworkHandler;
+import com.lotusblight.map.PlayerStateSyncPacket;
 import com.lotusblight.registry.ModItems;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -94,6 +98,30 @@ public final class GuardianManager {
 
         for (ServerLevel level : server.getAllLevels()) {
             sweepLevel(level);
+            markGuardianSightings(level);
+        }
+    }
+
+    private static final double GUARDIAN_SIGHT_RADIUS = 24.0;
+
+    /**
+     * "(!) Стражи?" dialogue aside - the World Lotus warning a player not to kill her guardians
+     * only makes sense once the player has actually met one. Same sweep cadence as
+     * {@link #sweepLevel} rather than a dedicated per-tick check, since missing a sighting by up to
+     * 100 ticks costs nothing (the aside just unlocks a little later).
+     */
+    private void markGuardianSightings(ServerLevel level) {
+        for (ServerPlayer player : level.players()) {
+            if (com.lotusblight.data.LotusPlayerState.hasSeenGuardian(player)) continue;
+            var box = new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(GUARDIAN_SIGHT_RADIUS);
+            boolean sawGuardian = !level.getEntitiesOfClass(Wolf.class, box, w -> w.getTags().contains(GUARDIAN_TAG)).isEmpty();
+            if (!sawGuardian) continue;
+            com.lotusblight.data.LotusPlayerState.setSeenGuardian(player);
+            com.lotusblight.map.NetworkHandler.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                    new com.lotusblight.map.PlayerStateSyncPacket(
+                            com.lotusblight.data.LotusPlayerState.getDialogueBranch(player),
+                            com.lotusblight.data.LotusPlayerState.hasFullMapVisibility(player),
+                            com.lotusblight.data.LotusPlayerState.hasHeardInnerVoice(player), true));
         }
     }
 
@@ -217,6 +245,29 @@ public final class GuardianManager {
                 event.getDrops().add(new ItemEntity(wolf.level(), wolf.getX(), wolf.getY(), wolf.getZ(), pageStack));
             }
         }
+
+        if (event.getSource().getEntity() instanceof ServerPlayer allianceKiller
+                && LotusPlayerState.getDialogueBranch(allianceKiller) == LotusPlayerState.BRANCH_ALLIANCE) {
+            onAllianceGuardianKilled(allianceKiller);
+        }
+    }
+
+    /** "Часть лотоса ненавидит, когда собаки ЛЮБЯТ" - see LotusPlayerState#betrayAlliance. */
+    public static final int ALLIANCE_BETRAYAL_KILL_COUNT = 20;
+
+    private void onAllianceGuardianKilled(ServerPlayer player) {
+        int total = LotusPlayerState.incrementAllianceGuardianKills(player);
+        if (total != ALLIANCE_BETRAYAL_KILL_COUNT) return;
+        if (!LotusPlayerState.betrayAlliance(player)) return;
+
+        com.lotusblight.advancement.AllianceGuardianSlaughterTrigger.INSTANCE.trigger(player);
+        ChatOverhaulBranchColor.applyBranchColor(player, LotusPlayerState.BRANCH_RESISTANCE);
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
+                LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
+                LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player)));
+        player.displayClientMessage(Component.literal(
+                "— Двадцать моих стражей. Ты слышал предупреждение и всё равно шёл до конца.\n"
+                        + "Больше ты не часть нас. Считай это войной."), false);
     }
 
     private static final double ALLY_DEFENSE_RADIUS = 24.0;
