@@ -185,6 +185,22 @@ public final class LotusPlayerState {
         return mask == (1 << totalVariants) - 1;
     }
 
+    private static final String TAMED_GUARDIAN_COUNT_KEY = "TamedGuardianCount";
+
+    /** How many outbreak guardians this player has tamed (see GuardianManager) - drives the "Повелитель лотоса...или пушистых хвостов?" advancement at 13. */
+    public static int getTamedGuardianCount(Player player) {
+        return root(player, false).getInt(TAMED_GUARDIAN_COUNT_KEY);
+    }
+
+    /** Returns the new total. */
+    public static int incrementTamedGuardianCount(Player player) {
+        CompoundTag root = root(player, true);
+        int newCount = root.getInt(TAMED_GUARDIAN_COUNT_KEY) + 1;
+        root.putInt(TAMED_GUARDIAN_COUNT_KEY, newCount);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return newCount;
+    }
+
     private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
 
     /** Game-time tick this player's True-Light bonus absorption hearts expire at, or 0 if inactive. */
