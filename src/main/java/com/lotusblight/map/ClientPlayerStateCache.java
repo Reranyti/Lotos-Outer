@@ -14,15 +14,17 @@ public final class ClientPlayerStateCache {
     private static volatile boolean fullMapVisibility = false;
     private static volatile boolean heardInnerVoice = false;
     private static volatile boolean hasSeenGuardian = false;
+    private static volatile boolean hasCleansedAsAlly = false;
 
     private ClientPlayerStateCache() {
     }
 
-    public static void update(int branch, boolean fullVisibility, boolean heardVoice, boolean seenGuardian) {
+    public static void update(int branch, boolean fullVisibility, boolean heardVoice, boolean seenGuardian, boolean cleansedAsAlly) {
         dialogueBranch = branch;
         fullMapVisibility = fullVisibility;
         heardInnerVoice = heardVoice;
         hasSeenGuardian = seenGuardian;
+        hasCleansedAsAlly = cleansedAsAlly;
     }
 
     public static int dialogueBranch() {
@@ -41,11 +43,16 @@ public final class ClientPlayerStateCache {
         return hasSeenGuardian;
     }
 
+    public static boolean hasCleansedAsAlly() {
+        return hasCleansedAsAlly;
+    }
+
     /** Clears the cache, e.g. on disconnect, so a stale server's state doesn't linger. */
     public static void clear() {
         dialogueBranch = LotusPlayerState.BRANCH_UNDECIDED;
         fullMapVisibility = false;
         heardInnerVoice = false;
         hasSeenGuardian = false;
+        hasCleansedAsAlly = false;
     }
 }

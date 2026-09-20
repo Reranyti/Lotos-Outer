@@ -121,7 +121,8 @@ public final class GuardianManager {
                     new com.lotusblight.map.PlayerStateSyncPacket(
                             com.lotusblight.data.LotusPlayerState.getDialogueBranch(player),
                             com.lotusblight.data.LotusPlayerState.hasFullMapVisibility(player),
-                            com.lotusblight.data.LotusPlayerState.hasHeardInnerVoice(player), true));
+                            com.lotusblight.data.LotusPlayerState.hasHeardInnerVoice(player), true,
+                            com.lotusblight.data.LotusPlayerState.hasCleansedAsAlly(player)));
         }
     }
 
@@ -264,7 +265,8 @@ public final class GuardianManager {
         ChatOverhaulBranchColor.applyBranchColor(player, LotusPlayerState.BRANCH_RESISTANCE);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                 LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
-                LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player)));
+                LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),
+                LotusPlayerState.hasCleansedAsAlly(player)));
         player.displayClientMessage(Component.literal(
                 "— Двадцать моих стражей. Ты слышал предупреждение и всё равно шёл до конца.\n"
                         + "Больше ты не часть нас. Считай это войной."), false);
