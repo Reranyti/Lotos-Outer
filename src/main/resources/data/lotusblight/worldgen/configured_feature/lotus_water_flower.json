@@ -3,7 +3,7 @@
   "config": {
     "to_place": {
       "type": "minecraft:simple_state_provider",
-      "state": { "Name": "lotusblight:infected_lotus" }
+      "state": { "Name": "minecraft:lily_pad" }
     }
   }
 }
