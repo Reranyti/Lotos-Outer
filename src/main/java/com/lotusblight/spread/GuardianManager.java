@@ -215,6 +215,11 @@ public final class GuardianManager {
             BlockPos above = ground.above();
             if (level.getBlockState(ground).isAir() || level.getFluidState(ground).isSource()) continue;
             if (level.getBlockState(ground).is(Blocks.LAVA) || level.getFluidState(ground).is(net.minecraft.world.level.material.Fluids.LAVA)) continue;
+            // WORLD_SURFACE counts lily pads as "ground" (they block motion), so this used to
+            // regularly find the lily pad itself as the highest point over water and spawn the
+            // guardian standing right on top of it - looked wrong (bug #5), especially now that
+            // the main lotus anchor's own pad is much bigger than a plain vanilla one.
+            if (level.getBlockState(ground).is(Blocks.LILY_PAD)) continue;
             if (!level.getBlockState(above).isAir()) continue;
             return above.immutable();
         }
