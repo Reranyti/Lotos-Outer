@@ -160,6 +160,8 @@ public class LotusBlight {
         CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);
         CriteriaTriggers.register(SurvivorOfTheBloomTrigger.INSTANCE);
         CriteriaTriggers.register(TheHeartWaitsTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.GuardianTamedTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.GuardianPackTamedTrigger.INSTANCE);
         MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes
