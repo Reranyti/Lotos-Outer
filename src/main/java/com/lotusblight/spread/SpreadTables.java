@@ -127,7 +127,9 @@ public final class SpreadTables {
     }
 
     public static BlockState infectedGrass(BlockState clean) {
-        if (clean.is(Blocks.GRASS_BLOCK)) return ModBlocks.BLOSSOM_GRASS.get().defaultBlockState();
+        // blossom_grass (the dedicated grass analogue) was cut - a grass block just becomes
+        // infected_soil like every other dirt-family block instead of its own special case.
+        if (clean.is(Blocks.GRASS_BLOCK)) return ModBlocks.INFECTED_SOIL.get().defaultBlockState();
         return null; // Tall grass/ferns just die off when their soil infects rather than converting to a lotus analogue.
     }
 }

@@ -3,14 +3,11 @@ package com.lotusblight.world;
 import com.lotusblight.registry.ModEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Silverfish;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -18,8 +15,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3f;
 
 public class LotusMimicBlock extends Block {
-    /** Tags the revealed creature so future systems (loot, tracking) can recognize it the same way GuardianManager tags guardians. */
-    public static final String MIMIC_CREATURE_TAG = "lotus_mimic";
     private static final DustParticleOptions MIMIC_DUST = new DustParticleOptions(new Vector3f(0.25f, 0.95f, 0.35f), 1.0f);
     // Matches the small pad+flower model's actual footprint instead of the default full cube.
     private static final net.minecraft.world.phys.shapes.VoxelShape SHAPE = Block.box(1, 0, 1, 15, 11, 15);
@@ -51,21 +46,10 @@ public class LotusMimicBlock extends Block {
         // Was a one-shot "trap": apply an effect, then turn into a harmless decorative
         // ModBlocks.LOTUS_SHOOT and never act again (bug #22 - "это не ловушка а реальное
         // существо", the mimic is lore-established as the lotus's own creature, disguised as an
-        // ordinary block, not a spring-loaded gimmick). Reveals into an actual living hostile
-        // instead, same "reuse a vanilla mob, no new model/texture pipeline" approach already
-        // used for the outbreak guardians (see GuardianManager) - a vanilla Silverfish is already
-        // a Monster with its own NearestAttackableTargetGoal, so it starts hunting the entity
-        // that triggered it with no extra AI wiring needed.
-        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
-        Silverfish revealed = EntityType.SILVERFISH.create(level);
-        if (revealed != null) {
-            revealed.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-            revealed.finalizeSpawn((net.minecraft.world.level.ServerLevelAccessor) level, level.getCurrentDifficultyAt(pos), net.minecraft.world.entity.MobSpawnType.TRIGGERED, null, null);
-            revealed.addTag(MIMIC_CREATURE_TAG);
-            revealed.setCustomName(Component.literal("Мимик лотоса"));
-            revealed.setCustomNameVisible(true);
-            level.addFreshEntity(revealed);
-        }
+        // ordinary block). A follow-up attempt at this replaced the block with a spawned Silverfish
+        // entity - explicitly rejected too, the mimic itself must stay put and keep triggering
+        // (it does not vanish/despawn when it catches something), so this is back to only the
+        // effect/particles/sound, with no block-state change at all.
     }
 }
 

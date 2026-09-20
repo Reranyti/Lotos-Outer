@@ -51,7 +51,6 @@ public final class ModItems {
     public static final RegistryObject<Item> LOTUS_PICKAXE = ITEMS.register("lotus_pickaxe", () -> new LotusPickaxeItem(Tiers.DIAMOND, 4, -2.7f, new Item.Properties().durability(900)));
     public static final RegistryObject<Item> LOTUS_ROOTS_ITEM = ITEMS.register("lotus_roots", () -> new BlockItem(ModBlocks.LOTUS_ROOTS.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_HEART_ITEM = ITEMS.register("lotus_heart", () -> new BlockItem(ModBlocks.LOTUS_HEART.get(), new Item.Properties()));
-    public static final RegistryObject<Item> BLOSSOM_GRASS_ITEM = ITEMS.register("blossom_grass", () -> new BlockItem(ModBlocks.BLOSSOM_GRASS.get(), new Item.Properties()));
     public static final RegistryObject<Item> GLOW_BERRIES_ITEM = ITEMS.register("glow_berries", () -> new BlockItem(ModBlocks.GLOW_BERRIES.get(), new Item.Properties()));
     public static final RegistryObject<Item> GLOW_BERRY_FOOD = ITEMS.register("glowing_berry", () -> new GlowingBerryItem(new Item.Properties().food(new FoodProperties.Builder().nutrition(3).saturationMod(0.35f).alwaysEat().build())));
     public static final RegistryObject<Item> BLESSING_NODULE_ITEM = ITEMS.register("blessing_nodule", () -> new BlockItem(ModBlocks.BLESSING_NODULE.get(), new Item.Properties()));
