@@ -1,6 +1,7 @@
 package com.lotusblight.worldgen.feature;
 
 import com.lotusblight.registry.ModBlocks;
+import com.lotusblight.world.GlowBerryBushBlock;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -50,7 +51,8 @@ public class BlessingSandPillarFeature extends Feature<NoneFeatureConfiguration>
             if (i == vineHeight) {
                 BlockPos vinePos = pos.relative(vineFace);
                 if (level.getBlockState(vinePos).isAir()) {
-                    setBlock(level, vinePos, ModBlocks.GLOW_BERRIES.get().defaultBlockState());
+                    GlowBerryBushBlock vineBlock = (GlowBerryBushBlock) ModBlocks.GLOW_BERRIES.get();
+                    setBlock(level, vinePos, vineBlock.wallMountedState(vineFace));
                 }
             }
         }

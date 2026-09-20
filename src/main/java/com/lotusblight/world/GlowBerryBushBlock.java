@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.joml.Vector3f;
 
@@ -50,14 +51,31 @@ public class GlowBerryBushBlock extends BushBlock implements CaveVines {
     private static final int REGROW_CHANCE = 1;
     private static final int REGROW_ODDS = 5;
 
+    /**
+     * True when this vine is pinned to the side of something (see BlessingSandPillarFeature)
+     * instead of grown up out of soil - the model needs to know, because a plant "cross" render
+     * looks wrong sticking sideways out of a wall the way a real wall-clinging vine wouldn't (see
+     * the blockstate: wall_mounted picks a flat wall-panel model instead of the floor cross, using
+     * FACING to point it away from whatever it's attached to).
+     */
+    public static final BooleanProperty WALL_MOUNTED = BooleanProperty.create("wall_mounted");
+
     public GlowBerryBushBlock(BlockBehaviour.Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(BlockStateProperties.BERRIES, true));
+        registerDefaultState(stateDefinition.any()
+                .setValue(BlockStateProperties.BERRIES, true)
+                .setValue(WALL_MOUNTED, false)
+                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
+    }
+
+    /** Convenience for placement code (e.g. BlessingSandPillarFeature) - facing points AWAY from the surface it clings to. */
+    public BlockState wallMountedState(Direction facing) {
+        return defaultBlockState().setValue(WALL_MOUNTED, true).setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
-        builder.add(BlockStateProperties.BERRIES);
+        builder.add(BlockStateProperties.BERRIES, WALL_MOUNTED, BlockStateProperties.HORIZONTAL_FACING);
     }
 
     /**
