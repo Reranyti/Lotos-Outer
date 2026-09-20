@@ -492,7 +492,14 @@ public class InfectionSpreadEngine {
      * grass). Returns true if it planted anything, so the caller doesn't also drop a root on the
      * same spot.
      */
+    /** lotus_mimic had a whole trap mechanic (LotusMimicBlock#entityInside) but was never actually placed anywhere in the mod at all - not rare, just completely absent (bug #18). Phase 3+ only, rarer than the mini-tree, so it's a real surprise rather than a common sight. */
+    private static final int MIMIC_CHANCE = 60;
+
     private boolean growOwnVegetation(ServerLevel level, int phase, BlockPos above) {
+        if (phase >= 3 && level.random.nextInt(MIMIC_CHANCE) == 0) {
+            level.setBlock(above, ModBlocks.LOTUS_MIMIC.get().defaultBlockState(), 3);
+            return true;
+        }
         if (phase >= 3) {
             int chance = phase >= 4 ? MINI_TREE_CHANCE_PHASE4 : MINI_TREE_CHANCE_PHASE3;
             if (level.random.nextInt(chance) == 0) {
