@@ -3,6 +3,7 @@ package com.lotusblight.spread;
 import com.lotusblight.LotusConfig;
 import com.lotusblight.data.MossyGlandRecord;
 import com.lotusblight.data.MossyGlandSavedData;
+import com.lotusblight.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -37,6 +38,9 @@ public class MossyGlandSpreadEngine {
     private static final int FRONTIER_CAP = 400;
     /** Chance (1 in N) a successful ground conversion also grows a single azalea-family plant on top - real vanilla blocks, no new art, per the "vanilla but it multiplies" design. */
     private static final int AZALEA_CHANCE = 10;
+    /** Mossy Glands are the surface counterpart of the real Lush Caves ("мшистые железы - поверхность, мшистые пещеры - глубина") - same lotus lineage, so the same mimic and vine-berries show up here too, just rarer than the azalea flourish. */
+    private static final int MOSSY_VINE_CHANCE = 25;
+    private static final int MOSSY_MIMIC_CHANCE = 80;
 
     private final Map<UUID, Deque<BlockPos>> frontiers = new HashMap<>();
 
@@ -142,10 +146,16 @@ public class MossyGlandSpreadEngine {
         level.setBlock(target, replacement, 3);
 
         BlockPos above = target.above();
-        if (level.getBlockState(above).isAir() && level.random.nextInt(AZALEA_CHANCE) == 0) {
-            level.setBlock(above, level.random.nextBoolean()
-                    ? Blocks.AZALEA.defaultBlockState()
-                    : Blocks.FLOWERING_AZALEA.defaultBlockState(), 3);
+        if (level.getBlockState(above).isAir()) {
+            if (level.random.nextInt(MOSSY_MIMIC_CHANCE) == 0) {
+                level.setBlock(above, ModBlocks.LOTUS_MIMIC.get().defaultBlockState(), 3);
+            } else if (level.random.nextInt(MOSSY_VINE_CHANCE) == 0) {
+                level.setBlock(above, ModBlocks.GLOW_BERRIES.get().defaultBlockState(), 3);
+            } else if (level.random.nextInt(AZALEA_CHANCE) == 0) {
+                level.setBlock(above, level.random.nextBoolean()
+                        ? Blocks.AZALEA.defaultBlockState()
+                        : Blocks.FLOWERING_AZALEA.defaultBlockState(), 3);
+            }
         }
         return target;
     }

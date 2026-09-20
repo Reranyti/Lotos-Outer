@@ -1,0 +1,28 @@
+{
+  "feature": "lotusblight:mossy_cave_vine_bush",
+  "placement": [
+    { "type": "minecraft:count", "count": 24 },
+    { "type": "minecraft:in_square" },
+    {
+      "type": "minecraft:height_range",
+      "height": {
+        "type": "minecraft:uniform",
+        "min_inclusive": { "above_bottom": 0 },
+        "max_inclusive": { "absolute": 256 }
+      }
+    },
+    {
+      "type": "minecraft:block_predicate_filter",
+      "predicate": { "type": "minecraft:matching_blocks", "blocks": "minecraft:air" }
+    },
+    {
+      "type": "minecraft:block_predicate_filter",
+      "predicate": {
+        "type": "minecraft:matching_blocks",
+        "offset": [0, -1, 0],
+        "blocks": ["minecraft:moss_block", "minecraft:tuff", "minecraft:clay", "minecraft:stone"]
+      }
+    },
+    { "type": "minecraft:biome" }
+  ]
+}
