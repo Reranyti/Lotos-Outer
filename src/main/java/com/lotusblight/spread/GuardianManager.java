@@ -9,6 +9,7 @@ import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.map.ChatOverhaulBranchColor;
 import com.lotusblight.map.NetworkHandler;
 import com.lotusblight.map.PlayerStateSyncPacket;
+import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.registry.ModEffects;
 import com.lotusblight.registry.ModItems;
 import net.minecraftforge.network.PacketDistributor;
@@ -102,6 +103,29 @@ public final class GuardianManager {
         for (ServerLevel level : server.getAllLevels()) {
             sweepLevel(level);
             markGuardianSightings(level);
+            dropStaleAllianceTargets(level);
+        }
+    }
+
+    /**
+     * "шабаке злые до сих пор даже после принятия альянса" - the ALLIANCE-exclusion predicate on
+     * NearestAttackableTargetGoal only ever runs when a guardian is picking a NEW target
+     * (canUse()); it is never re-checked while an existing attack is already in progress
+     * (MeleeAttackGoal just keeps swinging at whatever Mob#getTarget() currently is, and vanilla's
+     * own TargetGoal#canContinueToUse doesn't re-test the selector predicate either). A guardian
+     * that started attacking a player a moment before they joined the Lotus would otherwise just
+     * keep attacking them forever - the predicate closes the door to a NEW fight, but never ends
+     * one already running. Same sweep cadence as the rest of this class; a few seconds' delay
+     * before an angry guardian visibly calms down is an acceptable trade for not scanning every tick.
+     */
+    private void dropStaleAllianceTargets(ServerLevel level) {
+        for (List<UUID> tracked : outbreakGuardians.values()) {
+            for (UUID guardianId : tracked) {
+                if (!(level.getEntity(guardianId) instanceof Wolf wolf)) continue;
+                if (wolf.getTarget() instanceof Player target && LotusPlayerState.hasJoinedLotus(target)) {
+                    wolf.setTarget(null);
+                }
+            }
         }
     }
 
@@ -409,11 +433,17 @@ public final class GuardianManager {
             BlockPos above = ground.above();
             if (level.getBlockState(ground).isAir() || level.getFluidState(ground).isSource()) continue;
             if (level.getBlockState(ground).is(Blocks.LAVA) || level.getFluidState(ground).is(net.minecraft.world.level.material.Fluids.LAVA)) continue;
-            // WORLD_SURFACE counts lily pads as "ground" (they block motion), so this used to
-            // regularly find the lily pad itself as the highest point over water and spawn the
-            // guardian standing right on top of it - looked wrong (bug #5), especially now that
-            // the main lotus anchor's own pad is much bigger than a plain vanilla one.
-            if (level.getBlockState(ground).is(Blocks.LILY_PAD)) continue;
+            // WORLD_SURFACE counts lily pads (and anything else that blocks motion) as "ground",
+            // so this used to regularly find a lily pad - or, worse, LOTUS_SHOOT sitting ON TOP of
+            // a lily pad (see InfectionSpreadEngine's own pad+shoot pairs around the main anchor) -
+            // as the highest point over open water and spawn the guardian standing right on it, in
+            // the middle of a lake ("стражи спавнятся в воде"). Checking LILY_PAD alone missed the
+            // shoot-on-pad case entirely, since `ground` there resolves to the shoot, not the pad
+            // underneath it - excluding LOTUS_SHOOT directly closes that specific gap, and the
+            // fluid-below check on top catches any OTHER thin floating plant sitting right on
+            // water, regardless of which block it happens to be.
+            if (level.getBlockState(ground).is(Blocks.LILY_PAD) || level.getBlockState(ground).is(ModBlocks.LOTUS_SHOOT.get())) continue;
+            if (!level.getFluidState(ground.below()).isEmpty()) continue;
             if (!level.getBlockState(above).isAir()) continue;
             return above.immutable();
         }
