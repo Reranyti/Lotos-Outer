@@ -1,6 +1,20 @@
 {
   "variants": {
-    "berries=true": { "model": "lotusblight:block/glow_berries" },
-    "berries=false": { "model": "lotusblight:block/glow_berries" }
+    "wall_mounted=false,berries=true,facing=north": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=true,facing=south": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=true,facing=east": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=true,facing=west": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=false,facing=north": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=false,facing=south": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=false,facing=east": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=false,berries=false,facing=west": { "model": "lotusblight:block/glow_berries" },
+    "wall_mounted=true,berries=true,facing=south": { "model": "lotusblight:block/glow_berries_wall", "y": 0 },
+    "wall_mounted=true,berries=false,facing=south": { "model": "lotusblight:block/glow_berries_wall", "y": 0 },
+    "wall_mounted=true,berries=true,facing=north": { "model": "lotusblight:block/glow_berries_wall", "y": 180 },
+    "wall_mounted=true,berries=false,facing=north": { "model": "lotusblight:block/glow_berries_wall", "y": 180 },
+    "wall_mounted=true,berries=true,facing=west": { "model": "lotusblight:block/glow_berries_wall", "y": 90 },
+    "wall_mounted=true,berries=false,facing=west": { "model": "lotusblight:block/glow_berries_wall", "y": 90 },
+    "wall_mounted=true,berries=true,facing=east": { "model": "lotusblight:block/glow_berries_wall", "y": 270 },
+    "wall_mounted=true,berries=false,facing=east": { "model": "lotusblight:block/glow_berries_wall", "y": 270 }
   }
 }
