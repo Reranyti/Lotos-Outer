@@ -11,6 +11,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -22,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -201,10 +203,39 @@ public final class GuardianManager {
         // "Страницы дневника Объекта Ноль" (see ScientistPageItem/ObjectZeroPages) needs to read as
         // a rare find from actually fighting a guardian, the mod's one source of combat risk, not
         // just another guaranteed reward that dilutes the powder's own payoff.
-        if (wolf.level().getRandom().nextInt(SCIENTIST_PAGE_DROP_CHANCE) == 0) {
-            ItemEntity pageDrop = new ItemEntity(wolf.level(), wolf.getX(), wolf.getY(), wolf.getZ(),
-                    com.lotusblight.item.ScientistPageItem.createRandomStack(wolf.level().getRandom()));
-            event.getDrops().add(pageDrop);
+        // "Постоянный дроп после получения страниц дневника" - createRandomStack() ignored what the
+        // killer already had, so a lucky/unlucky streak of rolls could hand out the same variant
+        // over and over forever with no way to ever complete the set. Only rolls this at all when
+        // the kill can be attributed to a real player, and lets ScientistPageItem pick a variant
+        // that specific player doesn't have yet - it returns null (no drop) once they own all 5.
+        if (event.getSource().getEntity() instanceof Player killer
+                && wolf.level().getRandom().nextInt(SCIENTIST_PAGE_DROP_CHANCE) == 0) {
+            ItemStack pageStack = com.lotusblight.item.ScientistPageItem.createStackForFinder(wolf.level().getRandom(), killer);
+            if (pageStack != null) {
+                event.getDrops().add(new ItemEntity(wolf.level(), wolf.getX(), wolf.getY(), wolf.getZ(), pageStack));
+            }
+        }
+    }
+
+    private static final double ALLY_DEFENSE_RADIUS = 24.0;
+
+    /**
+     * "Когда ты в альянсе волки ничего из себя не представляют и просто являются бесполезными
+     * союзниками" - guardians already spare ALLIANCE players (never hunt them), but that only ever
+     * made them neutral, not actually allied - they gave RESISTANCE a real threat/reward loop and
+     * gave ALLIANCE nothing back at all. Any nearby guardian now steps in and targets whatever just
+     * hurt an ALLIANCE player, the same "protect the ally" role a real companion would play,
+     * instead of standing there as pure decoration while their own side's player gets hit.
+     */
+    @SubscribeEvent
+    public void onAllyHurt(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player victim) || !LotusPlayerState.hasJoinedLotus(victim)) return;
+        if (!(event.getSource().getEntity() instanceof LivingEntity attacker)) return;
+        if (!(victim.level() instanceof ServerLevel level)) return;
+
+        var box = new net.minecraft.world.phys.AABB(victim.blockPosition()).inflate(ALLY_DEFENSE_RADIUS);
+        for (Wolf wolf : level.getEntitiesOfClass(Wolf.class, box, w -> w.getTags().contains(GUARDIAN_TAG))) {
+            wolf.setTarget(attacker);
         }
     }
 
