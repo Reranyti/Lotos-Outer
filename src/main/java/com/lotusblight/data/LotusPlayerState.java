@@ -291,6 +291,24 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String HAS_CLEANSED_AS_ALLY_KEY = "HasCleansedAsAlly";
+
+    /**
+     * Set the first time an ALLIANCE player cleanses an infected block with powder (see
+     * LotusEvents#onPlayerInteract) - unlocks the "(!) Лечение?" dialogue aside, the ALLIANCE-side
+     * mirror of hasSeenGuardian's guardian warning: the Lotus objecting to an ally still fighting
+     * her infection, before it escalates into anything worse.
+     */
+    public static boolean hasCleansedAsAlly(Player player) {
+        return root(player, false).getBoolean(HAS_CLEANSED_AS_ALLY_KEY);
+    }
+
+    public static void setCleansedAsAlly(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HAS_CLEANSED_AS_ALLY_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     private static final String TRUE_LIGHT_HEARTS_EXPIRES_KEY = "TrueLightHeartsExpiresAtGameTime";
 
     /** Game-time tick this player's True-Light bonus absorption hearts expire at, or 0 if inactive. */

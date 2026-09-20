@@ -48,7 +48,8 @@ public class DialogueChoicePacket {
             ChatOverhaulBranchColor.applyBranchColor(player, packet.branch);
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
-                    LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player)));
+                    LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),
+                    LotusPlayerState.hasCleansedAsAlly(player)));
         });
         ctx.setPacketHandled(true);
     }
