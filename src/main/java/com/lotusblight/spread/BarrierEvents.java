@@ -22,9 +22,28 @@ public class BarrierEvents {
     public void onWeakPointBroken(BlockEvent.BreakEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         if (!event.getState().is(ModBlocks.LIANA_WEAK_POINT.get())) return;
+        onWeakPointGone(level, event.getPos());
+    }
 
+    /**
+     * BreakEvent never fires for explosion-destroyed blocks (Forge has its own dedicated event for
+     * that). A weak point taken out by a creeper/TNT instead of mined by hand used to leave the
+     * barrier's tracker permanently thinking that point was still intact - isFullyBroken() could
+     * then never return true for that barrier again even after every weak point was physically
+     * gone, soft-locking its remaining solid wall in place forever.
+     */
+    @SubscribeEvent
+    public void onExplosion(net.minecraftforge.event.level.ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        for (BlockPos pos : event.getAffectedBlocks()) {
+            if (level.getBlockState(pos).is(ModBlocks.LIANA_WEAK_POINT.get())) {
+                onWeakPointGone(level, pos);
+            }
+        }
+    }
+
+    private void onWeakPointGone(ServerLevel level, BlockPos pos) {
         OutbreakSavedData data = OutbreakSavedData.get(level);
-        BlockPos pos = event.getPos();
         BarrierRecord barrier = data.barrierAt(pos);
         if (barrier == null) return;
 
