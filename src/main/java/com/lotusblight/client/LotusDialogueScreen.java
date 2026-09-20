@@ -185,6 +185,8 @@ public final class LotusDialogueScreen extends Screen {
                 : LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
     }
 
+    private static final ResourceLocation VIGNETTE = new ResourceLocation("textures/misc/vignette.png");
+
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
@@ -192,7 +194,17 @@ public final class LotusDialogueScreen extends Screen {
         int height = panelHeight();
         int left = (this.width - width) / 2;
         int top = (this.height - height) / 2;
-        graphics.fill(0, 0, this.width, this.height, 0x99050907);
+        // Was one flat, uniformly-dark fill covering the whole screen - a hard rectangle with no
+        // falloff. This layers vanilla's own radial vignette texture (untinted - white shader
+        // color, so it stays neutral gray/black, never the jarring yellow an earlier attempt at
+        // this apparently had) under a lighter flat dim, so the edges darken smoothly instead of
+        // the whole screen dropping to one flat shade all at once.
+        graphics.fill(0, 0, this.width, this.height, 0x66050907);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        graphics.blit(VIGNETTE, 0, 0, 0, 0, this.width, this.height, this.width, this.height);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         graphics.fill(left - 3, top - 3, left + width + 3, top + height + 3, 0xFF17251B);
         graphics.fill(left, top, left + width, top + height, 0xF20B100D);
         graphics.fill(left + 10, top + 10, left + width - 10, top + 36, 0xFF263C2B);
