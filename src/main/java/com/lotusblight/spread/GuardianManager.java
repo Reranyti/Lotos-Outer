@@ -26,7 +26,10 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * "Мобы: заражённые варианты существ и страж растения" (ALPHA_SCOPE.md) — the
@@ -64,9 +67,20 @@ public final class GuardianManager {
     private static final int SWEEP_INTERVAL_TICKS = 100;
     private static final int MIN_GUARDIAN_PHASE = 3;
     private static final int MAX_GUARDIANS_PER_OUTBREAK = 2;
-    private static final double GUARDIAN_CHECK_RADIUS = 20.0;
     private static final int SPAWN_SEARCH_RADIUS = 10;
     private static final int SPAWN_SEARCH_ATTEMPTS = 6;
+
+    /**
+     * A live proximity scan (countNearbyGuardians, GUARDIAN_CHECK_RADIUS=20 from the anchor) was
+     * the ONLY thing capping guardian population - but guardians are plain Wolves with
+     * setPersistenceRequired() (never naturally despawn) and normal Wolf AI, which wanders and
+     * chases fleeing players far past 20 blocks. Once a guardian wandered outside that radius, the
+     * sweep stopped counting it as "belonging" to its outbreak and happily spawned another one on
+     * the next 100-tick pass, with no upper bound - a long-lived outbreak could accumulate an
+     * ever-growing, never-despawning wolf pack over enough real time. Tracks actual spawned
+     * guardian UUIDs per outbreak instead of relying on where they currently happen to be standing.
+     */
+    private final Map<UUID, List<UUID>> outbreakGuardians = new HashMap<>();
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -92,10 +106,18 @@ public final class GuardianManager {
             // patrolled by the infection's own guardians either.
             if (level.getBiome(outbreak.pos()).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)) continue;
             if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
-            if (countNearbyGuardians(level, outbreak.pos()) >= MAX_GUARDIANS_PER_OUTBREAK) continue;
+            if (livingGuardianCount(level, outbreak.id()) >= MAX_GUARDIANS_PER_OUTBREAK) continue;
 
             trySpawnGuardian(level, outbreak);
         }
+    }
+
+    /** Prunes dead/unloaded guardians from this outbreak's tracked list, then returns how many are actually still alive. */
+    private int livingGuardianCount(ServerLevel level, UUID outbreakId) {
+        List<UUID> tracked = outbreakGuardians.get(outbreakId);
+        if (tracked == null) return 0;
+        tracked.removeIf(guardianId -> !(level.getEntity(guardianId) instanceof Wolf wolf) || !wolf.isAlive());
+        return tracked.size();
     }
 
     private boolean withinActiveRange(ServerLevel level, BlockPos pos, double rangeSq) {
@@ -103,12 +125,6 @@ public final class GuardianManager {
             if (player.blockPosition().distSqr(pos) <= rangeSq) return true;
         }
         return false;
-    }
-
-    private int countNearbyGuardians(ServerLevel level, BlockPos anchor) {
-        var box = new net.minecraft.world.phys.AABB(anchor).inflate(GUARDIAN_CHECK_RADIUS);
-        List<Wolf> nearby = level.getEntitiesOfClass(Wolf.class, box, e -> e.getTags().contains(GUARDIAN_TAG));
-        return nearby.size();
     }
 
     private void trySpawnGuardian(ServerLevel level, OutbreakRecord outbreak) {
@@ -138,6 +154,7 @@ public final class GuardianManager {
         wolf.getPersistentData().putInt(GUARDIAN_PHASE_KEY, outbreak.phase());
 
         level.addFreshEntity(wolf);
+        outbreakGuardians.computeIfAbsent(outbreak.id(), id -> new ArrayList<>()).add(wolf.getUUID());
     }
 
     /** Vanilla Wolf baseline, used as the phase-3 (fresh mature outbreak) tier. */
