@@ -287,7 +287,9 @@ public class LotusEvents {
         if (event.getType() != ModVillagers.LOTUS_BOTANIST.get()) return;
         event.getTrades().get(1).add((trader, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 2), new ItemStack(ModItems.LOTUS_SEED.get(), 2), 12, 4, 0.05f));
         event.getTrades().get(2).add((trader, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 8), new ItemStack(ModItems.LOTUS_MAP.get()), 8, 8, 0.05f));
-        event.getTrades().get(3).add((trader, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 5), new ItemStack(ModItems.CLEANSING_POWDER.get(), 4), 12, 10, 0.05f));
+        // Smaller stack per trade to match the smaller per-use cleanse radius - powder is meant to
+        // stay scarce, not stockpile faster than the new 4x4x4 patch burns through it.
+        event.getTrades().get(3).add((trader, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 5), new ItemStack(ModItems.CLEANSING_POWDER.get(), 2), 12, 10, 0.05f));
     }
 
     @SubscribeEvent
@@ -348,10 +350,10 @@ public class LotusEvents {
             OutbreakSavedData data = OutbreakSavedData.get(level);
             BlockPos pos = event.getEntity().blockPosition();
             int cleansed = 0;
-            // Was -1..+1 (3 blocks tall, centered on the player's feet) - never reached anything
-            // above head height at all (bug #8). -2..+3 covers from just below feet to well above
-            // a player's head.
-            for (BlockPos target : BlockPos.betweenClosed(pos.offset(-2, -2, -2), pos.offset(2, 3, 2))) {
+            // Redesigned per user request: a full head-to-toe 5x6x5 wipe per single powder made
+            // the item a straight win button. Shrunk to a compact 4x4x4 patch around the player's
+            // feet - deliberate, repeated use instead of one throw clearing a whole outbreak.
+            for (BlockPos target : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(2, 2, 2))) {
                 // This used to only recognize 3 of the ~10 infected block types, and reverted ALL
                 // of them - including the infected_water FLUID - to solid Blocks.DIRT. Cleansing a
                 // patch of infected river visibly filled it in with land instead of turning it
