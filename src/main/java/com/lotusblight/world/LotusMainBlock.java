@@ -33,7 +33,12 @@ public final class LotusMainBlock extends Block implements EntityBlock {
     // vs ±24 for the old full-square model this shape used to match), so the old -16..32 outline
     // cut the star's diagonal tips off, making the selection/interaction hitbox look offset from
     // the visible model.
-    private static final VoxelShape PAD_SHAPE = Block.box(-20, 0, -20, 36, 3, 36);
+    // Height was 3 (matching only the flat pad cubes) - the raised center bud/petals in the geo
+    // model actually reach up to y=10, well above that. Entities and vegetation could pass straight
+    // through the visibly-solid bud, and things floating/standing on it (e.g. underwater kelp,
+    // mobs) looked like they were clipping into or hovering off of the model - "не совпадение
+    // структур плюс слиплость". Raised to fully contain the bud instead of just the pad's rim.
+    private static final VoxelShape PAD_SHAPE = Block.box(-20, 0, -20, 36, 10, 36);
 
     public LotusMainBlock(BlockBehaviour.Properties properties) {
         super(properties);
