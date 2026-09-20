@@ -276,8 +276,28 @@ public class InfectionSpreadEngine {
         return influence;
     }
 
+    /**
+     * A uniformly random pick here used to mean an outbreak anywhere near a real lake/river
+     * quietly starved its own land spread: every converted water tile pushes a new water frontier
+     * entry, and a lake holds far more tiles than any shoreline does, so the frontier fills up
+     * with water positions over time and land sources become statistically rare to ever draw.
+     * Testers kept reporting "only trees change, the ground/water look untouched" - the ground
+     * genuinely wasn't getting its fair share of attempts, not just an illusion. Now tries a
+     * handful of random draws first looking specifically for a non-water entry before falling
+     * back to a fully random pick, so land conversion keeps pace instead of being crowded out.
+     */
+    private static final int LAND_BIAS_DRAWS = 6;
+
     private BlockPos pickFrontierSource(ServerLevel level, Deque<BlockPos> frontier, BlockPos anchor) {
         if (frontier.isEmpty()) return anchor;
+        List<BlockPos> asList = null;
+        for (int attempt = 0; attempt < LAND_BIAS_DRAWS; attempt++) {
+            if (asList == null) asList = new ArrayList<>(frontier);
+            BlockPos candidate = asList.get(level.random.nextInt(asList.size()));
+            if (!level.getFluidState(candidate).is(Fluids.WATER) && !level.getFluidState(candidate).is(ModFluids.INFECTED_WATER.get())) {
+                return candidate;
+            }
+        }
         int index = level.random.nextInt(frontier.size());
         int i = 0;
         for (BlockPos pos : frontier) {
