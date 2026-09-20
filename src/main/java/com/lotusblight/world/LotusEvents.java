@@ -382,4 +382,30 @@ public class LotusEvents {
             if (!event.getEntity().getAbilities().instabuild) event.getItemStack().shrink(1);
         }
     }
+
+    /**
+     * infectedBlockCount only ever grew - spread incremented it, and the ONLY way it ever went
+     * back down was the cleansing-powder handler above. Mining an infected block directly with a
+     * pickaxe (or any other means outside that one item) destroyed it in the world but left the
+     * outbreak's own count/phase/progress completely untouched - "можно хоть ВЕСЬ ЛОТОС СЛОМАТЬ А
+     * ШКАЛА БУДЕТ ПОКАЗЫВАТЬ КАКОЙ НИБУДЬ МИНИ БИОМ", the bar tracked a write-only event count
+     * instead of anything resembling the outbreak's actual current footprint. Reuses the exact
+     * same "is this a recognized infected block" check the cleanse handler already has.
+     */
+    @SubscribeEvent
+    public void onBlockBreak(net.minecraftforge.event.level.BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        if (cleanReplacementFor(event.getState()) == null) return;
+
+        OutbreakSavedData data = OutbreakSavedData.get(level);
+        BlockPos pos = event.getPos();
+        data.incrementChunkCount(new ChunkPos(pos), -1);
+        OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
+        if (nearest != null) {
+            int newCount = Math.max(0, nearest.infectedBlockCount() - 1);
+            int newPhase = InfectionPhases.phaseForBlockCount(newCount);
+            float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
+            data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
+        }
+    }
 }
