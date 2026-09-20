@@ -169,7 +169,7 @@ public class InfectionSpreadEngine {
             BlockPos source = pickFrontierSource(level, frontier, outbreak.pos());
             BlockPos convertedPos = trySpreadOnce(level, source, radius, phase);
             if (convertedPos != null) {
-                pushFrontier(frontier, convertedPos);
+                pushFrontier(frontier, convertedPos, phase);
                 data.incrementChunkCount(new ChunkPos(convertedPos), 1);
                 infectNearbyLiving(level, convertedPos);
                 converted++;
@@ -282,8 +282,10 @@ public class InfectionSpreadEngine {
         return false;
     }
 
-    private void pushFrontier(Deque<BlockPos> frontier, BlockPos pos) {
+    /** Phase 5 never trims - a capped frontier is exactly the "locally contained" behaviour phase 5 is meant to break out of. */
+    private void pushFrontier(Deque<BlockPos> frontier, BlockPos pos, int phase) {
         frontier.addLast(pos.immutable());
+        if (phase >= 5) return;
         while (frontier.size() > FRONTIER_CAP) {
             frontier.pollFirst();
         }
