@@ -105,6 +105,12 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
         if (options == null || options.showInfectionArea.get()) {
             syncInfectionArea(dimension);
         }
+        for (BlockPos pos : com.lotusblight.map.ClientGlandCache.positions()) {
+            Waypoint waypoint = WaypointFactory.createWaypoint(MOD_ID, pos, dimension, true);
+            waypoint.setName("Мшистая железа");
+            waypoint.setColor(Color.CYAN.getRGB());
+            journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
+        }
     }
 
     /**
