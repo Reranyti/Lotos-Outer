@@ -79,18 +79,22 @@ public class GlowBerryBushBlock extends BushBlock implements CaveVines {
     }
 
     /**
-     * Was a plain BushBlock check (needs dirt/grass-like ground directly below) - fine for the
-     * Blessing patches it originally grew in, but the sand-pillar waypoint (see
-     * BlessingSandPillarFeature) pins this to the SIDE of a blessing_sand column, clinging to it
-     * the way a real vine clings to a wall rather than growing up from soil. Accepts either: the
-     * original ground-below case, or any solid horizontal neighbor.
+     * BushBlock's own canSurvive (mayPlaceOn) only accepts BlockTags.DIRT or farmland directly
+     * below - but this block has NEVER once actually been placed on real dirt anywhere in the mod:
+     * Blessing patches grow it on blessing_soil/snow_block/stone, the worldgen feature places it on
+     * the same set, and Mossy Glands/the sand-pillar waypoint put it on moss_block/tuff/clay or pin
+     * it to a wall - none of those are dirt-tagged. Every single placement site would have failed
+     * the inherited check and popped the block on the very next neighbor update. Replaced entirely
+     * with "any sturdy support, above or to the side" instead of layering a narrow side-only
+     * exception on top of an overly strict ground rule that never actually matched real usage.
      */
     @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        if (super.canSurvive(state, level, pos)) return true;
+        BlockGetter getter = level;
+        if (getter.getBlockState(pos.below()).isFaceSturdy(getter, pos.below(), Direction.UP)) return true;
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockGetter getter = level;
-            if (getter.getBlockState(pos.relative(direction)).isFaceSturdy(getter, pos.relative(direction), direction.getOpposite())) {
+            BlockPos neighborPos = pos.relative(direction);
+            if (getter.getBlockState(neighborPos).isFaceSturdy(getter, neighborPos, direction.getOpposite())) {
                 return true;
             }
         }
