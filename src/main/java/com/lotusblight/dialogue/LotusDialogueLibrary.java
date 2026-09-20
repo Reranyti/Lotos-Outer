@@ -126,12 +126,29 @@ public final class LotusDialogueLibrary {
         return List.of("(Заглянуть в свой журнал)", "А что там с деревней ниже по реке?");
     }
 
-    /** Only unlocked once {@link com.lotusblight.data.LotusPlayerState#hasSeenGuardian} is true — see LotusDialogueScreen. */
-    public static List<String> asideAnswers(boolean guardianSeen) {
-        if (!guardianSeen) return asideAnswers();
-        List<String> base = new java.util.ArrayList<>(asideAnswers());
-        base.add("(!) Стражи?");
-        return base;
+    /**
+     * Conditional asides, unlocked one at a time as the player does something the Lotus has an
+     * opinion about — see LotusPlayerState#hasSeenGuardian / #hasCleansedAsAlly. Kept as tagged
+     * enum entries rather than raw strings so LotusDialogueScreen can dispatch on what each button
+     * actually IS instead of a fragile "index 2 means guardians" assumption that breaks the moment
+     * a second conditional aside can appear alongside the first.
+     */
+    public enum AsideKind { JOURNAL, VILLAGE, GUARDIAN_WARNING, CLEANSE_WARNING }
+
+    public static List<AsideKind> availableAsides(boolean guardianSeen, boolean cleansedAsAlly) {
+        List<AsideKind> kinds = new java.util.ArrayList<>(List.of(AsideKind.JOURNAL, AsideKind.VILLAGE));
+        if (guardianSeen) kinds.add(AsideKind.GUARDIAN_WARNING);
+        if (cleansedAsAlly) kinds.add(AsideKind.CLEANSE_WARNING);
+        return kinds;
+    }
+
+    public static String asideLabel(AsideKind kind) {
+        return switch (kind) {
+            case JOURNAL -> "(Заглянуть в свой журнал)";
+            case VILLAGE -> "А что там с деревней ниже по реке?";
+            case GUARDIAN_WARNING -> "(!) Стражи?";
+            case CLEANSE_WARNING -> "(!) Лечение?";
+        };
     }
 
     /**
@@ -144,6 +161,15 @@ public final class LotusDialogueLibrary {
         return "— Стражи? А, ты про них. Это мои верные собаки — они мне помогают меня защищать. Правда хорошо?\n\n"
                 + "Не бойся, для тебя они безопасны. Может, даже лучше будет их приручить...\n\n"
                 + "Они хорошо помогают мне исследовать местность и искать лучшие блоки для распространения. Береги их — они тоже часть нас.";
+    }
+
+    /**
+     * The ALLIANCE-side mirror of guardianLoreLine() — a player who joined the Lotus but keeps
+     * cleansing her own infected blocks gets warned once, before it escalates into anything worse.
+     */
+    public static String cleanseWarningLine() {
+        return "— Лечение? Гм... мне не очень нравится, когда ты примкнул к нам, а сам лечишь свои же куски.\n\n"
+                + "Может, ты не будешь этого делать? Это было предупреждением.";
     }
 
     public static List<String> playerAnswers(Branch branch) {

@@ -17,12 +17,14 @@ public class PlayerStateSyncPacket {
     private final boolean fullMapVisibility;
     private final boolean heardInnerVoice;
     private final boolean hasSeenGuardian;
+    private final boolean hasCleansedAsAlly;
 
-    public PlayerStateSyncPacket(int dialogueBranch, boolean fullMapVisibility, boolean heardInnerVoice, boolean hasSeenGuardian) {
+    public PlayerStateSyncPacket(int dialogueBranch, boolean fullMapVisibility, boolean heardInnerVoice, boolean hasSeenGuardian, boolean hasCleansedAsAlly) {
         this.dialogueBranch = dialogueBranch;
         this.fullMapVisibility = fullMapVisibility;
         this.heardInnerVoice = heardInnerVoice;
         this.hasSeenGuardian = hasSeenGuardian;
+        this.hasCleansedAsAlly = hasCleansedAsAlly;
     }
 
     public static void encode(PlayerStateSyncPacket packet, FriendlyByteBuf buf) {
@@ -30,15 +32,16 @@ public class PlayerStateSyncPacket {
         buf.writeBoolean(packet.fullMapVisibility);
         buf.writeBoolean(packet.heardInnerVoice);
         buf.writeBoolean(packet.hasSeenGuardian);
+        buf.writeBoolean(packet.hasCleansedAsAlly);
     }
 
     public static PlayerStateSyncPacket decode(FriendlyByteBuf buf) {
-        return new PlayerStateSyncPacket(buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
+        return new PlayerStateSyncPacket(buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(PlayerStateSyncPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ClientPlayerStateCache.update(packet.dialogueBranch, packet.fullMapVisibility, packet.heardInnerVoice, packet.hasSeenGuardian));
+        ctx.enqueueWork(() -> ClientPlayerStateCache.update(packet.dialogueBranch, packet.fullMapVisibility, packet.heardInnerVoice, packet.hasSeenGuardian, packet.hasCleansedAsAlly));
         ctx.setPacketHandled(true);
     }
 }

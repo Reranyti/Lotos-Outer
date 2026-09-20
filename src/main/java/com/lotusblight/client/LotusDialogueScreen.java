@@ -94,8 +94,8 @@ public final class LotusDialogueScreen extends Screen {
         return pendingConfirm != null ? 2 : primaryAnswers.length + currentAsides().size();
     }
 
-    private java.util.List<String> currentAsides() {
-        return LotusDialogueLibrary.asideAnswers(ClientPlayerStateCache.hasSeenGuardian());
+    private java.util.List<LotusDialogueLibrary.AsideKind> currentAsides() {
+        return LotusDialogueLibrary.availableAsides(ClientPlayerStateCache.hasSeenGuardian(), ClientPlayerStateCache.hasCleansedAsAlly());
     }
 
     private int panelHeight() {
@@ -132,8 +132,8 @@ public final class LotusDialogueScreen extends Screen {
         }
         var asides = currentAsides();
         for (int i = 0; i < asides.size(); i++, row++) {
-            final int asideChoice = i;
-            this.addRenderableWidget(Button.builder(Component.literal(asides.get(i)), button -> chooseAside(asideChoice))
+            LotusDialogueLibrary.AsideKind kind = asides.get(i);
+            this.addRenderableWidget(Button.builder(Component.literal(LotusDialogueLibrary.asideLabel(kind)), button -> chooseAside(kind))
                     .bounds(left, top + row * 24, 340, 20).build());
         }
     }
@@ -181,16 +181,15 @@ public final class LotusDialogueScreen extends Screen {
         rebuildButtons();
     }
 
-    /** Shows a journal/village-crisis/guardian-lore aside without advancing the conversation. */
-    private void chooseAside(int asideChoice) {
+    /** Shows a journal/village-crisis/guardian-lore/cleanse-warning aside without advancing the conversation. */
+    private void chooseAside(LotusDialogueLibrary.AsideKind kind) {
         asideOpen = true;
-        if (asideChoice == 0) {
-            lotusText = LotusDialogueLibrary.scientistNote(phase);
-        } else if (asideChoice == 1) {
-            lotusText = LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
-        } else {
-            lotusText = LotusDialogueLibrary.guardianLoreLine();
-        }
+        lotusText = switch (kind) {
+            case JOURNAL -> LotusDialogueLibrary.scientistNote(phase);
+            case VILLAGE -> LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
+            case GUARDIAN_WARNING -> LotusDialogueLibrary.guardianLoreLine();
+            case CLEANSE_WARNING -> LotusDialogueLibrary.cleanseWarningLine();
+        };
         // Every other place that changes lotusText (setConversation, confirmBranch, the "Нет, я ещё
         // подумаю" button) pairs it with rebuildButtons() right after - this was the one spot that
         // didn't. panelHeight()/rebuildButtons() both read lotusText fresh, but only render() picks

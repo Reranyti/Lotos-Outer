@@ -380,6 +380,21 @@ public class LotusEvents {
                     float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
                     data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
                 }
+                // "мне не очень нравится когда ты примкнул к нам а сам лечишь свои же куски" -
+                // unlocks the "(!) Лечение?" dialogue aside the first time an ALLIANCE player
+                // cleanses anything, the ALLIANCE-side mirror of hasSeenGuardian's warning.
+                if (event.getEntity() instanceof ServerPlayer allyPlayer
+                        && LotusPlayerState.getDialogueBranch(allyPlayer) == LotusPlayerState.BRANCH_ALLIANCE
+                        && !LotusPlayerState.hasCleansedAsAlly(allyPlayer)) {
+                    LotusPlayerState.setCleansedAsAlly(allyPlayer);
+                    com.lotusblight.map.NetworkHandler.CHANNEL.send(
+                            net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> allyPlayer),
+                            new com.lotusblight.map.PlayerStateSyncPacket(
+                                    LotusPlayerState.getDialogueBranch(allyPlayer),
+                                    LotusPlayerState.hasFullMapVisibility(allyPlayer),
+                                    LotusPlayerState.hasHeardInnerVoice(allyPlayer),
+                                    LotusPlayerState.hasSeenGuardian(allyPlayer), true));
+                }
             }
             if (!event.getEntity().getAbilities().instabuild) event.getItemStack().shrink(1);
         }
