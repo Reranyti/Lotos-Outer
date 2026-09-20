@@ -163,6 +163,25 @@ public final class LotusDialogueLibrary {
                 + "Они хорошо помогают мне исследовать местность и искать лучшие блоки для распространения. Береги их — они тоже часть нас.";
     }
 
+    /**
+     * "Нудная лекция" — the World Lotus confronting a freshly-turned traitor, right at the moment
+     * betrayAlliance() fires (see GuardianManager#triggerBetrayal). {@code {PLAYER}} is substituted
+     * client-side with the real player's own name (see WorldLotusLectureOverlay) since the server
+     * doesn't need to push a name that's already known locally.
+     */
+    public enum LectureSpeaker { LOTUS, PLAYER }
+
+    public record LectureLine(LectureSpeaker speaker, String text) {}
+
+    public static List<LectureLine> worldLotusLectureLines() {
+        return List.of(
+                new LectureLine(LectureSpeaker.LOTUS, "ЧТО ТЫ ЧЁРТ ВОЗЬМИ ДЕЛАЕШЬ..."),
+                new LectureLine(LectureSpeaker.LOTUS, "ТЫ ПРИМКНУЛ К НАМ НЕ ДЛЯ ТОГО ЧТОБЫ ИСТРЕБЛЯТЬ."),
+                new LectureLine(LectureSpeaker.LOTUS, "ТЫ ПОНИМАЕШЬ ЖЕ, ЧТО ТЫ БУДЕШЬ ИСПЕПЕЛЁН МНОЙ? ЕСЛИ ВЫЖИВЕШЬ — ЛОТОС УЖЕ НЕ ЗАХВАТИТ ТЕБЯ."),
+                new LectureLine(LectureSpeaker.PLAYER, "Что...ч... НЕТ...")
+        );
+    }
+
     /** Uses count at which the soft warning stops and the Lotus starts speaking plainly. */
     public static final int CLEANSE_BLUNT_WARNING_USES = 18;
 
