@@ -1,5 +1,6 @@
 package com.lotusblight.world;
 
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.spread.InfectionPhases;
@@ -425,6 +426,15 @@ public class LotusEvents {
                 decrementInfectedCount(level, pos, 1);
             }
         }
+    }
+
+    /** "Премиальное воровство" - smelting the lotus's own ore into alloy while actively fighting it is the joke. */
+    @SubscribeEvent
+    public void onItemSmelted(PlayerEvent.ItemSmeltedEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!event.getSmelting().is(ModItems.LOTUS_ALLOY.get())) return;
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
+        com.lotusblight.advancement.LotusAlloyCraftedTrigger.INSTANCE.trigger(player);
     }
 
     private void decrementInfectedCount(ServerLevel level, BlockPos pos, int amount) {
