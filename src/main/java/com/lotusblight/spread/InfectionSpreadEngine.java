@@ -152,7 +152,15 @@ public class InfectionSpreadEngine {
         });
 
         int phase = outbreak.phase();
-        boolean openOcean = !hasNearbyLand(level, outbreak.pos());
+        // hasNearbyLand's sampling used to be the WHOLE check - 8 random points in a 65x65 square
+        // around the anchor. A large pond/lake/wide river (exactly what GuaranteedSpawnManager
+        // likes to seed outbreaks next to) is easily bigger than that square, so every sample could
+        // land on water and this outbreak got misclassified as "stuck in the ocean": phase capped
+        // at 2 (OCEAN_PHASE_CAP) and its attempts skewed toward the ocean bonus instead of actual
+        // land conversion, even though it was sitting on an ordinary lake, not open sea. Now
+        // requires the anchor to actually BE in a vanilla ocean-tagged biome first - a lake in a
+        // plains/forest/taiga biome can never trigger this misclassification, no matter how wide it is.
+        boolean openOcean = level.getBiome(outbreak.pos()).is(net.minecraft.tags.BiomeTags.IS_OCEAN) && !hasNearbyLand(level, outbreak.pos());
         int attempts = InfectionPhases.attemptsPerTick(phase);
         if (STREAMS_REFLOWING_LOADED && LotusConfig.STREAMS_COMPATIBILITY.get() && isNearWater(level, frontier, outbreak.pos())) {
             // A real, mixin-driven river/stream network is a much stronger signal than vanilla's flat water — lean on it harder.
