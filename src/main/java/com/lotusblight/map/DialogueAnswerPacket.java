@@ -48,6 +48,14 @@ public class DialogueAnswerPacket {
             ServerPlayer player = ctx.getSender();
             if (player == null || !(player.level() instanceof ServerLevel level)) return;
 
+            // The packet's branch field used to be trusted outright - nothing here checked it
+            // against the player's own actual, server-persisted branch (LotusPlayerState), so a
+            // modified client could just send branch=2 while really being RESISTANCE (or vice
+            // versa) and claim the other side's exclusive reward (grafting rod / cleansing powder
+            // gift) on top of its own. Each reward already has its own one-time flag, so this
+            // couldn't be farmed repeatedly, but it could bypass the branch exclusivity entirely.
+            if (packet.branch != LotusPlayerState.getDialogueBranch(player)) return;
+
             // branch 1 = RESISTANCE, 2 = ALLIANCE (see LotusDialogueLibrary.Branch) — matches the
             // fixed answer lists LotusDialogueLibrary#playerAnswers returns for each branch.
             if (packet.branch == 1) {

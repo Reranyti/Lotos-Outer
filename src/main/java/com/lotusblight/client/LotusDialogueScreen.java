@@ -183,6 +183,13 @@ public final class LotusDialogueScreen extends Screen {
         lotusText = asideChoice == 0
                 ? LotusDialogueLibrary.scientistNote(phase)
                 : LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
+        // Every other place that changes lotusText (setConversation, confirmBranch, the "Нет, я ещё
+        // подумаю" button) pairs it with rebuildButtons() right after - this was the one spot that
+        // didn't. panelHeight()/rebuildButtons() both read lotusText fresh, but only render() picks
+        // up the new height every frame; the buttons stay frozen at whatever position they were
+        // last built at, so after an aside (which is often a different length of text) they visibly
+        // drift away from the panel that just resized around them.
+        rebuildButtons();
     }
 
     private static final ResourceLocation VIGNETTE = new ResourceLocation("textures/misc/vignette.png");

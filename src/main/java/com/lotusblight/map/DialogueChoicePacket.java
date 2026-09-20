@@ -36,7 +36,12 @@ public class DialogueChoicePacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null || packet.branch == LotusPlayerState.BRANCH_UNDECIDED) {
+            // Was only excluding UNDECIDED - any other garbage value (a modified client, or just a
+            // stray packet) would still get stored verbatim by setDialogueBranch. Since that write
+            // is one-way/permanent, a value that isn't actually RESISTANCE or ALLIANCE would lock
+            // the player out of both branches' content forever with no way to recover.
+            if (player == null
+                    || (packet.branch != LotusPlayerState.BRANCH_RESISTANCE && packet.branch != LotusPlayerState.BRANCH_ALLIANCE)) {
                 return;
             }
             LotusPlayerState.setDialogueBranch(player, packet.branch);
