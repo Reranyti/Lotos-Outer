@@ -104,12 +104,14 @@ public final class LotusChaseStructure {
 
     public void sealEntrance() {
         for (BlockPos pos : doorCells) {
+            if (!level.hasChunkAt(pos)) continue;
             level.setBlock(pos, Blocks.POLISHED_ANDESITE.defaultBlockState(), 3);
         }
     }
 
     public void unsealEntrance() {
         for (BlockPos pos : doorCells) {
+            if (!level.hasChunkAt(pos)) continue;
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         }
     }
@@ -127,6 +129,7 @@ public final class LotusChaseStructure {
                 for (int w = -half; w <= half; w++) {
                     for (int h = 1; h < HEIGHT - 1; h++) {
                         BlockPos pos = center.relative(side, w).above(h);
+                        if (!level.hasChunkAt(pos)) continue;
                         if (level.getBlockState(pos).is(Blocks.COBWEB)) {
                             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                         }
@@ -190,13 +193,16 @@ public final class LotusChaseStructure {
 
     /** Temporary "fallen shelf" obstacle - cobweb, not a solid block, so it hinders (slows) instead of fully blocking a corridor that's otherwise unbreakable. */
     public void dropObstacle(BlockPos pos) {
+        if (!level.hasChunkAt(pos)) return;
         if (!level.getBlockState(pos).isAir()) return;
         level.setBlock(pos, Blocks.COBWEB.defaultBlockState(), 3);
         // Deliberately NOT added to PROTECTED - cobweb is meant to be pushed/broken through, unlike
         // the corridor shell itself.
     }
 
+    /** Skips silently on an unloaded chunk - "он не может попасть туда даже если найдёт его до 15 процентов" only needs this lab to exist somewhere players actually reach; forcing a synchronous chunk load from a setBlock call here would deadlock the server tick that's driving that very load (see LotusChaseEvent#ensureLabExists's own hasChunkAt gate). */
     private void place(BlockPos pos, BlockState state) {
+        if (!level.hasChunkAt(pos)) return;
         level.setBlock(pos, state, 3);
         PROTECTED.put(GlobalPos.of(level.dimension(), pos), this);
     }

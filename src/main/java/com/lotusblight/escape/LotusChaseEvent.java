@@ -85,6 +85,8 @@ public final class LotusChaseEvent {
         long gameTick = overworld.getGameTime();
 
         ensureLabExists(overworld);
+        if (structure == null) return; // area not chunk-loaded yet - retry next tick, see ensureLabExists
+
         tickActiveRun(server, gameTick);
 
         if (server.getTickCount() % SWEEP_INTERVAL_TICKS != 0) return;
@@ -92,22 +94,36 @@ public final class LotusChaseEvent {
         checkForNewRunner(overworld);
     }
 
+    /**
+     * Deliberately waits for {@link ServerLevel#hasChunkAt} before touching a single block - this
+     * used to build() unconditionally the moment the overworld ticked once, and if the lab's spot
+     * (spawn + {@link #LAB_OFFSET_FROM_SPAWN}) wasn't already loaded (no spawn-chunk keep-alive,
+     * or nobody near it yet), Level#setBlock's own getChunk() call would force a synchronous chunk
+     * load/generation and deadlock the server tick thread against itself - the exact freeze a
+     * player hit after crossing the unlock threshold nowhere near the lab. LotusChaseStructure's
+     * own place()/sealEntrance()/unsealEntrance()/dropObstacle() now also guard individually, since
+     * the lab's footprint can span more than one chunk.
+     */
     private void ensureLabExists(ServerLevel overworld) {
         if (structure != null) return;
         LotusLabSavedData labData = LotusLabSavedData.get(overworld);
         if (!labData.isBuilt()) {
             BlockPos spawn = overworld.getSharedSpawnPos();
             BlockPos entrance = new BlockPos(spawn.getX() + LAB_OFFSET_FROM_SPAWN, spawn.getY(), spawn.getZ());
+            if (!overworld.hasChunkAt(entrance)) return;
             Direction facing = Direction.EAST;
-            structure = new LotusChaseStructure(overworld, entrance, facing, overworld.random);
-            structure.build();
-            labData.markBuilt(entrance, facing, structure.correctIsLeft());
+            LotusChaseStructure built = new LotusChaseStructure(overworld, entrance, facing, overworld.random);
+            built.build();
+            labData.markBuilt(entrance, facing, built.correctIsLeft());
+            structure = built;
         } else {
-            structure = new LotusChaseStructure(overworld, labData.entrance(), labData.facing(), labData.correctIsLeft());
-            structure.build();
+            if (!overworld.hasChunkAt(labData.entrance())) return;
+            LotusChaseStructure rebuilt = new LotusChaseStructure(overworld, labData.entrance(), labData.facing(), labData.correctIsLeft());
+            rebuilt.build();
             if (labData.isUnlocked() && runnerUuid == null) {
-                structure.unsealEntrance();
+                rebuilt.unsealEntrance();
             }
+            structure = rebuilt;
         }
     }
 
@@ -233,21 +249,23 @@ public final class LotusChaseEvent {
 
     // ---- Testing hooks (see com.lotusblight.command.LotusCommands) ----------------------------
 
+    /** May return null if the lab's chunk isn't loaded yet (see ensureLabExists) - the caller commands report that instead of touching a still-null structure. */
     public BlockPos labEntrance(ServerLevel overworld) {
         ensureLabExists(overworld);
-        return structure.entrance();
+        return structure == null ? null : structure.entrance();
     }
 
     public void forceUnlock(ServerLevel overworld) {
         ensureLabExists(overworld);
         LotusLabSavedData labData = LotusLabSavedData.get(overworld);
         labData.setUnlocked(true);
-        if (runnerUuid == null) structure.unsealEntrance();
+        if (structure != null && runnerUuid == null) structure.unsealEntrance();
     }
 
     public String statusReport(ServerLevel overworld) {
         ensureLabExists(overworld);
         LotusLabSavedData labData = LotusLabSavedData.get(overworld);
-        return String.format("lab=%s unlocked=%b runner=%s", structure.entrance().toShortString(), labData.isUnlocked(), runnerUuid);
+        String labPos = structure == null ? "chunk not loaded yet" : structure.entrance().toShortString();
+        return String.format("lab=%s unlocked=%b runner=%s", labPos, labData.isUnlocked(), runnerUuid);
     }
 }

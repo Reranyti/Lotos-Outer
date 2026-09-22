@@ -302,6 +302,10 @@ public final class LotusCommands {
 
     private static int chaseTeleport(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         BlockPos entrance = com.lotusblight.escape.LotusChaseEvent.get().labEntrance(source.getServer().overworld());
+        if (entrance == null) {
+            source.sendFailure(Component.literal("Чанк лаборатории ещё не загружен - попробуй снова, когда кто-нибудь окажется рядом."));
+            return 0;
+        }
         source.getPlayerOrException().teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
         source.sendSuccess(() -> Component.literal("Телепортирован ко входу в лабораторию: " + entrance.toShortString()), true);
         return 1;
