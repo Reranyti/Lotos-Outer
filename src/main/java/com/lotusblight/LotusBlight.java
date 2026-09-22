@@ -159,6 +159,7 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.EpicenterManager());
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);
+        MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.LotusChaseEvent());
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
         CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);

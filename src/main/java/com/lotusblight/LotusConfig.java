@@ -11,6 +11,7 @@ public final class LotusConfig {
     public static final ForgeConfigSpec.BooleanValue STREAMS_COMPATIBILITY;
     public static final ForgeConfigSpec.IntValue ACTIVE_CHUNK_RADIUS;
     public static final ForgeConfigSpec.IntValue MAX_PENDING_WORLDGEN_TASKS;
+    public static final ForgeConfigSpec.IntValue WORLD_INFECTION_REFERENCE;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -29,6 +30,8 @@ public final class LotusConfig {
                 .defineInRange("activeChunkRadius", 32, 4, 32);
         MAX_PENDING_WORLDGEN_TASKS = builder.comment("Maximum queued natural lotus worldgen tasks.")
                 .defineInRange("maxPendingWorldgenTasks", 64, 8, 256);
+        WORLD_INFECTION_REFERENCE = builder.comment("Sum of infectedBlockCount across every outbreak on the server treated as \"100% of the world captured\" - the Lotus Chase event's 15% trigger is this times 0.15.")
+                .defineInRange("worldInfectionReference", 100000, 1000, 10_000_000);
         builder.pop();
         SPEC = builder.build();
     }

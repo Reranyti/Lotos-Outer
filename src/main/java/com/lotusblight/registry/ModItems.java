@@ -11,6 +11,7 @@ import com.lotusblight.item.LotusWikiItem;
 import com.lotusblight.item.ScientistPageItem;
 import com.lotusblight.item.LotusPickaxeItem;
 import com.lotusblight.item.GlowingBerryItem;
+import com.lotusblight.item.VitaminItem;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.HoeItem;
@@ -60,6 +61,9 @@ public final class ModItems {
     public static final RegistryObject<Item> LOTUS_LEAVES_ITEM = ITEMS.register("lotus_leaves", () -> new BlockItem(ModBlocks.LOTUS_LEAVES.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LOG_ITEM = ITEMS.register("blessing_log", () -> new BlockItem(ModBlocks.BLESSING_LOG.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LEAVES_ITEM = ITEMS.register("blessing_leaves", () -> new BlockItem(ModBlocks.BLESSING_LEAVES.get(), new Item.Properties()));
+    // --- "Побег от лотоса" event item: a burst of Speed, most useful while a chase is active ---
+    public static final RegistryObject<Item> VITAMIN = ITEMS.register("vitamin", () -> new VitaminItem(new Item.Properties().stacksTo(16)
+            .food(new FoodProperties.Builder().nutrition(1).saturationMod(0.1f).alwaysEat().build())));
 
     // --- Lotus alloy tools (same tier/material as the pickaxe) ---
     public static final RegistryObject<Item> LOTUS_AXE = ITEMS.register("lotus_axe", () -> new AxeItem(Tiers.DIAMOND, 5.0f, -3.0f, new Item.Properties().durability(900)));
