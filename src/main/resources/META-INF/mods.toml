@@ -122,13 +122,13 @@ description='''${mod_description}'''
     versionRange="[1.20.1-6.0,1.21)"
     ordering="AFTER"
     side="CLIENT"
-# Soft dependency on Ex Meteor Shower: not required to load. If present (and its own OctoLib
-# requirement is satisfied), StarFallOverlay can trigger real comet visuals during the StarFall
-# event instead of falling back to our own particles. modId is a best guess from the jar's own
-# filename convention (meteor_shower-*.jar) - verify once the real jar is in hand.
+# Hard dependency on Ex Meteor Shower, per explicit request - the mod will refuse to load at all
+# without it (and its own OctoLib requirement) installed, not just lose the comet visuals during
+# StarFall. modId is a best guess from the jar's own filename convention (meteor_shower-*.jar) -
+# verify once the real jar is in hand.
 [[dependencies.${mod_id}]]
     modId="meteor_shower"
-    mandatory=false
+    mandatory=true
     versionRange="[0.0.4,1.0)"
     ordering="AFTER"
     side="CLIENT"
