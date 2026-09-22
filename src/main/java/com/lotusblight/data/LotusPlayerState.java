@@ -273,6 +273,31 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String BLACK_HEART_COUNT_KEY = "BlackHeartCount";
+
+    /**
+     * "любые золотые предметы на ветке войны дают чёрные сердца, тем больше золотых сердец тем
+     * меньше оз макс, при смерти можно только снять" - permanent max-health reduction per golden
+     * item eaten on the war branch (see LotusEvents#onGoldenItemEaten), cleared only on death.
+     */
+    public static int getBlackHeartCount(Player player) {
+        return root(player, false).getInt(BLACK_HEART_COUNT_KEY);
+    }
+
+    public static int incrementBlackHeartCount(Player player) {
+        CompoundTag root = root(player, true);
+        int newCount = root.getInt(BLACK_HEART_COUNT_KEY) + 1;
+        root.putInt(BLACK_HEART_COUNT_KEY, newCount);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return newCount;
+    }
+
+    public static void clearBlackHeartCount(Player player) {
+        CompoundTag root = root(player, true);
+        root.putInt(BLACK_HEART_COUNT_KEY, 0);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     private static final String HAS_SEEN_GUARDIAN_KEY = "HasSeenGuardian";
 
     /**

@@ -46,17 +46,22 @@ public final class StarFallOverlay {
     private static float lockedYaw;
     private static float lockedPitch;
     private static boolean locking;
+    private static boolean warBranch;
+    private static int lineIndex;
 
     private StarFallOverlay() {}
 
     public static void show(boolean allianceBranch) {
+        warBranch = !allianceBranch;
         queue.clear();
         queue.addAll(allianceBranch ? StarFallLibrary.allianceLines() : StarFallLibrary.warLines());
+        lineIndex = -1;
         advance();
     }
 
     private static void advance() {
         activeLine = queue.poll();
+        lineIndex++;
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
         Minecraft mc = Minecraft.getInstance();
@@ -66,6 +71,11 @@ public final class StarFallOverlay {
             locking = true;
         } else {
             locking = false;
+        }
+        // Health/inventory are server-authoritative - the war script's (урон)/staff-removal/meteor
+        // beats have to be applied server-side, keyed by which line the client just reached.
+        if (activeLine != null && warBranch) {
+            com.lotusblight.map.NetworkHandler.CHANNEL.sendToServer(new com.lotusblight.map.StarFallLineReachedPacket(lineIndex));
         }
     }
 

@@ -57,6 +57,8 @@ public final class ModItems {
     public static final RegistryObject<Item> BLESSING_NODULE_ITEM = ITEMS.register("blessing_nodule", () -> new BlockItem(ModBlocks.BLESSING_NODULE.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_SOIL_ITEM = ITEMS.register("blessing_soil", () -> new BlockItem(ModBlocks.BLESSING_SOIL.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_SAND_ITEM = ITEMS.register("blessing_sand", () -> new BlockItem(ModBlocks.BLESSING_SAND.get(), new Item.Properties()));
+    public static final RegistryObject<Item> BLESSING_SOIL_PURPLE_ITEM = ITEMS.register("blessing_soil_purple", () -> new BlockItem(ModBlocks.BLESSING_SOIL_PURPLE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> BLESSING_SAND_PURPLE_ITEM = ITEMS.register("blessing_sand_purple", () -> new BlockItem(ModBlocks.BLESSING_SAND_PURPLE.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_LOG_ITEM = ITEMS.register("lotus_log", () -> new BlockItem(ModBlocks.LOTUS_LOG.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_LEAVES_ITEM = ITEMS.register("lotus_leaves", () -> new BlockItem(ModBlocks.LOTUS_LEAVES.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LOG_ITEM = ITEMS.register("blessing_log", () -> new BlockItem(ModBlocks.BLESSING_LOG.get(), new Item.Properties()));

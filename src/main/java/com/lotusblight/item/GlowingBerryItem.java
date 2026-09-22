@@ -17,6 +17,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -39,6 +41,16 @@ public class GlowingBerryItem extends Item {
 
     public GlowingBerryItem(Properties properties) {
         super(properties);
+    }
+
+    /** "теперь нельзя на ветке войны сьесть ягоды" - refuse the eat action outright instead of letting it start and consume, so the item stays in hand. */
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (!level.isClientSide && LotusPlayerState.getDialogueBranch(player) == LotusPlayerState.BRANCH_RESISTANCE) {
+            player.displayClientMessage(Component.literal("— Эти ягоды не для тебя. Больше нет."), true);
+            return InteractionResultHolder.fail(player.getItemInHand(hand));
+        }
+        return super.use(level, player, hand);
     }
 
     @Override

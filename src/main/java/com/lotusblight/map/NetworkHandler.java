@@ -50,5 +50,6 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, TraitorBossThemePacket.class, TraitorBossThemePacket::encode, TraitorBossThemePacket::decode, TraitorBossThemePacket::handle);
         CHANNEL.registerMessage(id++, ChaseStatePacket.class, ChaseStatePacket::encode, ChaseStatePacket::decode, ChaseStatePacket::handle);
         CHANNEL.registerMessage(id++, ShowStarFallPacket.class, ShowStarFallPacket::encode, ShowStarFallPacket::decode, ShowStarFallPacket::handle);
+        CHANNEL.registerMessage(id++, StarFallLineReachedPacket.class, StarFallLineReachedPacket::encode, StarFallLineReachedPacket::decode, StarFallLineReachedPacket::handle);
     }
 }
