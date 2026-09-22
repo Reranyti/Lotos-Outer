@@ -158,7 +158,7 @@ public class LotusBlight {
         modBus.addListener(this::registerRenderLayers);
         modBus.addListener(this::registerBlockColors);
         modBus.addListener(this::registerItemColors);
-        context.registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MossyGlandSpreadEngine());
