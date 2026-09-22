@@ -1,6 +1,7 @@
 package com.lotusblight.escape;
 
 import com.lotusblight.LotusConfig;
+import com.lotusblight.data.LotusLabSavedData;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.map.ChaseStatePacket;
@@ -19,29 +20,30 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
- * "Побег от лотоса" — a rare, world-scale event: once the infection covers roughly 15% of the
- * world (see {@link LotusConfig#WORLD_INFECTION_REFERENCE}), each sweep additionally rolls a
- * 1-in-{@link #TRIGGER_CHANCE} chance to grab a random online player. A sealed lab corridor
- * ({@link LotusChaseStructure}) is built around them and they're placed at its entrance - one
- * branch at the junction leads to the real exit (yellow-lit), the other is a decoy dead end
- * (red-lit). They have {@link #DURATION_TICKS} to physically reach the exit trigger; obstacles
- * ("упавшие полки" - cobweb) periodically appear along the correct path to slow them down, and
- * {@link com.lotusblight.item.VitaminItem}'s Speed burst / the crouch+sprint dash are what's meant
- * to carry a player through in time.
+ * "Побег от лотоса" — a PERSISTENT lab (see {@link LotusChaseStructure} / {@link LotusLabSavedData}),
+ * built once at a fixed spot and sealed shut. "он не может попасть туда даже если найдёт его до 15
+ * процентов" - the door only opens once the infection covers roughly 15% of the world (see
+ * {@link LotusConfig#WORLD_INFECTION_REFERENCE}). Once open, whichever player walks up to the
+ * start-trigger a few steps inside begins their own run - the entrance seals again behind them
+ * ("не может пойти назад") until they resolve it, one runner at a time.
+ *
+ * A junction partway in has two branches - the real one lit yellow, a decoy dead end lit red. They
+ * have {@link #DURATION_TICKS} to physically reach the exit trigger; obstacles ("упавшие полки" -
+ * cobweb) periodically appear along the correct path, escalating partway through per the theme
+ * track's own structure, and {@link com.lotusblight.item.VitaminItem}'s Speed burst / the
+ * crouch+sprint dash are what's meant to carry a player through in time.
  *
  * Outcome on running out of time: the Lotus "grabs" the player - every item is shaken out onto the
  * ground first (bypasses keepInventory on purpose, unlike a normal death) before a lethal,
- * guaranteed-kill impact. Outcome on reaching the exit: nothing is lost, the structure tears down.
+ * guaranteed-kill impact. Outcome on reaching the exit: nothing is lost, the door reopens for the
+ * next attempt.
  */
 public final class LotusChaseEvent {
     private static final int SWEEP_INTERVAL_TICKS = 100;
-    private static final int TRIGGER_CHANCE = 1_000_000;
     private static final float TRIGGER_FRACTION = 0.15f;
     // Timed against lotus_chase_theme.ogg's own structure: 0:11 the track settles into the escape
     // proper, 0:23 it escalates hard, 1:50 is the actual deadline, 2:14 is the track's full length
@@ -55,36 +57,64 @@ public final class LotusChaseEvent {
     /** "1 фаза более менее лёгкая" / "вторая фаза... сильное усложнение" - obstacles roughly triple in frequency once phase 2 starts. */
     private static final int PHASE1_OBSTACLE_INTERVAL_TICKS = 20 * 6;
     private static final int PHASE2_OBSTACLE_INTERVAL_TICKS = 20 * 2;
+    /** How far from world spawn (X+, same Y as spawn) the lab gets carved - arbitrary but fixed, so it always ends up at the same real spot for a given world. */
+    private static final int LAB_OFFSET_FROM_SPAWN = 48;
 
-    private static final class ChaseState {
-        final LotusChaseStructure structure;
-        final long startTick;
-        long dashReadyAtTick;
-        long nextObstacleAtTick;
+    private static LotusChaseEvent instance;
 
-        ChaseState(LotusChaseStructure structure, long startTick) {
-            this.structure = structure;
-            this.startTick = startTick;
-            this.dashReadyAtTick = startTick;
-            this.nextObstacleAtTick = startTick + GRACE_END_TICKS;
-        }
+    private LotusChaseStructure structure;
+    private UUID runnerUuid;
+    private long runnerStartTick;
+    private long dashReadyAtTick;
+    private long nextObstacleAtTick;
+
+    public LotusChaseEvent() {
+        instance = this;
     }
 
-    private final Map<UUID, ChaseState> active = new HashMap<>();
+    /** For /lotus chase test commands (see com.lotusblight.command.LotusCommands) - null only if the mod's own registration in LotusBlight never ran, which should never happen. */
+    public static LotusChaseEvent get() {
+        return instance;
+    }
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         MinecraftServer server = event.getServer();
-        long gameTick = server.overworld().getGameTime();
+        ServerLevel overworld = server.overworld();
+        long gameTick = overworld.getGameTime();
 
-        tickActiveChases(server, gameTick);
+        ensureLabExists(overworld);
+        tickActiveRun(server, gameTick);
 
         if (server.getTickCount() % SWEEP_INTERVAL_TICKS != 0) return;
-        maybeStartNewChase(server, gameTick);
+        maybeUnlock(server, overworld);
+        checkForNewRunner(overworld);
     }
 
-    private void maybeStartNewChase(MinecraftServer server, long gameTick) {
+    private void ensureLabExists(ServerLevel overworld) {
+        if (structure != null) return;
+        LotusLabSavedData labData = LotusLabSavedData.get(overworld);
+        if (!labData.isBuilt()) {
+            BlockPos spawn = overworld.getSharedSpawnPos();
+            BlockPos entrance = new BlockPos(spawn.getX() + LAB_OFFSET_FROM_SPAWN, spawn.getY(), spawn.getZ());
+            Direction facing = Direction.EAST;
+            structure = new LotusChaseStructure(overworld, entrance, facing, overworld.random);
+            structure.build();
+            labData.markBuilt(entrance, facing, structure.correctIsLeft());
+        } else {
+            structure = new LotusChaseStructure(overworld, labData.entrance(), labData.facing(), labData.correctIsLeft());
+            structure.build();
+            if (labData.isUnlocked() && runnerUuid == null) {
+                structure.unsealEntrance();
+            }
+        }
+    }
+
+    private void maybeUnlock(MinecraftServer server, ServerLevel overworld) {
+        LotusLabSavedData labData = LotusLabSavedData.get(overworld);
+        if (labData.isUnlocked()) return;
+
         long totalInfected = 0;
         for (ServerLevel level : server.getAllLevels()) {
             for (OutbreakRecord outbreak : OutbreakSavedData.get(level).allOutbreaks()) {
@@ -93,65 +123,78 @@ public final class LotusChaseEvent {
         }
         long threshold = (long) (LotusConfig.WORLD_INFECTION_REFERENCE.get() * TRIGGER_FRACTION);
         if (totalInfected < threshold) return;
-        if (server.overworld().getRandom().nextInt(TRIGGER_CHANCE) != 0) return;
 
-        List<ServerPlayer> candidates = server.getPlayerList().getPlayers().stream()
-                .filter(p -> !active.containsKey(p.getUUID()))
-                .toList();
-        if (candidates.isEmpty()) return;
-        ServerPlayer target = candidates.get(server.overworld().getRandom().nextInt(candidates.size()));
-        if (!(target.level() instanceof ServerLevel level)) return;
-
-        Direction facing = Direction.Plane.HORIZONTAL.getRandomDirection(level.random);
-        BlockPos entrance = target.blockPosition();
-        LotusChaseStructure structure = new LotusChaseStructure(level, entrance, facing, level.random);
-        structure.build();
-        target.teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
-
-        active.put(target.getUUID(), new ChaseState(structure, gameTick));
-        target.displayClientMessage(Component.literal(
-                "— Ты чувствуешь, как мир под тобой начинает уходить. Беги. Ищи жёлтый свет."), false);
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), new ChaseStatePacket(ChaseStatePacket.State.STARTED, DURATION_TICKS));
+        labData.setUnlocked(true);
+        structure.unsealEntrance();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            player.displayClientMessage(Component.literal(
+                    "— Где-то в мире дверь, которая была заперта, только что открылась."), false);
+        }
     }
 
-    private void tickActiveChases(MinecraftServer server, long gameTick) {
-        if (active.isEmpty()) return;
-        for (UUID uuid : List.copyOf(active.keySet())) {
-            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
-            ChaseState state = active.get(uuid);
-            if (player == null || !player.isAlive()) {
-                if (state != null) state.structure.teardown();
-                active.remove(uuid);
-                continue;
-            }
+    private void checkForNewRunner(ServerLevel overworld) {
+        if (runnerUuid != null) return;
+        LotusLabSavedData labData = LotusLabSavedData.get(overworld);
+        if (!labData.isUnlocked()) return;
 
-            long elapsed = gameTick - state.startTick;
-            if (elapsed >= DURATION_TICKS) {
-                resolveCaught(player, state);
-                continue;
-            }
-            if (player.blockPosition().equals(state.structure.exitTrigger())
-                    || player.blockPosition().equals(state.structure.exitTrigger().below())) {
-                resolveSurvived(player, state);
-                continue;
-            }
-
-            if (player.isCrouching() && player.isSprinting() && gameTick >= state.dashReadyAtTick) {
-                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DASH_BURST_TICKS, DASH_AMPLIFIER, false, true, true));
-                state.dashReadyAtTick = gameTick + DASH_COOLDOWN_TICKS;
-            }
-
-            if (elapsed >= GRACE_END_TICKS && gameTick >= state.nextObstacleAtTick) {
-                state.structure.dropObstacle(player.blockPosition().relative(player.getDirection(), 3));
-                int interval = elapsed >= PHASE2_START_TICKS ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
-                state.nextObstacleAtTick = gameTick + interval;
+        for (ServerPlayer player : overworld.players()) {
+            if (player.blockPosition().equals(structure.startTrigger())) {
+                startRun(player, overworld.getGameTime());
+                return;
             }
         }
     }
 
-    private void resolveSurvived(ServerPlayer player, ChaseState state) {
-        active.remove(player.getUUID());
-        state.structure.teardown();
+    private void startRun(ServerPlayer player, long gameTick) {
+        structure.resetForNextRun();
+        structure.sealEntrance();
+        runnerUuid = player.getUUID();
+        runnerStartTick = gameTick;
+        dashReadyAtTick = gameTick;
+        nextObstacleAtTick = gameTick + GRACE_END_TICKS;
+
+        player.displayClientMessage(Component.literal(
+                "— Ты чувствуешь, как мир под тобой начинает уходить. Беги. Ищи жёлтый свет."), false);
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.STARTED, DURATION_TICKS));
+    }
+
+    private void tickActiveRun(MinecraftServer server, long gameTick) {
+        if (runnerUuid == null) return;
+        ServerPlayer player = server.getPlayerList().getPlayer(runnerUuid);
+        if (player == null || !player.isAlive()) {
+            endRun();
+            return;
+        }
+
+        long elapsed = gameTick - runnerStartTick;
+        if (elapsed >= DURATION_TICKS) {
+            resolveCaught(player);
+            return;
+        }
+        if (player.blockPosition().equals(structure.exitTrigger()) || player.blockPosition().equals(structure.exitTrigger().below())) {
+            resolveSurvived(player);
+            return;
+        }
+
+        if (player.isCrouching() && player.isSprinting() && gameTick >= dashReadyAtTick) {
+            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DASH_BURST_TICKS, DASH_AMPLIFIER, false, true, true));
+            dashReadyAtTick = gameTick + DASH_COOLDOWN_TICKS;
+        }
+
+        if (elapsed >= GRACE_END_TICKS && gameTick >= nextObstacleAtTick) {
+            structure.dropObstacle(player.blockPosition().relative(player.getDirection(), 3));
+            int interval = elapsed >= PHASE2_START_TICKS ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
+            nextObstacleAtTick = gameTick + interval;
+        }
+    }
+
+    private void endRun() {
+        runnerUuid = null;
+        structure.unsealEntrance();
+    }
+
+    private void resolveSurvived(ServerPlayer player) {
+        endRun();
         player.displayClientMessage(Component.literal("— ...Ушёл. В этот раз."), false);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.SURVIVED, 0));
     }
@@ -162,9 +205,8 @@ public final class LotusChaseEvent {
      * world entity BEFORE death (so there is nothing left for keepInventory to preserve), then a
      * guaranteed-lethal impact follows.
      */
-    private void resolveCaught(ServerPlayer player, ChaseState state) {
-        active.remove(player.getUUID());
-        state.structure.teardown();
+    private void resolveCaught(ServerPlayer player) {
+        endRun();
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.CAUGHT, 0));
         if (!(player.level() instanceof ServerLevel level)) return;
 
@@ -187,5 +229,25 @@ public final class LotusChaseEvent {
             drop.setDefaultPickUpDelay();
             level.addFreshEntity(drop);
         }
+    }
+
+    // ---- Testing hooks (see com.lotusblight.command.LotusCommands) ----------------------------
+
+    public BlockPos labEntrance(ServerLevel overworld) {
+        ensureLabExists(overworld);
+        return structure.entrance();
+    }
+
+    public void forceUnlock(ServerLevel overworld) {
+        ensureLabExists(overworld);
+        LotusLabSavedData labData = LotusLabSavedData.get(overworld);
+        labData.setUnlocked(true);
+        if (runnerUuid == null) structure.unsealEntrance();
+    }
+
+    public String statusReport(ServerLevel overworld) {
+        ensureLabExists(overworld);
+        LotusLabSavedData labData = LotusLabSavedData.get(overworld);
+        return String.format("lab=%s unlocked=%b runner=%s", structure.entrance().toShortString(), labData.isUnlocked(), runnerUuid);
     }
 }

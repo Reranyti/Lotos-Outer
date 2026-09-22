@@ -51,7 +51,8 @@ public final class LotusCommands {
                 .then(glandCommands())
                 .then(Commands.literal("timewarp")
                         .then(Commands.argument("passes", IntegerArgumentType.integer(1, 500))
-                                .executes(ctx -> timewarp(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "passes"))))));
+                                .executes(ctx -> timewarp(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "passes")))))
+                .then(chaseCommands()));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------
@@ -274,6 +275,34 @@ public final class LotusCommands {
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(player), reveal, LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player), LotusPlayerState.getAllianceCleanseUses(player)));
         source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": полная видимость карты = " + reveal), true);
+        return 1;
+    }
+
+    // ---- /lotus chase ... ("Побег от лотоса" testing) -----------------------------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> chaseCommands() {
+        return Commands.literal("chase")
+                .then(Commands.literal("unlock").executes(ctx -> chaseUnlock(ctx.getSource())))
+                .then(Commands.literal("status").executes(ctx -> chaseStatus(ctx.getSource())))
+                .then(Commands.literal("tp").executes(ctx -> chaseTeleport(ctx.getSource())));
+    }
+
+    private static int chaseUnlock(CommandSourceStack source) {
+        com.lotusblight.escape.LotusChaseEvent.get().forceUnlock(source.getServer().overworld());
+        source.sendSuccess(() -> Component.literal("Лаборатория побега разблокирована (обходит порог 15%)."), true);
+        return 1;
+    }
+
+    private static int chaseStatus(CommandSourceStack source) {
+        String report = com.lotusblight.escape.LotusChaseEvent.get().statusReport(source.getServer().overworld());
+        source.sendSuccess(() -> Component.literal(report), false);
+        return 1;
+    }
+
+    private static int chaseTeleport(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        BlockPos entrance = com.lotusblight.escape.LotusChaseEvent.get().labEntrance(source.getServer().overworld());
+        source.getPlayerOrException().teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+        source.sendSuccess(() -> Component.literal("Телепортирован ко входу в лабораторию: " + entrance.toShortString()), true);
         return 1;
     }
 }
