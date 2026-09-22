@@ -56,14 +56,19 @@ public class StarFallLineReachedPacket {
                     // immediate patch as a working first version.
                     player.hurt(player.damageSources().flyIntoWall(), 6.0f);
                     player.push(0, -0.6, 0);
-                    placePurpleBlessingPatch(level, player.blockPosition());
+                    BlockPos impact = player.blockPosition();
+                    placePurpleBlessingPatch(level, impact);
+                    level.setBlock(impact.below(), ModBlocks.METEORITE_STONE.get().defaultBlockState(), 3);
                 }
             }
         });
         ctx.setPacketHandled(true);
     }
 
-    private static final int PATCH_RADIUS = 4;
+    // "и на его месте вокруг 80 блоков нового биома" - not a literal 80-block radius (that's
+    // ~16,000 blocks, well past the scale of any other patch/spread feature in this mod); reading
+    // it as "a patch of about that many blocks total" instead, roughly matching a radius-9 circle.
+    private static final int PATCH_RADIUS = 9;
 
     private static void placePurpleBlessingPatch(ServerLevel level, BlockPos center) {
         var sand = ModBlocks.BLESSING_SAND_PURPLE.get().defaultBlockState();

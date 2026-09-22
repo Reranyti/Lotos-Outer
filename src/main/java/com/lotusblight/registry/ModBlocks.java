@@ -43,6 +43,7 @@ public final class ModBlocks {
     // stronger, purple-toned variant, not the ordinary Blessing patch.
     public static final RegistryObject<Block> BLESSING_SOIL_PURPLE = BLOCKS.register("blessing_soil_purple", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.7f).sound(SoundType.GRAVEL)));
     public static final RegistryObject<Block> BLESSING_SAND_PURPLE = BLOCKS.register("blessing_sand_purple", () -> new com.lotusblight.world.BlessingSandBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.5f).sound(SoundType.SAND)));
+    public static final RegistryObject<Block> METEORITE_STONE = BLOCKS.register("meteorite_stone", () -> new com.lotusblight.world.MeteoriteStoneBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(4.0f).requiresCorrectToolForDrops().sound(SoundType.NETHERITE_BLOCK)));
     public static final RegistryObject<Block> LOTUS_LOG = BLOCKS.register("lotus_log", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(2.0f).sound(SoundType.WOOD)));
     public static final RegistryObject<Block> LOTUS_LEAVES = BLOCKS.register("lotus_leaves", () -> new com.lotusblight.world.LotusLeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.2f).sound(SoundType.GRASS).noOcclusion()));
     public static final RegistryObject<Block> BLESSING_LOG = BLOCKS.register("blessing_log", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(2.2f).sound(SoundType.WOOD)));
