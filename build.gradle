@@ -137,6 +137,14 @@ repositories {
         }
     }
 
+    maven {
+        name = 'CurseMaven'
+        url 'https://cursemaven.com'
+        content {
+            includeGroup("curse.maven")
+        }
+    }
+
 }
 
 dependencies {
@@ -168,6 +176,11 @@ dependencies {
 
     // Curios API integration attempted and reverted — see LotusSeerLensItem's javadoc and
     // IDEAS_AND_MODS.md for why `implements ICurioItem` directly isn't safe as a soft dependency.
+
+    // Ex Meteor Shower: soft dependency for real comet visuals during the StarFall event
+    // (com.lotusblight.escape / StarFallOverlay). CurseForge project 1461322, file 7756940
+    // (meteor_shower-0.0.4.2.jar, the current Forge 1.20.1 build).
+    compileOnly fg.deobf("curse.maven:ex-meteor-shower-1461322:7756940")
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
