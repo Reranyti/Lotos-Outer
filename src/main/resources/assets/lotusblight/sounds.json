@@ -25,5 +25,14 @@
         "stream": true
       }
     ]
+  },
+  "lotus_chase_theme": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "lotusblight:lotus_chase_theme",
+        "stream": true
+      }
+    ]
   }
 }

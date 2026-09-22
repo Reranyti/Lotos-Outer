@@ -21,5 +21,9 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> TRAITOR_BOSS_THEME = SOUNDS.register("traitor_boss_theme",
             () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "traitor_boss_theme")));
 
+    /** "Побег от лотоса" - 2:14 total, the 1:50 mark is the escape deadline itself (LotusChaseEvent.DURATION_TICKS), the rest plays out as an outro on a successful escape. */
+    public static final RegistryObject<SoundEvent> LOTUS_CHASE_THEME = SOUNDS.register("lotus_chase_theme",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "lotus_chase_theme")));
+
     private ModSounds() {}
 }

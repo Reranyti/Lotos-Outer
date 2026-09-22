@@ -43,11 +43,18 @@ public final class LotusChaseEvent {
     private static final int SWEEP_INTERVAL_TICKS = 100;
     private static final int TRIGGER_CHANCE = 1_000_000;
     private static final float TRIGGER_FRACTION = 0.15f;
-    private static final int DURATION_TICKS = 20 * 45;
+    // Timed against lotus_chase_theme.ogg's own structure: 0:11 the track settles into the escape
+    // proper, 0:23 it escalates hard, 1:50 is the actual deadline, 2:14 is the track's full length
+    // (the 1:50-2:14 tail only ever plays as a successful-escape outro, see ChaseStatePacket).
+    private static final int GRACE_END_TICKS = 20 * 11;
+    private static final int PHASE2_START_TICKS = 20 * 23;
+    private static final int DURATION_TICKS = 20 * 110;
     private static final int DASH_BURST_TICKS = 12;
     private static final int DASH_AMPLIFIER = 3;
     private static final int DASH_COOLDOWN_TICKS = 20 * 3;
-    private static final int OBSTACLE_INTERVAL_TICKS = 20 * 4;
+    /** "1 фаза более менее лёгкая" / "вторая фаза... сильное усложнение" - obstacles roughly triple in frequency once phase 2 starts. */
+    private static final int PHASE1_OBSTACLE_INTERVAL_TICKS = 20 * 6;
+    private static final int PHASE2_OBSTACLE_INTERVAL_TICKS = 20 * 2;
 
     private static final class ChaseState {
         final LotusChaseStructure structure;
@@ -59,7 +66,7 @@ public final class LotusChaseEvent {
             this.structure = structure;
             this.startTick = startTick;
             this.dashReadyAtTick = startTick;
-            this.nextObstacleAtTick = startTick + OBSTACLE_INTERVAL_TICKS;
+            this.nextObstacleAtTick = startTick + GRACE_END_TICKS;
         }
     }
 
@@ -104,7 +111,7 @@ public final class LotusChaseEvent {
         active.put(target.getUUID(), new ChaseState(structure, gameTick));
         target.displayClientMessage(Component.literal(
                 "— Ты чувствуешь, как мир под тобой начинает уходить. Беги. Ищи жёлтый свет."), false);
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), new ChaseStatePacket(true, DURATION_TICKS));
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), new ChaseStatePacket(ChaseStatePacket.State.STARTED, DURATION_TICKS));
     }
 
     private void tickActiveChases(MinecraftServer server, long gameTick) {
@@ -134,9 +141,10 @@ public final class LotusChaseEvent {
                 state.dashReadyAtTick = gameTick + DASH_COOLDOWN_TICKS;
             }
 
-            if (gameTick >= state.nextObstacleAtTick) {
+            if (elapsed >= GRACE_END_TICKS && gameTick >= state.nextObstacleAtTick) {
                 state.structure.dropObstacle(player.blockPosition().relative(player.getDirection(), 3));
-                state.nextObstacleAtTick = gameTick + OBSTACLE_INTERVAL_TICKS;
+                int interval = elapsed >= PHASE2_START_TICKS ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
+                state.nextObstacleAtTick = gameTick + interval;
             }
         }
     }
@@ -145,7 +153,7 @@ public final class LotusChaseEvent {
         active.remove(player.getUUID());
         state.structure.teardown();
         player.displayClientMessage(Component.literal("— ...Ушёл. В этот раз."), false);
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(false, 0));
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.SURVIVED, 0));
     }
 
     /**
@@ -157,7 +165,7 @@ public final class LotusChaseEvent {
     private void resolveCaught(ServerPlayer player, ChaseState state) {
         active.remove(player.getUUID());
         state.structure.teardown();
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(false, 0));
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.CAUGHT, 0));
         if (!(player.level() instanceof ServerLevel level)) return;
 
         shakeOutInventory(level, player);

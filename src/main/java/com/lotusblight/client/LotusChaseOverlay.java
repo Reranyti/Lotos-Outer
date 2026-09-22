@@ -1,8 +1,10 @@
 package com.lotusblight.client;
 
 import com.lotusblight.LotusBlight;
+import com.lotusblight.registry.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
@@ -10,31 +12,52 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * "Побег от лотоса" HUD — a plain countdown clock, centered near the top of the screen. Purely
+ * "Побег от лотоса" HUD — a countdown clock plus lotus_chase_theme (2:14 total). Purely
  * cosmetic/informational: {@link com.lotusblight.escape.LotusChaseEvent} is the actual authority on
- * whether the player is caught, this just displays the ticking clock it told the client to start.
+ * whether the player is caught, this just displays/plays what it was told to.
+ *
+ * The clock (durationTicks, 1:50 / 2200 ticks) and the track are DIFFERENT lengths on purpose - the
+ * escape has to be won by 1:50, but the track keeps playing past that as a 24s outro on a
+ * successful escape (see ChaseStatePacket). Being caught cuts the music immediately instead.
  */
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class LotusChaseOverlay {
-    private static boolean active = false;
+    private static boolean clockActive = false;
     private static int totalDurationTicks;
     private static int ticksLeft;
+    private static SimpleSoundInstance musicInstance;
 
     private LotusChaseOverlay() {}
 
     public static void start(int durationTicks) {
-        active = true;
+        clockActive = true;
         totalDurationTicks = durationTicks;
         ticksLeft = durationTicks;
+        Minecraft mc = Minecraft.getInstance();
+        if (musicInstance != null) {
+            mc.getSoundManager().stop(musicInstance);
+        }
+        musicInstance = SimpleSoundInstance.forUI(ModSounds.LOTUS_CHASE_THEME.get(), 1.0f, 1.0f);
+        mc.getSoundManager().play(musicInstance);
     }
 
-    public static void stop() {
-        active = false;
+    /** Escaped: hide the clock, let the track's own outro (past the 1:50 deadline) keep playing to its natural end. */
+    public static void stopClockOnly() {
+        clockActive = false;
+    }
+
+    /** Caught: hide the clock and cut the music immediately - no outro. */
+    public static void stopAll() {
+        clockActive = false;
+        if (musicInstance != null) {
+            Minecraft.getInstance().getSoundManager().stop(musicInstance);
+            musicInstance = null;
+        }
     }
 
     @SubscribeEvent
     public static void onRender(RenderGuiOverlayEvent.Post event) {
-        if (!active) return;
+        if (!clockActive) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui) return;
         if (mc.level != null && !mc.isPaused()) {
