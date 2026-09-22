@@ -48,7 +48,11 @@ public final class StarFallEvent {
             if (LotusPlayerState.hasSeenStarFall(player)) continue;
 
             LotusPlayerState.markStarFallSeen(player);
-            boolean allianceBranch = branch == LotusPlayerState.BRANCH_ALLIANCE;
+            // Inverted on purpose: "на войне вы сражаетесь с лотосом а не с НИМ [Звёздным Светом]" -
+            // a RESISTANCE player is fighting the same enemy Star Light is (the Lotus), so they get
+            // the friendly/allied script; an ALLIANCE player sided WITH the Lotus, so Star Light
+            // treats them as hostile and they get the damage/rod-removal script instead.
+            boolean allianceBranch = branch == LotusPlayerState.BRANCH_RESISTANCE;
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowStarFallPacket(allianceBranch));
             if (player.level() instanceof ServerLevel level) {
                 MeteorShowerEventManager.forceShower(level, MeteorShowerEventManager.ShowerScale.LARGE);
