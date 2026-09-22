@@ -85,5 +85,18 @@
   "block.lotusblight.liana_weak_point": "Уязвимый узел лиан",
   "block.lotusblight.tangled_roots": "Спутанные корни",
   "block.lotusblight.lotus_shoot": "Росток лотоса",
-  "item.lotusblight.glowing_berry": "Светящаяся ягода"
+  "item.lotusblight.glowing_berry": "Светящаяся ягода",
+  "item.lotusblight.vitamin": "Витаминка",
+  "block.lotusblight.blessing_sand_purple": "Фиолетовый песок Блеска",
+  "block.lotusblight.blessing_soil_purple": "Фиолетовая земля Блеска",
+  "block.lotusblight.meteorite_stone": "Метеоритный камень",
+  "item.lotusblight.meteorite_ingot": "Метеоритный слиток",
+  "item.lotusblight.meteorite_pickaxe": "Метеоритная кирка",
+  "item.lotusblight.meteorite_axe": "Метеоритный топор",
+  "item.lotusblight.meteorite_sword": "Метеоритный меч",
+  "item.lotusblight.meteorite_hoe": "Метеоритная мотыга",
+  "item.lotusblight.meteorite_helmet": "Метеоритный шлем",
+  "item.lotusblight.meteorite_chestplate": "Метеоритный нагрудник",
+  "item.lotusblight.meteorite_leggings": "Метеоритные поножи",
+  "item.lotusblight.meteorite_boots": "Метеоритные ботинки"
 }

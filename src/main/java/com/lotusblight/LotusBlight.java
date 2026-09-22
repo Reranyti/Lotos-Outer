@@ -81,6 +81,17 @@ public class LotusBlight {
                 output.accept(ModItems.LOTUS_BOOTS.get());
                 output.accept(ModItems.LOTUS_GRAFTING_ROD.get());
                 output.accept(ModItems.LOTUS_SEER_LENS.get());
+                output.accept(ModItems.VITAMIN.get());
+                output.accept(ModItems.METEORITE_STONE_ITEM.get());
+                output.accept(ModItems.METEORITE_INGOT.get());
+                output.accept(ModItems.METEORITE_PICKAXE.get());
+                output.accept(ModItems.METEORITE_AXE.get());
+                output.accept(ModItems.METEORITE_SWORD.get());
+                output.accept(ModItems.METEORITE_HOE.get());
+                output.accept(ModItems.METEORITE_HELMET.get());
+                output.accept(ModItems.METEORITE_CHESTPLATE.get());
+                output.accept(ModItems.METEORITE_LEGGINGS.get());
+                output.accept(ModItems.METEORITE_BOOTS.get());
             }).build());
 
     /**
@@ -161,6 +172,7 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.LotusChaseEvent());
         MinecraftForge.EVENT_BUS.register(com.lotusblight.escape.LotusChaseStructure.class);
+        MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.StarFallEvent());
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
         CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);

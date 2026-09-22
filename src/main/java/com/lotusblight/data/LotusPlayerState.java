@@ -30,6 +30,7 @@ public final class LotusPlayerState {
     private static final String HAS_TALKED_KEY = "HasTalkedToLotus";
     private static final String RECEIVED_CLEANSING_POWDER_KEY = "ReceivedCleansingPowderGift";
     private static final String RECEIVED_GRAFTING_ROD_KEY = "ReceivedGraftingRodGift";
+    private static final String STAR_FALL_SEEN_KEY = "StarFallSeen";
     /** First two berries always show a scene, no conditions attached — an introduction, not a reward. */
     public static final int INNER_VOICE_FREE_USES = 2;
 
@@ -71,6 +72,17 @@ public final class LotusPlayerState {
 
     public static boolean hasJoinedLotus(Player player) {
         return getDialogueBranch(player) == BRANCH_ALLIANCE;
+    }
+
+    /** Whether this player has already lived through the StarFall event - it only fires once each (see com.lotusblight.escape.StarFallEvent). */
+    public static boolean hasSeenStarFall(Player player) {
+        return root(player, false).getBoolean(STAR_FALL_SEEN_KEY);
+    }
+
+    public static void markStarFallSeen(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(STAR_FALL_SEEN_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
     }
 
     public static boolean hasFullMapVisibility(Player player) {

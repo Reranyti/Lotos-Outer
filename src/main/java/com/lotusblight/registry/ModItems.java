@@ -8,6 +8,8 @@ import com.lotusblight.item.LotusMapItem;
 import com.lotusblight.item.LotusSeerLensItem;
 import com.lotusblight.item.LotusSeedItem;
 import com.lotusblight.item.LotusWikiItem;
+import com.lotusblight.item.MeteoriteArmorMaterial;
+import com.lotusblight.item.MeteoriteTier;
 import com.lotusblight.item.ScientistPageItem;
 import com.lotusblight.item.LotusPickaxeItem;
 import com.lotusblight.item.GlowingBerryItem;
@@ -15,6 +17,7 @@ import com.lotusblight.item.VitaminItem;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.HoeItem;
+import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.BlockItem;
@@ -84,6 +87,18 @@ public final class ModItems {
 
     // --- Full map visibility modifier (see com.lotusblight.map.MapSyncManager) ---
     public static final RegistryObject<Item> LOTUS_SEER_LENS = ITEMS.register("lotus_seer_lens", () -> new LotusSeerLensItem(new Item.Properties().stacksTo(1)));
+
+    // --- Meteorite tier: smelted from meteorite_stone (see MeteoriteTier/MeteoriteArmorMaterial for the
+    // "better than diamond, netherite alternative" stat split), only ever reachable past a StarFall war ending ---
+    public static final RegistryObject<Item> METEORITE_INGOT = ITEMS.register("meteorite_ingot", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> METEORITE_PICKAXE = ITEMS.register("meteorite_pickaxe", () -> new PickaxeItem(MeteoriteTier.METEORITE, 4, -2.6f, new Item.Properties().durability(1800)));
+    public static final RegistryObject<Item> METEORITE_AXE = ITEMS.register("meteorite_axe", () -> new AxeItem(MeteoriteTier.METEORITE, 5.5f, -2.9f, new Item.Properties().durability(1800)));
+    public static final RegistryObject<Item> METEORITE_SWORD = ITEMS.register("meteorite_sword", () -> new SwordItem(MeteoriteTier.METEORITE, 3, -2.3f, new Item.Properties().durability(1800)));
+    public static final RegistryObject<Item> METEORITE_HOE = ITEMS.register("meteorite_hoe", () -> new HoeItem(MeteoriteTier.METEORITE, -2, 0.0f, new Item.Properties().durability(1800)));
+    public static final RegistryObject<Item> METEORITE_HELMET = ITEMS.register("meteorite_helmet", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistryObject<Item> METEORITE_CHESTPLATE = ITEMS.register("meteorite_chestplate", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistryObject<Item> METEORITE_LEGGINGS = ITEMS.register("meteorite_leggings", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistryObject<Item> METEORITE_BOOTS = ITEMS.register("meteorite_boots", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.BOOTS, new Item.Properties()));
 
     private ModItems() {}
 }
