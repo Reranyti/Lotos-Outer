@@ -52,7 +52,8 @@ public final class LotusCommands {
                 .then(Commands.literal("timewarp")
                         .then(Commands.argument("passes", IntegerArgumentType.integer(1, 500))
                                 .executes(ctx -> timewarp(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "passes")))))
-                .then(chaseCommands()));
+                .then(chaseCommands())
+                .then(starFallCommands()));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------
@@ -303,6 +304,21 @@ public final class LotusCommands {
         BlockPos entrance = com.lotusblight.escape.LotusChaseEvent.get().labEntrance(source.getServer().overworld());
         source.getPlayerOrException().teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
         source.sendSuccess(() -> Component.literal("Телепортирован ко входу в лабораторию: " + entrance.toShortString()), true);
+        return 1;
+    }
+
+    // ---- /lotus starfall ... (testing - real trigger condition not decided yet) ---------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> starFallCommands() {
+        return Commands.literal("starfall")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.literal("war").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), false)))
+                        .then(Commands.literal("alliance").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), true))));
+    }
+
+    private static int starFallTrigger(CommandSourceStack source, ServerPlayer player, boolean allianceBranch) {
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new com.lotusblight.map.ShowStarFallPacket(allianceBranch));
+        source.sendSuccess(() -> Component.literal("StarFall (" + (allianceBranch ? "альянс" : "война") + ") запущен для " + player.getGameProfile().getName()), true);
         return 1;
     }
 }
