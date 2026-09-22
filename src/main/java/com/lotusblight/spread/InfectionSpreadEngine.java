@@ -29,6 +29,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import org.joml.Vector3f;
@@ -214,6 +215,14 @@ public class InfectionSpreadEngine {
         if (openOcean) {
             newPhase = Math.min(newPhase, OCEAN_PHASE_CAP);
         }
+        // Was only capped for the openOcean case - a maxPhaseCap-limited child outbreak (see
+        // RootGrowthEngine) could keep computing an uncapped newPhase from its raw block count
+        // forever, past the point outbreak.phase() itself ever moves (withPhase already clamps that
+        // to maxPhaseCap). newPhase > outbreak.phase() then stayed true on every single tick instead
+        // of firing once, replaying the phase-up particles/sound/announcement and the phase-4 tree
+        // burst indefinitely, and maybeSpawnHeart below saw a phase the outbreak was never actually
+        // allowed to reach.
+        newPhase = Math.min(newPhase, outbreak.maxPhaseCap());
         float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
 
         OutbreakRecord updated = outbreak.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress);
@@ -678,6 +687,19 @@ public class InfectionSpreadEngine {
     private void bloom(ServerLevel level, BlockPos pos, DustParticleOptions color) {
         level.sendParticles(color, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5, 5, 0.3, 0.25, 0.3, 0.01);
         level.playSound(null, pos, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.3f, 1.5f);
+    }
+
+    /**
+     * updateBossBar only ever calls bar.removePlayer() from inside the "no nearby outbreak" branch,
+     * which never runs for a player who simply stops appearing in level.players() by disconnecting -
+     * leaving one stale ServerPlayer reference in that bar's player set per such disconnect, forever.
+     */
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        ServerBossEvent bar = bossBars.remove(event.getEntity().getUUID());
+        if (bar != null && event.getEntity() instanceof ServerPlayer player) {
+            bar.removePlayer(player);
+        }
     }
 
     private void updateBossBar(ServerLevel level, ServerPlayer player) {

@@ -117,16 +117,6 @@ public final class LotusDialogueLibrary {
     }
 
     /**
-     * Branch-independent asides, always offered alongside the branch-specific answers:
-     * checking the scientist's own journal, and asking the Lotus about the crisis
-     * downstream. Neither advances the conversation line — {@link com.lotusblight.client.LotusDialogueScreen}
-     * shows the returned text and re-offers the same answer set.
-     */
-    public static List<String> asideAnswers() {
-        return List.of("(Заглянуть в свой журнал)", "А что там с деревней ниже по реке?");
-    }
-
-    /**
      * Conditional asides, unlocked one at a time as the player does something the Lotus has an
      * opinion about — see LotusPlayerState#hasSeenGuardian / #hasCleansedAsAlly. Kept as tagged
      * enum entries rather than raw strings so LotusDialogueScreen can dispatch on what each button

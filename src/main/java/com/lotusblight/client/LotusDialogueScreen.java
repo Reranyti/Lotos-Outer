@@ -64,7 +64,12 @@ public final class LotusDialogueScreen extends Screen {
         this.line = nextLine;
         this.asideOpen = false;
         this.pendingConfirm = null;
-        lotusText = LotusDialogueLibrary.mainLine(phase, held, branch);
+        // LotusDialogueLibrary's switches are written against the real 1-4 outbreak phase (case 1
+        // reads as a phase-1 introduction, default as the phase-4 text, etc.), but this class's own
+        // `phase` field is 0-indexed for its own internal use (phaseName(phase + 1) below). Passing
+        // the raw 0-indexed field straight through used to show every real phase the PREVIOUS tier's
+        // dialogue (and phase 1 got the phase-4 "default" text instead of its own intro).
+        lotusText = LotusDialogueLibrary.mainLine(phase + 1, held, branch);
         primaryAnswers = LotusDialogueLibrary.playerAnswers(branch).toArray(String[]::new);
         if (branchWasPreLocked) {
             lotusText = (branch == LotusDialogueLibrary.Branch.ALLIANCE
@@ -185,7 +190,7 @@ public final class LotusDialogueScreen extends Screen {
     private void chooseAside(LotusDialogueLibrary.AsideKind kind) {
         asideOpen = true;
         lotusText = switch (kind) {
-            case JOURNAL -> LotusDialogueLibrary.scientistNote(phase);
+            case JOURNAL -> LotusDialogueLibrary.scientistNote(phase + 1);
             case VILLAGE -> LotusDialogueLibrary.villageWaterCrisisLines().get(line % LotusDialogueLibrary.villageWaterCrisisLines().size());
             case GUARDIAN_WARNING -> LotusDialogueLibrary.guardianLoreLine();
             case CLEANSE_WARNING -> LotusDialogueLibrary.cleanseWarningLine(ClientPlayerStateCache.allianceCleanseUses());

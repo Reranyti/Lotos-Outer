@@ -55,8 +55,14 @@ public class GlowingBerryItem extends Item {
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, TrueLightEffect.DURATION_TICKS, 0, true, false));
         ChatOverhaulBranchColor.applyTrueLightColor(player);
 
-        if (LotusPlayerState.canTriggerInnerVoiceFreely(player)) {
-            LotusPlayerState.incrementInnerVoiceUses(player);
+        // Was only ever incremented from inside this same branch, which itself requires uses >= 2
+        // to enter - the counter could never climb past 0 to reach the threshold that was supposed
+        // to unlock it, so no player on any branch ever got the scripted inner-voice scene. Reading
+        // the pre-increment state first, then always incrementing once per berry regardless of
+        // branch, lets it actually count up through the "silent" berries.
+        boolean triggersScene = LotusPlayerState.canTriggerInnerVoiceFreely(player);
+        LotusPlayerState.incrementInnerVoiceUses(player);
+        if (triggersScene) {
             List<String> scene = InnerVoiceLibrary.randomScene(player.getRandom());
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowInnerVoicePacket(scene));
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(

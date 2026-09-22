@@ -89,6 +89,11 @@ public final class BiomeInfectionColors {
                 InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
+        // Ice Spikes is the class doc's own motivating example for GRADIENT_OVERRIDE, but useGradient()
+        // was never actually called anywhere - it stood out enough from the rest of "cold" to be
+        // called out in the doc, but every world still rendered it with the flat cold-group tint.
+        useGradient("minecraft:ice_spikes");
+
         colors("hot_dry",
                 InfectedMaterial.STONE, 0x818181,       // stone.png
                 InfectedMaterial.SAND, 0x24305C,        // sand.png (real deserts are yellow sand, not red - red_sand is a badlands thing, see override below)
@@ -192,7 +197,11 @@ public final class BiomeInfectionColors {
         if (ownColors != null && ownColors.containsKey(material)) {
             return ownColors.get(material);
         }
-        if (GRADIENT_OVERRIDE.contains(biomeId)) {
+        // GRADIENT_SAMPLE_POINT only covers SOIL/SAND/GRAVEL/STONE/TERRACOTTA - LOG/LEAVES have no
+        // sample point defined, so GRADIENT_SAMPLE_POINT.get(material) would be null and unboxing it
+        // into sample(int[], float) would NPE. Those two materials fall through to the group color
+        // like any other biome without a gradient override.
+        if (GRADIENT_OVERRIDE.contains(biomeId) && GRADIENT_SAMPLE_POINT.containsKey(material)) {
             int[] gradient = BiomeFogColors.gradientFor(biomeId);
             if (gradient != null) {
                 return BiomeFogColors.sample(gradient, GRADIENT_SAMPLE_POINT.get(material));

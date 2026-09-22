@@ -46,6 +46,17 @@ public class LotusSeedItem extends Item {
         // InfectionSpreadEngine#maybeSpawnHeart); planting a seed just starts a normal outbreak
         // like GuaranteedSpawnManager's natural ones do.
         BlockPos flowerPos = pos.above();
+        // Neither this check nor WaterClearance.hasClearWaterAround inspects what's directly above
+        // the targeted water source - a roofed cistern, a flooded low-ceiling cave pocket, or a pond
+        // under an overhang could have a solid block there, which setBlock below would silently
+        // destroy with no drop the moment a seed was planted.
+        if (!serverLevel.getBlockState(flowerPos).isAir()) {
+            if (context.getPlayer() != null) {
+                context.getPlayer().displayClientMessage(Component.literal(
+                        "Тут не хватает места над водой для ростка."), true);
+            }
+            return InteractionResult.FAIL;
+        }
         serverLevel.setBlock(flowerPos, ModBlocks.INFECTED_LOTUS.get().defaultBlockState(), 3);
         LotusEvents.rememberAnchor(serverLevel, flowerPos);
         if (context.getPlayer() != null && !context.getPlayer().getAbilities().instabuild) {

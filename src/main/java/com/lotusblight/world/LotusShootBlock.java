@@ -2,6 +2,8 @@ package com.lotusblight.world;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelAccessor;
@@ -12,6 +14,10 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /** A small surface shoot belonging to an existing main lotus anchor. */
 public final class LotusShootBlock extends LotusBloomBlock {
+    /** shootLines() was written for this block but never actually wired up anywhere - the pool of ambient lines sat completely unused. */
+    private static final int AMBIENT_CHANCE = 30;
+    private static final double AMBIENT_PLAYER_RADIUS = 12.0;
+
     public LotusShootBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
@@ -39,5 +45,21 @@ public final class LotusShootBlock extends LotusBloomBlock {
             return Blocks.AIR.defaultBlockState();
         }
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
+
+    @Override
+    public boolean isRandomlyTicking(BlockState state) {
+        return true;
+    }
+
+    @Override
+    public void randomTick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, RandomSource random) {
+        if (random.nextInt(AMBIENT_CHANCE) != 0) return;
+        Player nearest = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, AMBIENT_PLAYER_RADIUS, false);
+        if (nearest == null) return;
+        var outbreak = com.lotusblight.data.OutbreakSavedData.get(level).nearestOutbreak(pos, 64.0, false);
+        int phase = outbreak != null ? outbreak.phase() : 1;
+        var lines = com.lotusblight.dialogue.LotusDialogueLibrary.shootLines(phase);
+        nearest.displayClientMessage(Component.literal(lines.get(random.nextInt(lines.size()))), true);
     }
 }

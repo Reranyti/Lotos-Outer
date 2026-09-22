@@ -71,8 +71,14 @@ public final class MapSyncManager {
         }
 
         long tick = level.getGameTime();
-        long last = lastSyncTick.getOrDefault(serverPlayer.getUUID(), Long.MIN_VALUE);
-        if (tick - last < SYNC_INTERVAL_TICKS) {
+        // A Long.MIN_VALUE sentinel + subtraction overflowed (tick - Long.MIN_VALUE wraps to a huge
+        // negative number via two's-complement), so a never-synced player's very first check always
+        // read as "not due yet" and the map entry that would fix that on the next tick was never
+        // created - every sync packet (map markers, player state, gland waypoints) silently never
+        // reached that player, for their entire session. Null-check instead of subtracting against a
+        // sentinel avoids the overflow entirely.
+        Long last = lastSyncTick.get(serverPlayer.getUUID());
+        if (last != null && tick - last < SYNC_INTERVAL_TICKS) {
             return;
         }
         lastSyncTick.put(serverPlayer.getUUID(), tick);
@@ -176,18 +182,26 @@ public final class MapSyncManager {
         lastSyncTick.remove(event.getEntity().getUUID());
     }
 
-    /** Resolved once per outbreak (cached) so repeated syncs don't repeatedly force-load distant chunks. */
+    /**
+     * Resolved once per outbreak (cached) so repeated syncs don't repeatedly force-load distant
+     * chunks. Only caches a `true` result: an anchor that isn't a heart yet can still be promoted to
+     * one later (InfectionSpreadEngine#promoteAnchorToHeart at phase 4), and a cached stale `false`
+     * would permanently hide that on the map/JourneyMap after the real block changed. Once it's
+     * actually a heart it never reverts, so caching `true` forever is safe.
+     */
     private static boolean isHeartAnchor(ServerLevel level, OutbreakRecord record) {
         Boolean cached = heartAnchorCache.get(record.id());
-        if (cached != null) {
-            return cached;
+        if (cached != null && cached) {
+            return true;
         }
         if (!level.hasChunkAt(record.pos())) {
             // Chunk not loaded yet — don't force-load it just to classify a marker; ask again next sync.
             return false;
         }
         boolean isHeart = level.getBlockState(record.pos()).is(ModBlocks.LOTUS_HEART.get());
-        heartAnchorCache.put(record.id(), isHeart);
+        if (isHeart) {
+            heartAnchorCache.put(record.id(), true);
+        }
         return isHeart;
     }
 }

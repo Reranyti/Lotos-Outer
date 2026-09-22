@@ -166,16 +166,35 @@ public final class GuardianManager {
             // patrolled by the infection's own guardians either.
             if (level.getBiome(outbreak.pos()).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)) continue;
             if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
-            if (livingGuardianCount(level, outbreak.id()) >= MAX_GUARDIANS_PER_OUTBREAK) continue;
+            if (livingGuardianCount(level, outbreak.id(), outbreak.pos()) >= MAX_GUARDIANS_PER_OUTBREAK) continue;
 
             trySpawnGuardian(level, outbreak);
         }
     }
 
-    /** Prunes dead/unloaded guardians from this outbreak's tracked list, then returns how many are actually still alive. */
-    private int livingGuardianCount(ServerLevel level, UUID outbreakId) {
+    /**
+     * Prunes dead/unloaded guardians from this outbreak's tracked list, then returns how many are
+     * actually still alive.
+     *
+     * outbreakGuardians is a plain in-memory field, reset to empty every time a fresh GuardianManager
+     * is constructed - which happens once per mod-constructor run, i.e. once per server process start
+     * (not once per world). Guardians themselves are real Wolves with setPersistenceRequired(), so
+     * they survive a restart just fine in the world - only the tracking map forgot about them,
+     * letting trySpawnGuardian spawn a fresh batch on top of survivors after every restart with no
+     * upper bound. The first time this outbreak is seen by a new GuardianManager instance (no tracked
+     * list yet), reconcile by scanning for already-tagged guardian Wolves near its anchor instead of
+     * assuming there are none.
+     */
+    private int livingGuardianCount(ServerLevel level, UUID outbreakId, BlockPos anchorPos) {
         List<UUID> tracked = outbreakGuardians.get(outbreakId);
-        if (tracked == null) return 0;
+        if (tracked == null) {
+            var box = new net.minecraft.world.phys.AABB(anchorPos).inflate(GUARDIAN_SIGHT_RADIUS);
+            tracked = new ArrayList<>();
+            for (Wolf wolf : level.getEntitiesOfClass(Wolf.class, box, w -> w.getTags().contains(GUARDIAN_TAG))) {
+                tracked.add(wolf.getUUID());
+            }
+            outbreakGuardians.put(outbreakId, tracked);
+        }
         tracked.removeIf(guardianId -> !(level.getEntity(guardianId) instanceof Wolf wolf) || !wolf.isAlive());
         return tracked.size();
     }
@@ -223,7 +242,7 @@ public final class GuardianManager {
     /** Phase 4 (mini-biome) guardians read as a real escalation, not just a bigger flower bed. */
     private static final double PHASE4_MULTIPLIER = 2.0;
 
-    private void applyGuardianStats(Wolf guardian, int phase) {
+    public static void applyGuardianStats(Wolf guardian, int phase) {
         double multiplier = phase >= 4 ? PHASE4_MULTIPLIER : 1.0;
 
         var healthAttr = guardian.getAttribute(Attributes.MAX_HEALTH);
@@ -315,6 +334,7 @@ public final class GuardianManager {
         player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, INCINERATION_DURATION_TICKS, 0));
         player.setSecondsOnFire(INCINERATION_DURATION_TICKS / 20);
         player.hurt(player.damageSources().onFire(), INCINERATION_DAMAGE);
+        com.lotusblight.boss.TraitorBossFight.scheduleStart(player, INCINERATION_DURATION_TICKS);
     }
 
     private static final int ALLIANCE_CLEANSE_LOTONIRIYA_USES = 20;

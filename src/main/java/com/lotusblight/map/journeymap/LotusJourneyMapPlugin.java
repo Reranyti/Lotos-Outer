@@ -97,8 +97,18 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
             for (MapMarker marker : ClientMapCache.markers()) {
                 BlockPos pos = marker.pos();
                 Waypoint waypoint = WaypointFactory.createWaypoint(MOD_ID, pos, dimension, true);
-                waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
-                waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
+                // Was always showing the real name/phase and full color, even for a marker the
+                // player hasn't actually discovered (hidden()=true, sent only because of full-map
+                // visibility) - the built-in map (LotusHudOverlay/LotusAtlasScreen) dims those to a
+                // "?" instead, and this ignored that flag entirely, leaking exact identity/position
+                // on JourneyMap that the mod's own map deliberately withholds.
+                if (marker.hidden()) {
+                    waypoint.setName("?");
+                    waypoint.setColor(Color.GRAY.getRGB());
+                } else {
+                    waypoint.setName(marker.heartAnchor() ? "Сердце лотоса" : "Очаг лотоса (фаза " + marker.phase() + ")");
+                    waypoint.setColor(marker.heartAnchor() ? Color.MAGENTA.getRGB() : Color.RED.getRGB());
+                }
                 journeyMapClientApi.addWaypoint(MOD_ID, waypoint);
             }
         }

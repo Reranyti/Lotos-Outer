@@ -306,6 +306,13 @@ public class LotusEvents {
         if (!(event.getEntity().level() instanceof ServerLevel level)) return;
         BlockPos pos = event.getPos();
         if (!level.getBlockState(pos).is(ModBlocks.INFECTED_LOTUS.get())) return;
+        // Was gated behind the same "% 8 == 0" window as the cosmetic bloom/whisper below, so the
+        // event only got cancelled on ~1 of every 8 real clicks - the other 7 fell through to
+        // Forge's normal item-use pipeline (placing whatever block was held, drinking, bucket use,
+        // ...) even though the client had already cancelled/opened the dialogue locally, producing a
+        // visible client/server desync. Cancelling belongs to "this is an infected_lotus right-click
+        // at all", not to the throttled cosmetic effect.
+        event.setCanceled(true);
         if (level.getGameTime() % 8 != 0) return;
         bloom(level, pos, PINK);
         Player player = event.getEntity();
@@ -318,7 +325,6 @@ public class LotusEvents {
             };
             player.displayClientMessage(Component.literal(whispers[level.random.nextInt(whispers.length)]), false);
         }
-        event.setCanceled(true);
     }
 
     /** The real clean counterpart of an infected block, or null if this block isn't something cleansing powder touches. */

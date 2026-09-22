@@ -154,6 +154,8 @@ public class LotusBlight {
         MinecraftForge.EVENT_BUS.register(new BarrierEvents());
         MinecraftForge.EVENT_BUS.register(new RootGrowthEngine());
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.GuardianManager());
+        MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossFight.class);
+        MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossArena.class);
         MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
         MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.EpicenterManager());
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);

@@ -47,5 +47,6 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, DialogueOpenedPacket.class, DialogueOpenedPacket::encode, DialogueOpenedPacket::decode, DialogueOpenedPacket::handle);
         CHANNEL.registerMessage(id++, GlandSyncPacket.class, GlandSyncPacket::encode, GlandSyncPacket::decode, GlandSyncPacket::handle);
         CHANNEL.registerMessage(id++, ShowWorldLotusLecturePacket.class, ShowWorldLotusLecturePacket::encode, ShowWorldLotusLecturePacket::decode, ShowWorldLotusLecturePacket::handle);
+        CHANNEL.registerMessage(id++, TraitorBossThemePacket.class, TraitorBossThemePacket::encode, TraitorBossThemePacket::decode, TraitorBossThemePacket::handle);
     }
 }

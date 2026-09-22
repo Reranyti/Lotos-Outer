@@ -28,7 +28,12 @@ public class LotusCrownBlockEntity extends BlockEntity implements GeoBlockEntity
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private int cachedPhase = 1;
-    private int ticksSincePhaseRefresh = Integer.MAX_VALUE;
+    // Was Integer.MAX_VALUE, meant to force an immediate refresh on the first tick - but the
+    // pre-increment below (++ticksSincePhaseRefresh) overflows straight to Integer.MIN_VALUE on
+    // that very first tick, which is still < PHASE_REFRESH_INTERVAL_TICKS, so the refresh never
+    // actually ran and cachedPhase stayed stuck at 1 forever. PHASE_REFRESH_INTERVAL_TICKS itself
+    // gets the same "refresh on the first real tick" behavior without the overflow.
+    private int ticksSincePhaseRefresh = PHASE_REFRESH_INTERVAL_TICKS;
     private boolean checkedForLegacyStack;
 
     public LotusCrownBlockEntity(BlockPos pos, BlockState state) {
