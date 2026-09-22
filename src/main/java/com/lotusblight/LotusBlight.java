@@ -129,7 +129,8 @@ public class LotusBlight {
                 output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
             }).build());
 
-    public LotusBlight(FMLJavaModLoadingContext context) {
+    public LotusBlight() {
+        FMLJavaModLoadingContext context = FMLJavaModLoadingContext.get();
         IEventBus modBus = context.getModEventBus();
         ModFluids.FLUID_TYPES.register(modBus);
         ModFluids.FLUIDS.register(modBus);
