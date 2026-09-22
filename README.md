@@ -32,4 +32,6 @@ The common config is generated under `config/lotusblight-common.toml`. It contro
 
 ## License
 
-Licensed under GPLv3 (see `LICENSE`). Minecraft is a trademark of Mojang Studios. Streams Reflowing, Oculus and Complementary Reimagined are separate projects with their own licenses.
+This project's own code and lore are All Rights Reserved (see `mod_license` in `gradle.properties`) — nobody else may copy, redistribute, or fork it without permission. The `LICENSE` and `LICENSE.txt` files in this repo are boilerplate carried over from the Forge MDK template (Eclipse Public License / LGPL 2.1) — they cover Forge's own tooling, not this mod's original code.
+
+Character concepts are partly original, partly inspired by/referencing DOORS (Roblox) — lore and writing here are our own. Music and other third-party references used as inspiration or temporary assets belong to their original creators; if you recognize your own work and don't want it associated with this project, reach out and it will be removed. Minecraft is a trademark of Mojang Studios. Streams Reflowing, Oculus and Complementary Reimagined are separate projects with their own licenses.
