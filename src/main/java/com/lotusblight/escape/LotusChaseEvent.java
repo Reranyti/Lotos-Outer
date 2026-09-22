@@ -6,6 +6,7 @@ import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.map.ChaseStatePacket;
 import com.lotusblight.map.NetworkHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -26,30 +27,39 @@ import java.util.UUID;
 /**
  * "Побег от лотоса" — a rare, world-scale event: once the infection covers roughly 15% of the
  * world (see {@link LotusConfig#WORLD_INFECTION_REFERENCE}), each sweep additionally rolls a
- * 1-in-{@link #TRIGGER_CHANCE} chance to grab a random online player. A wall of infection expands
- * outward from wherever they're standing; they have {@link #DURATION_TICKS} to keep ahead of it.
- * Plain walking can't outrun the expansion — sprinting barely can, {@link com.lotusblight.item.VitaminItem}
- * and the crouch+sprint dash burst are what's actually meant to carry a player through it, per the
- * "преобладает скорость" design call.
+ * 1-in-{@link #TRIGGER_CHANCE} chance to grab a random online player. A sealed lab corridor
+ * ({@link LotusChaseStructure}) is built around them and they're placed at its entrance - one
+ * branch at the junction leads to the real exit (yellow-lit), the other is a decoy dead end
+ * (red-lit). They have {@link #DURATION_TICKS} to physically reach the exit trigger; obstacles
+ * ("упавшие полки" - cobweb) periodically appear along the correct path to slow them down, and
+ * {@link com.lotusblight.item.VitaminItem}'s Speed burst / the crouch+sprint dash are what's meant
+ * to carry a player through in time.
  *
- * Outcome on being caught: the Lotus "grabs" the player - every item is shaken out onto the ground
- * (bypassing keepInventory on purpose, unlike a normal death) before a lethal, guaranteed-kill
- * impact. Outcome on surviving the full duration: nothing is lost, the event just ends.
+ * Outcome on running out of time: the Lotus "grabs" the player - every item is shaken out onto the
+ * ground first (bypasses keepInventory on purpose, unlike a normal death) before a lethal,
+ * guaranteed-kill impact. Outcome on reaching the exit: nothing is lost, the structure tears down.
  */
 public final class LotusChaseEvent {
     private static final int SWEEP_INTERVAL_TICKS = 100;
     private static final int TRIGGER_CHANCE = 1_000_000;
     private static final float TRIGGER_FRACTION = 0.15f;
-    private static final int DURATION_TICKS = 20 * 30;
-    /** Blocks/tick the danger radius grows - tuned above plain sprint speed (~0.28/tick) on purpose, so outrunning it needs vitamins/the dash burst, not just holding forward. */
-    private static final double EXPANSION_BLOCKS_PER_TICK = 0.30;
+    private static final int DURATION_TICKS = 20 * 45;
     private static final int DASH_BURST_TICKS = 12;
     private static final int DASH_AMPLIFIER = 3;
     private static final int DASH_COOLDOWN_TICKS = 20 * 3;
+    private static final int OBSTACLE_INTERVAL_TICKS = 20 * 4;
 
-    private record ChaseState(BlockPos origin, long startTick, long dashReadyAtTick) {
-        ChaseState withDashUsed(long now) {
-            return new ChaseState(origin, startTick, now + DASH_COOLDOWN_TICKS);
+    private static final class ChaseState {
+        final LotusChaseStructure structure;
+        final long startTick;
+        long dashReadyAtTick;
+        long nextObstacleAtTick;
+
+        ChaseState(LotusChaseStructure structure, long startTick) {
+            this.structure = structure;
+            this.startTick = startTick;
+            this.dashReadyAtTick = startTick;
+            this.nextObstacleAtTick = startTick + OBSTACLE_INTERVAL_TICKS;
         }
     }
 
@@ -83,10 +93,17 @@ public final class LotusChaseEvent {
                 .toList();
         if (candidates.isEmpty()) return;
         ServerPlayer target = candidates.get(server.overworld().getRandom().nextInt(candidates.size()));
+        if (!(target.level() instanceof ServerLevel level)) return;
 
-        active.put(target.getUUID(), new ChaseState(target.blockPosition(), gameTick, gameTick));
+        Direction facing = Direction.Plane.HORIZONTAL.getRandomDirection(level.random);
+        BlockPos entrance = target.blockPosition();
+        LotusChaseStructure structure = new LotusChaseStructure(level, entrance, facing, level.random);
+        structure.build();
+        target.teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+
+        active.put(target.getUUID(), new ChaseState(structure, gameTick));
         target.displayClientMessage(Component.literal(
-                "— Ты чувствуешь, как мир под тобой начинает уходить. Беги."), false);
+                "— Ты чувствуешь, как мир под тобой начинает уходить. Беги. Ищи жёлтый свет."), false);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), new ChaseStatePacket(true, DURATION_TICKS));
     }
 
@@ -96,32 +113,37 @@ public final class LotusChaseEvent {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             ChaseState state = active.get(uuid);
             if (player == null || !player.isAlive()) {
+                if (state != null) state.structure.teardown();
                 active.remove(uuid);
                 continue;
             }
 
-            long elapsed = gameTick - state.startTick();
+            long elapsed = gameTick - state.startTick;
             if (elapsed >= DURATION_TICKS) {
-                resolveSurvived(player);
+                resolveCaught(player, state);
+                continue;
+            }
+            if (player.blockPosition().equals(state.structure.exitTrigger())
+                    || player.blockPosition().equals(state.structure.exitTrigger().below())) {
+                resolveSurvived(player, state);
                 continue;
             }
 
-            double radius = EXPANSION_BLOCKS_PER_TICK * elapsed;
-            double distance = Math.sqrt(player.blockPosition().distSqr(state.origin()));
-            if (distance <= radius) {
-                resolveCaught(player);
-                continue;
-            }
-
-            if (player.isCrouching() && player.isSprinting() && gameTick >= state.dashReadyAtTick()) {
+            if (player.isCrouching() && player.isSprinting() && gameTick >= state.dashReadyAtTick) {
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DASH_BURST_TICKS, DASH_AMPLIFIER, false, true, true));
-                active.put(uuid, state.withDashUsed(gameTick));
+                state.dashReadyAtTick = gameTick + DASH_COOLDOWN_TICKS;
+            }
+
+            if (gameTick >= state.nextObstacleAtTick) {
+                state.structure.dropObstacle(player.blockPosition().relative(player.getDirection(), 3));
+                state.nextObstacleAtTick = gameTick + OBSTACLE_INTERVAL_TICKS;
             }
         }
     }
 
-    private void resolveSurvived(ServerPlayer player) {
+    private void resolveSurvived(ServerPlayer player, ChaseState state) {
         active.remove(player.getUUID());
+        state.structure.teardown();
         player.displayClientMessage(Component.literal("— ...Ушёл. В этот раз."), false);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(false, 0));
     }
@@ -132,8 +154,9 @@ public final class LotusChaseEvent {
      * world entity BEFORE death (so there is nothing left for keepInventory to preserve), then a
      * guaranteed-lethal impact follows.
      */
-    private void resolveCaught(ServerPlayer player) {
+    private void resolveCaught(ServerPlayer player, ChaseState state) {
         active.remove(player.getUUID());
+        state.structure.teardown();
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(false, 0));
         if (!(player.level() instanceof ServerLevel level)) return;
 
