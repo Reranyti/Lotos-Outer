@@ -24,9 +24,9 @@ public final class StarFallLibrary {
     public static List<StarLine> warLines() {
         return List.of(
                 new StarLine("Слушай... Я знаю, что ты пытаешься сделать.", false, false),
-                // "(при попытке застроится или зайти в дом)" - the real trigger condition (player
-                // fortifying/hiding) isn't wired up yet; this always shows as the scene's 2nd line
-                // for now, see StarFallEvent's own TODO.
+                // "(при попытке застроится или зайти в дом)" - only actually shown (and only deals
+                // its damage) if the player is sheltering when the scene reaches this line, see
+                // StarFallOverlay#isSheltering/WAR_SHELTER_LINE_INDEX. Skipped outright otherwise.
                 new StarLine("Ты не сможешь вечно прятаться от меня.", false, true),
                 new StarLine("Прекрати распространять, ЛОТОС.", false, false),
                 // Also the war branch's permanent "golden items -> black hearts, no more berries"

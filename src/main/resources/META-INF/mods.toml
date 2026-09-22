@@ -123,15 +123,18 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="CLIENT"
 # Hard dependency on Ex Meteor Shower, per explicit request - the mod will refuse to load at all
-# without it (and its own OctoLib requirement) installed, not just lose the comet visuals during
-# StarFall. modId is a best guess from the jar's own filename convention (meteor_shower-*.jar) -
-# verify once the real jar is in hand.
+# without it installed, not just lose the comet visuals during StarFall. modId/version verified
+# directly against the real downloaded jar's own META-INF/mods.toml (modId="meteor_shower",
+# version="0.0.4.2", no OctoLib dependency of its own after all). side=BOTH, not CLIENT: our own
+# code calls MeteorShowerEventManager.forceShower(ServerLevel, ...) server-side (see
+# com.lotusblight.escape.StarFallEvent and LotusCommands#starFallTrigger), so the dependency has to
+# be present on the server too, not just the client.
 [[dependencies.${mod_id}]]
     modId="meteor_shower"
     mandatory=true
     versionRange="[0.0.4,1.0)"
     ordering="AFTER"
-    side="CLIENT"
+    side="BOTH"
 
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't

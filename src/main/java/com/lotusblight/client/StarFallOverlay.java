@@ -4,6 +4,8 @@ import com.lotusblight.LotusBlight;
 import com.lotusblight.dialogue.StarFallLibrary;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -59,12 +61,21 @@ public final class StarFallOverlay {
         advance();
     }
 
+    /** "Ты не сможешь вечно прятаться от меня." - the war script's own note: "(при попытке застроится или зайти в дом)". Only shows (and only deals its damage) if the player is actually sheltering when the scene reaches it; otherwise it's skipped entirely, straight to the next line. */
+    private static final int WAR_SHELTER_LINE_INDEX = 1;
+
     private static void advance() {
         activeLine = queue.poll();
         lineIndex++;
+        Minecraft mc = Minecraft.getInstance();
+
+        if (activeLine != null && warBranch && lineIndex == WAR_SHELTER_LINE_INDEX && !isSheltering(mc)) {
+            advance();
+            return;
+        }
+
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
-        Minecraft mc = Minecraft.getInstance();
         if (activeLine != null && activeLine.important() && mc.player != null) {
             lockedYaw = mc.player.getYRot();
             lockedPitch = mc.player.getXRot();
@@ -77,6 +88,20 @@ public final class StarFallOverlay {
         if (activeLine != null && warBranch) {
             com.lotusblight.map.NetworkHandler.CHANNEL.sendToServer(new com.lotusblight.map.StarFallLineReachedPacket(lineIndex));
         }
+    }
+
+    /** "застроится" (walled in on at least 3 sides) or "зайти в дом" (roofed overhead) - either counts as hiding. */
+    private static boolean isSheltering(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return false;
+        BlockPos base = mc.player.blockPosition();
+        for (int dy = 1; dy <= 4; dy++) {
+            if (!mc.level.getBlockState(base.above(dy)).isAir()) return true;
+        }
+        int solidSides = 0;
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            if (!mc.level.getBlockState(base.relative(dir)).isAir()) solidSides++;
+        }
+        return solidSides >= 3;
     }
 
     private static boolean active() {

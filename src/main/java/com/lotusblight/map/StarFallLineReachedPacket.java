@@ -52,13 +52,16 @@ public class StarFallLineReachedPacket {
                 } else if (player.level() instanceof ServerLevel level) {
                     // "посох удаляется если ты его брал, если не брал то на игрока падает метеорит
                     // и появляется ультра сильный блесковый биом (даже сильнее чем на альянсе)" -
-                    // real spread-to-any-block conversion is a bigger follow-up; this places an
-                    // immediate patch as a working first version.
+                    // the immediate patch below is the footprint at the moment of impact;
+                    // MeteoriteSpreadEngine.seed keeps it growing into whatever it touches afterward.
                     player.hurt(player.damageSources().flyIntoWall(), 6.0f);
                     player.push(0, -0.6, 0);
                     BlockPos impact = player.blockPosition();
                     placePurpleBlessingPatch(level, impact);
                     level.setBlock(impact.below(), ModBlocks.METEORITE_STONE.get().defaultBlockState(), 3);
+                    // "метеориты распространяют биом абсолютно на любой блок" - the immediate patch
+                    // above is just the initial footprint; this keeps it growing on its own afterward.
+                    com.lotusblight.spread.MeteoriteSpreadEngine.seed(level, impact);
                 }
             }
         });
