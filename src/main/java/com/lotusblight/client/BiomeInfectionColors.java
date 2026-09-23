@@ -4,43 +4,40 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Per-biome, per-material color table for the infected ground tint (see InfectedGroundColor).
- * 49 biomes x 5 materials would be 245 hand-dictated entries - instead, biomes are grouped into
- * the same handful of families already used for the fog gradient list (Лес/равнины, Тайга,
- * Холодные, ...), and colors are dictated once per (group, material) pair. A biome with no group
- * assignment yet falls back to NO_TINT.
- *
- * Some biomes stand out enough from their group's shared look that they shouldn't just inherit
- * it (e.g. Ice Spikes inside the "cold" group) - those are listed in GRADIENT_OVERRIDE and instead
- * derive their color straight from that biome's own fog gradient (see BiomeFogColors), sampled at
- * a fixed position per material so the 5 materials still read as related shades of the same
- * biome rather than 5 unrelated colors.
+ * "создать КУЧА биомов и каждый биом что есть своя вариация заражения используя всё что у нас
+ * есть" - instead of 8 shared group buckets, every biome with an entry in {@link BiomeFogColors}
+ * (~50 of them, already hand-authored, distinct per biome) now derives its own SOIL/TERRACOTTA/
+ * LOG/LEAVES colors by sampling ITS OWN gradient at a different point per material, so the 4
+ * organic materials read as related-but-distinct shades of that one biome's own palette instead of
+ * one of 8 shared looks. STONE/SAND/GRAVEL stay a single shared color everywhere on purpose - see
+ * UNIFORM_STONE/SAND/GRAVEL - these are plain minerals, not biome-tied organics. A specific biome
+ * override (BIOME_OVERRIDE, e.g. birch wood, mangrove mud) still wins over its gradient-derived
+ * default when one exists. The old 8-bucket GROUP_COLORS table is now only a fallback for a biome
+ * with no fog gradient dictated at all (a modded biome this mod doesn't know about yet).
  */
 public final class BiomeInfectionColors {
     public static final int NO_TINT = 0xFFFFFF;
 
-    /** Shared, non-biome-tied color for STONE/SAND/GRAVEL - see the static block's own comment on why these three don't get per-group variety like the organic materials do. */
+    /** Shared, non-biome-tied color for STONE/SAND/GRAVEL - see the class doc on why these three don't get per-biome variety like the organic materials do. */
     private static final int UNIFORM_STONE = 0x7A6B7F;
     private static final int UNIFORM_SAND = 0x5C4266;
     private static final int UNIFORM_GRAVEL = 0x6E5C75;
 
-    /** Where along a biome's own fog gradient (0=first stop, 1=last stop) each material samples, for GRADIENT_OVERRIDE biomes. */
+    /** Where along a biome's own fog gradient (0=first stop, 1=last stop) each organic material samples - spread out so all four read as distinct shades within the same biome, not four copies of one point. */
     private static final Map<InfectedMaterial, Float> GRADIENT_SAMPLE_POINT = Map.of(
             InfectedMaterial.SOIL, 0.15f,
-            InfectedMaterial.SAND, 0.35f,
-            InfectedMaterial.GRAVEL, 0.5f,
-            InfectedMaterial.STONE, 0.7f,
-            InfectedMaterial.TERRACOTTA, 0.9f
+            InfectedMaterial.TERRACOTTA, 0.5f,
+            InfectedMaterial.LOG, 0.75f,
+            InfectedMaterial.LEAVES, 0.35f
     );
 
     private static final Map<ResourceLocation, String> BIOME_GROUP = new HashMap<>();
     private static final Map<String, EnumMap<InfectedMaterial, Integer>> GROUP_COLORS = new HashMap<>();
-    private static final Set<ResourceLocation> GRADIENT_OVERRIDE = new HashSet<>();
     /** Per-biome, per-material overrides (e.g. Dark Forest's own wood/terracotta differs from the rest of forest_plains) - everything NOT overridden here still falls through to the biome's group color. */
     private static final Map<ResourceLocation, EnumMap<InfectedMaterial, Integer>> BIOME_OVERRIDE = new HashMap<>();
 
@@ -97,11 +94,6 @@ public final class BiomeInfectionColors {
                 InfectedMaterial.TERRACOTTA, 0x78949D,  // light_gray_terracotta.png
                 InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
-
-        // Ice Spikes is the class doc's own motivating example for GRADIENT_OVERRIDE, but useGradient()
-        // was never actually called anywhere - it stood out enough from the rest of "cold" to be
-        // called out in the doc, but every world still rendered it with the flat cold-group tint.
-        useGradient("minecraft:ice_spikes");
 
         colors("hot_dry",
                 InfectedMaterial.STONE, UNIFORM_STONE,
@@ -186,13 +178,6 @@ public final class BiomeInfectionColors {
         }
     }
 
-    /** Marks biomes that skip their group's shared color and instead derive one from their own fog gradient (see class doc). */
-    private static void useGradient(String... biomeIds) {
-        for (String id : biomeIds) {
-            GRADIENT_OVERRIDE.add(new ResourceLocation(id));
-        }
-    }
-
     /** One biome's own color for specific materials only - everything else it still inherits from its group. */
     private static void biomeColor(String biomeId, Object... materialColorPairs) {
         EnumMap<InfectedMaterial, Integer> map = BIOME_OVERRIDE.computeIfAbsent(new ResourceLocation(biomeId), b -> new EnumMap<>(InfectedMaterial.class));
@@ -202,21 +187,28 @@ public final class BiomeInfectionColors {
     }
 
     public static int colorFor(ResourceLocation biomeId, InfectedMaterial material) {
+        // Plain minerals, not biome-tied organics - same tone everywhere, see the class doc.
+        if (material == InfectedMaterial.STONE) return UNIFORM_STONE;
+        if (material == InfectedMaterial.SAND) return UNIFORM_SAND;
+        if (material == InfectedMaterial.GRAVEL) return UNIFORM_GRAVEL;
+
         EnumMap<InfectedMaterial, Integer> ownColors = BIOME_OVERRIDE.get(biomeId);
         if (ownColors != null && ownColors.containsKey(material)) {
             return ownColors.get(material);
         }
-        // GRADIENT_SAMPLE_POINT only covers SOIL/SAND/GRAVEL/STONE/TERRACOTTA - LOG/LEAVES have no
-        // sample point defined, so GRADIENT_SAMPLE_POINT.get(material) would be null and unboxing it
-        // into sample(int[], float) would NPE. Those two materials fall through to the group color
-        // like any other biome without a gradient override.
-        if (GRADIENT_OVERRIDE.contains(biomeId) && GRADIENT_SAMPLE_POINT.containsKey(material)) {
-            int[] gradient = BiomeFogColors.gradientFor(biomeId);
-            if (gradient != null) {
-                return BiomeFogColors.sample(gradient, GRADIENT_SAMPLE_POINT.get(material));
+        // Every biome with a dictated fog gradient (basically all of them, see BiomeFogColors) now
+        // derives its organic-material colors straight from ITS OWN gradient by default - true
+        // per-biome variety instead of 8 shared group looks, reusing color data this mod already
+        // hand-authored rather than inventing ~200 new entries from scratch.
+        int[] gradient = BiomeFogColors.gradientFor(biomeId);
+        if (gradient != null) {
+            Float samplePoint = GRADIENT_SAMPLE_POINT.get(material);
+            if (samplePoint != null) {
+                return BiomeFogColors.sample(gradient, samplePoint);
             }
-            // Flagged for override but has no fog gradient of its own yet - fall through to the group.
         }
+        // No fog gradient dictated for this biome at all (a modded biome this mod doesn't know
+        // about yet) - fall back to the old 8-bucket group table, or NO_TINT if it's not in one either.
         String groupId = BIOME_GROUP.get(biomeId);
         if (groupId == null) return NO_TINT;
         EnumMap<InfectedMaterial, Integer> materials = GROUP_COLORS.get(groupId);
