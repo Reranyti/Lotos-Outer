@@ -16,6 +16,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
@@ -109,7 +110,16 @@ public final class LotusChaseEvent {
         LotusLabSavedData labData = LotusLabSavedData.get(overworld);
         if (!labData.isBuilt()) {
             BlockPos spawn = overworld.getSharedSpawnPos();
-            BlockPos entrance = new BlockPos(spawn.getX() + LAB_OFFSET_FROM_SPAWN, spawn.getY(), spawn.getZ());
+            int x = spawn.getX() + LAB_OFFSET_FROM_SPAWN;
+            int z = spawn.getZ();
+            if (!overworld.hasChunkAt(new BlockPos(x, spawn.getY(), z))) return;
+            // Used to reuse spawn.getY() outright - fine right at spawn itself, but LAB_OFFSET_FROM_SPAWN
+            // (48 blocks) is easily a different biome/elevation entirely (a mesa canyon, a lake, a
+            // cliff), so the lab's fixed shell ended up built floating over or half-submerged in
+            // whatever was actually there instead of sitting on real ground. Sample the real surface
+            // height at the lab's own X/Z instead of trusting spawn's.
+            int surfaceY = overworld.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+            BlockPos entrance = new BlockPos(x, surfaceY, z);
             if (!overworld.hasChunkAt(entrance)) return;
             Direction facing = Direction.EAST;
             LotusChaseStructure built = new LotusChaseStructure(overworld, entrance, facing, overworld.random);
@@ -154,7 +164,7 @@ public final class LotusChaseEvent {
         if (!labData.isUnlocked()) return;
 
         for (ServerPlayer player : overworld.players()) {
-            if (player.blockPosition().equals(structure.startTrigger())) {
+            if (structure.isAtStartTrigger(player.blockPosition())) {
                 startRun(player, overworld.getGameTime());
                 return;
             }
@@ -187,7 +197,7 @@ public final class LotusChaseEvent {
             resolveCaught(player);
             return;
         }
-        if (player.blockPosition().equals(structure.exitTrigger()) || player.blockPosition().equals(structure.exitTrigger().below())) {
+        if (structure.isAtExitTrigger(player.blockPosition())) {
             resolveSurvived(player);
             return;
         }

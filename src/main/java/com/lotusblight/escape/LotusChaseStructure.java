@@ -28,9 +28,15 @@ import java.util.Map;
  */
 public final class LotusChaseStructure {
     private static final int START_TRIGGER_DISTANCE = 3;
-    private static final int CORRIDOR_LENGTH = 12;
-    private static final int BRANCH_LENGTH = 8;
-    private static final int DEAD_END_LENGTH = 5;
+    // Was 12/8/5 - a ~20-block straight-line path from entrance to exit, covered in 4-5 seconds at
+    // a sprint. The chase's own DURATION_TICKS gives a player 110 seconds against a full 2:14
+    // theme track ("где тут вообще место для побега?") - there was no actual room to run, just a
+    // closet-sized box. Long enough now that even sprinting flat out without a single obstacle or
+    // wrong turn takes a meaningful chunk of the real time budget, so obstacles/the decoy branch
+    // matter instead of being irrelevant next to a corridor you could clear in a few strides.
+    private static final int CORRIDOR_LENGTH = 80;
+    private static final int BRANCH_LENGTH = 60;
+    private static final int DEAD_END_LENGTH = 35;
     private static final int WIDTH = 3; // interior width, odd so there's a center line
     private static final int HEIGHT = 4;
 
@@ -72,6 +78,31 @@ public final class LotusChaseStructure {
         return exitTrigger;
     }
 
+    /**
+     * Exact BlockPos equality against a single center column never reliably fires for how a player
+     * actually walks - the corridor is WIDTH blocks wide, and nothing forces anyone to hug dead
+     * center. Accepts any position within the trigger's own footprint (all WIDTH columns, and a
+     * couple of Y levels of headroom) instead of one exact block.
+     */
+    public boolean isAtStartTrigger(BlockPos playerPos) {
+        return isAtTrigger(playerPos, startTrigger);
+    }
+
+    public boolean isAtExitTrigger(BlockPos playerPos) {
+        return isAtTrigger(playerPos, exitTrigger);
+    }
+
+    private boolean isAtTrigger(BlockPos playerPos, BlockPos triggerCenter) {
+        int half = WIDTH / 2;
+        Direction side = facing.getClockWise();
+        int dx = playerPos.getX() - triggerCenter.getX();
+        int dz = playerPos.getZ() - triggerCenter.getZ();
+        int alongFacing = dx * facing.getStepX() + dz * facing.getStepZ();
+        int alongSide = dx * side.getStepX() + dz * side.getStepZ();
+        int dy = playerPos.getY() - triggerCenter.getY();
+        return Math.abs(alongFacing) <= 1 && Math.abs(alongSide) <= half && dy >= 0 && dy <= 1;
+    }
+
     /** Carves the whole permanent structure once. Starts sealed - call unsealEntrance() separately once the world has actually crossed the threshold. */
     public void build() {
         int half = WIDTH / 2;
@@ -83,7 +114,13 @@ public final class LotusChaseStructure {
         }
 
         BlockPos junction = carveCorridor(entrance, facing, CORRIDOR_LENGTH);
-        startTrigger = entrance.relative(facing, START_TRIGGER_DISTANCE);
+        // Missing .above() here meant this pointed at the corridor's FLOOR block (h=0, solid shell)
+        // instead of the walkable space a standing player's own blockPosition() actually reports
+        // (floor + 1). The exact-position check in LotusChaseEvent#checkForNewRunner could then
+        // never match under normal walking - no cutscene, no music, no run ever started
+        // ("побега вообще нет"). exitTrigger already did this correctly (see carveExitRoom's own
+        // `return trigger.above();`) - this was the one asymmetric spot that didn't.
+        startTrigger = entrance.relative(facing, START_TRIGGER_DISTANCE).above();
 
         Direction left = facing.getCounterClockWise();
         Direction right = facing.getClockWise();
@@ -116,23 +153,39 @@ public final class LotusChaseStructure {
         }
     }
 
-    /** Clears any obstacle debris left in the corridor from a previous attempt - the structure itself never gets rebuilt. */
+    /**
+     * Clears any obstacle debris left in the corridor from a previous attempt - the structure
+     * itself never gets rebuilt. Used to sweep all three directions (entrance corridor + both
+     * branches) from `entrance` using `facing`'s own side axis - correct for the entrance corridor
+     * only. The two branches actually start at `junction` (entrance.relative(facing,
+     * CORRIDOR_LENGTH)), not entrance itself, and each branch's real width axis is ITS OWN
+     * direction's clockwise (see carveCorridor's own `side = dir.getClockWise()`), not facing's.
+     * With the old origin+axis, this never touched a single block inside either real branch -
+     * cobwebs there just accumulated across every run instead of clearing between attempts.
+     */
     public void resetForNextRun() {
-        // Obstacles are the only thing dropObstacle() ever places that isn't part of the fixed
-        // shell, and cobweb is the only block type it uses - safe to blanket-clear by type without
-        // tracking individual obstacle positions.
+        BlockPos junction = entrance.relative(facing, CORRIDOR_LENGTH);
+        Direction left = facing.getCounterClockWise();
+        Direction right = facing.getClockWise();
+        clearCobwebs(entrance, facing, CORRIDOR_LENGTH);
+        clearCobwebs(junction, left, Math.max(BRANCH_LENGTH, DEAD_END_LENGTH));
+        clearCobwebs(junction, right, Math.max(BRANCH_LENGTH, DEAD_END_LENGTH));
+    }
+
+    // Obstacles are the only thing dropObstacle() ever places that isn't part of the fixed shell,
+    // and cobweb is the only block type it uses - safe to blanket-clear by type without tracking
+    // individual obstacle positions.
+    private void clearCobwebs(BlockPos origin, Direction dir, int length) {
         int half = WIDTH / 2;
-        Direction side = facing.getClockWise();
-        for (Direction dir : new Direction[]{facing, facing.getCounterClockWise(), facing.getClockWise()}) {
-            for (int i = 1; i <= CORRIDOR_LENGTH + BRANCH_LENGTH; i++) {
-                BlockPos center = entrance.relative(dir, i);
-                for (int w = -half; w <= half; w++) {
-                    for (int h = 1; h < HEIGHT - 1; h++) {
-                        BlockPos pos = center.relative(side, w).above(h);
-                        if (!level.hasChunkAt(pos)) continue;
-                        if (level.getBlockState(pos).is(Blocks.COBWEB)) {
-                            level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-                        }
+        Direction side = dir.getClockWise();
+        for (int i = 1; i <= length; i++) {
+            BlockPos center = origin.relative(dir, i);
+            for (int w = -half; w <= half; w++) {
+                for (int h = 1; h < HEIGHT - 1; h++) {
+                    BlockPos pos = center.relative(side, w).above(h);
+                    if (!level.hasChunkAt(pos)) continue;
+                    if (level.getBlockState(pos).is(Blocks.COBWEB)) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
