@@ -119,33 +119,49 @@ public class InfectionSpreadEngine {
         }
     }
 
+    /**
+     * Was a hard on/off gate on ACTIVE_CHUNK_RADIUS (default already maxed at 32 chunks/512 blocks,
+     * with no config headroom to raise it further) - any outbreak nobody had ever stood within 512
+     * blocks of simply never ticked at all, reading as a flat "Цветение, 0 прогресса" forever on
+     * the map no matter how long the world ran. "лучше все очаги на карте с каждой далёкостью
+     * развивать всё медленнее и медленнее" - every outbreak on the server now always gets SOME
+     * attempts, just scaled down the further it is from the nearest player, down to a slow crawl
+     * rather than a hard stop. Reads naturally as lore too: the lotus's influence is strongest
+     * where it's actually being watched/fed by a nearby presence, and fades - but never vanishes -
+     * the further from any observer it is.
+     */
     private void tickLevel(ServerLevel level) {
         OutbreakSavedData data = OutbreakSavedData.get(level);
         List<OutbreakRecord> outbreaks = new ArrayList<>(data.allOutbreaks());
-        double activeRangeSq = activeChunkRangeSq();
+        if (level.players().isEmpty()) return;
         for (OutbreakRecord outbreak : outbreaks) {
             if (!level.hasChunkAt(outbreak.pos())) continue;
-            // ACTIVE_CHUNK_RADIUS config used to be pure placebo — exposed in the config screen as
-            // "active infection/scanning radius around players" but nothing ever read it. An
-            // outbreak with no player within that radius now simply doesn't tick.
-            if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
-            tickOutbreak(level, data, outbreak);
+            double distance = nearestPlayerDistance(level, outbreak.pos());
+            tickOutbreak(level, data, outbreak, distanceSpeedMultiplier(distance));
         }
     }
 
-    private double activeChunkRangeSq() {
-        double blocks = LotusConfig.ACTIVE_CHUNK_RADIUS.get() * 16.0;
-        return blocks * blocks;
-    }
-
-    private boolean withinActiveRange(ServerLevel level, BlockPos pos, double rangeSq) {
+    private double nearestPlayerDistance(ServerLevel level, BlockPos pos) {
+        double best = Double.MAX_VALUE;
         for (ServerPlayer player : level.players()) {
-            if (player.blockPosition().distSqr(pos) <= rangeSq) return true;
+            double dist = Math.sqrt(player.blockPosition().distSqr(pos));
+            if (dist < best) best = dist;
         }
-        return false;
+        return best;
     }
 
-    private void tickOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord outbreak) {
+    /** Full speed within FULL_SPEED_RADIUS, then a smooth linear falloff out to FALLOFF_RANGE past it, floored at a slow but nonzero crawl - never a hard cutoff. */
+    private static final double FULL_SPEED_RADIUS = 128.0;
+    private static final double FALLOFF_RANGE = 3000.0;
+    private static final double MIN_DISTANCE_MULTIPLIER = 0.05;
+
+    private double distanceSpeedMultiplier(double distance) {
+        if (distance <= FULL_SPEED_RADIUS) return 1.0;
+        double t = Math.min(1.0, (distance - FULL_SPEED_RADIUS) / FALLOFF_RANGE);
+        return Mth.lerp(t, 1.0, MIN_DISTANCE_MULTIPLIER);
+    }
+
+    private void tickOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord outbreak, double speedMultiplier) {
         Deque<BlockPos> frontier = frontiers.computeIfAbsent(outbreak.id(), id -> {
             Deque<BlockPos> seeded = new ArrayDeque<>();
             seeded.add(outbreak.pos());
@@ -192,6 +208,10 @@ public class InfectionSpreadEngine {
             radius += OCEAN_RADIUS_BONUS;
         }
         if (attempts == 0) return;
+        // Distance-from-nearest-player falloff (see distanceSpeedMultiplier) - floored at 1 so an
+        // outbreak with any nonzero attempts always keeps crawling forward, just far slower the
+        // further it is from anyone.
+        attempts = Math.max(1, (int) Math.round(attempts * speedMultiplier));
         int converted = 0;
 
         for (int i = 0; i < attempts; i++) {

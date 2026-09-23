@@ -24,6 +24,11 @@ import java.util.Set;
 public final class BiomeInfectionColors {
     public static final int NO_TINT = 0xFFFFFF;
 
+    /** Shared, non-biome-tied color for STONE/SAND/GRAVEL - see the static block's own comment on why these three don't get per-group variety like the organic materials do. */
+    private static final int UNIFORM_STONE = 0x7A6B7F;
+    private static final int UNIFORM_SAND = 0x5C4266;
+    private static final int UNIFORM_GRAVEL = 0x6E5C75;
+
     /** Where along a biome's own fog gradient (0=first stop, 1=last stop) each material samples, for GRADIENT_OVERRIDE biomes. */
     private static final Map<InfectedMaterial, Float> GRADIENT_SAMPLE_POINT = Map.of(
             InfectedMaterial.SOIL, 0.15f,
@@ -60,30 +65,34 @@ public final class BiomeInfectionColors {
                 "minecraft:lukewarm_ocean", "minecraft:deep_lukewarm_ocean", "minecraft:cold_ocean",
                 "minecraft:deep_cold_ocean", "minecraft:frozen_ocean", "minecraft:deep_frozen_ocean");
 
-        // Each group's colors are the INVERTED average color of a hand-picked vanilla texture per
-        // material (see BiomeInfectionColors's own class doc) - not a directly dictated color.
+        // Stone/sand/gravel are plain minerals, not biome-tied organics like grass/leaves/wood -
+        // there's no real reason infected stone should look different in a taiga than in a jungle,
+        // so unlike SOIL/TERRACOTTA/LOG/LEAVES (which genuinely do vary per biome below), these
+        // three get ONE shared, deliberately non-blue color used everywhere. The original bug
+        // wasn't "not enough per-biome variety" - it was that this shared color happened to be a
+        // washed-out blue (0x24305C for sand) instead of something that actually reads as infected.
         colors("forest_plains",
-                InfectedMaterial.STONE, 0x818181,      // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted with plains grass color, since the raw texture is a near-grey biome-tint mask)
                 InfectedMaterial.TERRACOTTA, 0x67A1BB,  // terracotta.png
                 InfectedMaterial.LOG, 0x92AACC,         // oak_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (tinted with default foliage color, same mask situation as grass_block_top)
 
         colors("taiga",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
                 InfectedMaterial.TERRACOTTA, 0x2D4D5E,  // white_terracotta.png
                 InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("cold",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0x060101,        // snow.png
                 InfectedMaterial.TERRACOTTA, 0x78949D,  // light_gray_terracotta.png
                 InfectedMaterial.LOG, 0xC4D9EE,         // spruce_log.png
@@ -95,45 +104,45 @@ public final class BiomeInfectionColors {
         useGradient("minecraft:ice_spikes");
 
         colors("hot_dry",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png (real deserts are yellow sand, not red - red_sand is a badlands thing, see override below)
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0x799FBC,        // dirt.png
                 InfectedMaterial.TERRACOTTA, 0x5DABD9,  // orange_terracotta.png
                 InfectedMaterial.LOG, 0x989EA8,         // acacia_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
-        // Badlands doesn't actually look like the rest of hot_dry - it's dominated by RED sand
-        // (not yellow) and a rainbow of terracotta color bands, not one flat orange. Blended
-        // across orange/yellow/red/white/brown/plain terracotta instead of picking just one color.
+        // Badlands doesn't actually look like the rest of hot_dry for its ORGANIC materials - it's
+        // dominated by a rainbow of terracotta color bands, not one flat orange. Blended across
+        // orange/yellow/red/white/brown/plain terracotta instead of picking just one color. Sand
+        // itself stays the shared UNIFORM_SAND, same reasoning as everywhere else.
         for (String badlandsVariant : new String[]{"minecraft:badlands", "minecraft:eroded_badlands", "minecraft:wooded_badlands"}) {
             biomeColor(badlandsVariant,
-                    InfectedMaterial.SAND, 0x4098DE,        // red_sand.png
                     InfectedMaterial.TERRACOTTA, 0x649BBF); // blend of orange/yellow/red/white/brown/plain terracotta
         }
 
         colors("hills",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
                 InfectedMaterial.TERRACOTTA, 0xC5D5DB,  // gray_terracotta.png
                 InfectedMaterial.LOG, 0x92AACC,         // oak_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("jungle",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0xAB92CC,        // grass_block_top.png (tinted plains grass)
                 InfectedMaterial.TERRACOTTA, 0xB3ACD5,  // green_terracotta.png
                 InfectedMaterial.LOG, 0xAABBE6,         // jungle_log.png
                 InfectedMaterial.LEAVES, 0xD699F1);     // oak_leaves.png (default foliage tint)
 
         colors("swamp_water",
-                InfectedMaterial.STONE, 0x818181,       // stone.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0xC2BEDE,        // grass_block_top.png (tinted with the special swamp grass/foliage color)
                 InfectedMaterial.TERRACOTTA, 0xB2CCDB,  // brown_terracotta.png
                 InfectedMaterial.LOG, 0x92AACC,         // oak_log.png (mangrove_swamp gets its own override below)
@@ -153,9 +162,9 @@ public final class BiomeInfectionColors {
                 InfectedMaterial.LEAVES, 0xC9C7E2); // mangrove_leaves.png (tinted with swamp color)
 
         colors("ocean",
-                InfectedMaterial.STONE, 0x9C6368,       // prismarine.png
-                InfectedMaterial.SAND, 0x24305C,        // sand.png
-                InfectedMaterial.GRAVEL, 0x7B8080,      // gravel.png
+                InfectedMaterial.STONE, UNIFORM_STONE,
+                InfectedMaterial.SAND, UNIFORM_SAND,
+                InfectedMaterial.GRAVEL, UNIFORM_GRAVEL,
                 InfectedMaterial.SOIL, 0x799FBC,        // dirt.png
                 InfectedMaterial.TERRACOTTA, 0xA8A4A4,  // cyan_terracotta.png
                 InfectedMaterial.LOG, 0x92AACC,         // oak_log.png (no real trees in ocean, filler)

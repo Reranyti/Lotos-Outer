@@ -52,11 +52,28 @@ public final class ModFluids {
                 // outdoor view distance with only ordinary sky fog - an "x-ray" look where distant
                 // terrain stayed clearly visible through the water instead of the murky close-up
                 // vanilla water gives.
+                // Was one fixed dark-green Vector3f no matter where the player actually was -
+                // "постоянно зелёная вода вне зависимости от континента" - even though
+                // BiomeFogColors already dictates a real per-biome fog gradient for the ambient
+                // InfectionFogRenderer, this never reused it. Now samples that same gradient at
+                // the camera's own biome, falling back to the old fixed green only for a biome
+                // with no gradient dictated yet.
                 @Override
                 public org.joml.Vector3f modifyFogColor(net.minecraft.client.Camera camera, float partialTick,
                         net.minecraft.client.multiplayer.ClientLevel level, int renderDistance, float darkenWorldAmount,
                         org.joml.Vector3f fluidFogColor) {
-                    return new org.joml.Vector3f(0.08F, 0.20F, 0.10F);
+                    net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(camera.getPosition());
+                    var biome = level.getBiome(pos);
+                    var biomeId = biome.unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+                    int[] gradient = biomeId != null ? com.lotusblight.client.BiomeFogColors.gradientFor(biomeId) : null;
+                    if (gradient == null) {
+                        return new org.joml.Vector3f(0.08F, 0.20F, 0.10F);
+                    }
+                    int color = com.lotusblight.client.BiomeFogColors.sample(gradient, 1.0f);
+                    return new org.joml.Vector3f(
+                            ((color >> 16) & 0xFF) / 255f,
+                            ((color >> 8) & 0xFF) / 255f,
+                            (color & 0xFF) / 255f);
                 }
 
                 @Override
