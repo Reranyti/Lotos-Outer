@@ -67,6 +67,14 @@ public final class BiomeFogColors {
         put("minecraft:frozen_ocean", 0x6FC9D4, 0x3A6FC9);
         put("minecraft:deep_frozen_ocean", 0x0C1420, 0x6FC9D4, 0x3A6FC9);
         put("streamsreflowing:stream", 0xE8EDEB, 0x6FC9D4);
+
+        // Was missing entirely - fell through to the generic default sick color instead of a real
+        // dictated gradient, "туман должен быть во всех биомов".
+        put("minecraft:cherry_grove", 0xF3C6D6, 0x3F6B33);
+        put("minecraft:dripstone_caves", 0x5C4224, 0x2E1C14);
+        put("minecraft:lush_caves", 0x3F6B33, 0x1C2E17);
+        put("minecraft:deep_dark", 0x0A120A, 0x1A2A40);
+        put("minecraft:the_void", 0x0C140C);
     }
 
     private BiomeFogColors() {}
