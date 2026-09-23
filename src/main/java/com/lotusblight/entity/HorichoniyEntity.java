@@ -1,5 +1,6 @@
 package com.lotusblight.entity;
 
+import com.lotusblight.registry.ModItems;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.item.ItemStack;
@@ -9,23 +10,26 @@ import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.level.Level;
 
 /**
- * "Хоричоний... торговец" - a trading NPC, built on WanderingTrader for its already-complete
- * trade-GUI/offer machinery rather than writing that from scratch. Only the look (own texture, see
- * HorichoniyRenderer) and trade list are ours; everything else (wandering AI, despawn timer, trade
- * screen) is inherited as-is.
+ * "торговец от звёздного света" - Horichoniy, a Star Light-affiliated trader. WanderingTrader is
+ * the right vanilla base for this (already peaceful, already just wanders and opens a trade
+ * screen) rather than a full Villager with its work-schedule AI this character has no use for.
  */
 public class HorichoniyEntity extends WanderingTrader {
     public HorichoniyEntity(EntityType<? extends WanderingTrader> type, Level level) {
         super(type, level);
+        this.setPersistenceRequired();
     }
 
     @Override
     protected void updateTrades() {
         MerchantOffers offers = this.getOffers();
-        // Placeholder trade set - swap for real ones once the actual trade list is decided.
-        offers.add(new MerchantOffer(new ItemStack(Items.EMERALD, 8),
-                new ItemStack(com.lotusblight.registry.ModItems.LOTUS_ALLOY.get()), 6, 2, 0.05f));
-        offers.add(new MerchantOffer(new ItemStack(com.lotusblight.registry.ModItems.STAR_LIGHT_VIAL.get()),
-                new ItemStack(Items.EMERALD, 12), 4, 5, 0.05f));
+        addOffer(offers, new ItemStack(Items.EMERALD, 6), new ItemStack(ModItems.GLOW_BERRY_FOOD.get(), 8), 8);
+        addOffer(offers, new ItemStack(Items.EMERALD, 3), new ItemStack(ModItems.VITAMIN.get(), 4), 12);
+        addOffer(offers, new ItemStack(Items.EMERALD, 20), new ItemStack(ModItems.METEORITE_INGOT.get(), 1), 4);
+        addOffer(offers, new ItemStack(Items.EMERALD, 12), new ItemStack(ModItems.BLESSING_SAND_PURPLE_ITEM.get(), 4), 6);
+    }
+
+    private static void addOffer(MerchantOffers offers, ItemStack cost, ItemStack result, int maxUses) {
+        offers.add(new MerchantOffer(cost, result, maxUses, 2, 0.05f));
     }
 }

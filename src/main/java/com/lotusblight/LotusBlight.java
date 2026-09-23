@@ -214,10 +214,13 @@ public class LotusBlight {
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
         event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
+        // WanderingTrader itself has no public static createAttributes() (its vanilla attribute
+        // registration is internal/private) - built manually to match vanilla's own trader stats.
         event.put(com.lotusblight.registry.ModEntities.HORICHONIY.get(), net.minecraft.world.entity.Mob.createMobAttributes()
                 .add(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, 20.0)
                 .add(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.5)
-                .add(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE, 48.0).build());
+                .add(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE, 48.0)
+                .build());
     }
 
     /**
