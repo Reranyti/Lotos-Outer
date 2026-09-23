@@ -58,20 +58,7 @@ public final class LotusCommands {
                 .then(meteoriteCommands())
                 .then(blackHeartCommands())
                 .then(borderCommands())
-                .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource())))
-                .then(Commands.literal("horichoniy")
-                        .then(Commands.literal("spawn").executes(ctx -> spawnHorichoniy(ctx.getSource())))));
-    }
-
-    private static int spawnHorichoniy(CommandSourceStack source) {
-        ServerLevel level = source.getLevel();
-        var entity = com.lotusblight.registry.ModEntities.HORICHONIY.get().create(level);
-        if (entity == null) return 0;
-        var pos = BlockPos.containing(source.getPosition());
-        entity.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0f, 0f);
-        level.addFreshEntity(entity);
-        source.sendSuccess(() -> Component.literal("Хоричоний заспавнен в " + pos.toShortString() + "."), true);
-        return 1;
+                .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource()))));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------

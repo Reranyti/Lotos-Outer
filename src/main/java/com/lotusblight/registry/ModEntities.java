@@ -2,7 +2,6 @@ package com.lotusblight.registry;
 
 import com.lotusblight.LotusBlight;
 import com.lotusblight.entity.HonchoEntity;
-import com.lotusblight.entity.HorichoniyEntity;
 import com.lotusblight.entity.WorldLotusGuardianWolf;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -25,12 +24,6 @@ public final class ModEntities {
             () -> EntityType.Builder.of(HonchoEntity::new, MobCategory.MISC)
                     .sized(0.6f, 1.95f)
                     .build("honcho"));
-
-    public static final RegistryObject<EntityType<HorichoniyEntity>> HORICHONIY = ENTITY_TYPES.register(
-            "horichoniy",
-            () -> EntityType.Builder.of(HorichoniyEntity::new, MobCategory.MISC)
-                    .sized(0.6f, 1.95f)
-                    .build("horichoniy"));
 
     private ModEntities() {}
 }

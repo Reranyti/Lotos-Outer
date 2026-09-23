@@ -207,20 +207,12 @@ public class LotusBlight {
         // Reuses ZombieRenderer's humanoid model/animation rig via a thin subclass (HonchoRenderer)
         // that overrides the hardcoded vanilla zombie texture with Honcho's own original one.
         event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoRenderer::new);
-        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HORICHONIY.get(), com.lotusblight.client.HorichoniyRenderer::new);
     }
 
     /** Forge requires every living entity type to have a registered attribute supplier or it crashes the instant one is spawned. Reuses vanilla Wolf's own attribute map - same base stats, GuardianManager-style code tunes health/damage per instance afterward. */
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
         event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
-        // WanderingTrader itself has no public static createAttributes() (its vanilla attribute
-        // registration is internal/private) - built manually to match vanilla's own trader stats.
-        event.put(com.lotusblight.registry.ModEntities.HORICHONIY.get(), net.minecraft.world.entity.Mob.createMobAttributes()
-                .add(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, 20.0)
-                .add(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.5)
-                .add(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE, 48.0)
-                .build());
     }
 
     /**
