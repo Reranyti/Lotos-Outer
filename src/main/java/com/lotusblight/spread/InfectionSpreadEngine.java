@@ -524,10 +524,15 @@ public class InfectionSpreadEngine {
         return best.equals(source) ? source.relative(Direction.getRandom(level.random)) : best;
     }
 
+    /**
+     * Used to skip Player entirely - "заражение должно быть видно и влиять на игрока", but the
+     * spore effect (real damage + Weakness, see LotusSporeEffect's own doc comment) only ever
+     * touched nearby mobs, never the player standing right next to the same conversion. Now the
+     * player breathes the same spores as everything else nearby.
+     */
     private void infectNearbyLiving(ServerLevel level, BlockPos source) {
         AABB box = new AABB(source).inflate(SPORE_RADIUS);
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, box)) {
-            if (entity instanceof Player) continue;
             if (entity.getType().getCategory() == MobCategory.MISC) continue;
             entity.addEffect(new MobEffectInstance(ModEffects.LOTUS_SPORES.get(), 240, 0));
         }

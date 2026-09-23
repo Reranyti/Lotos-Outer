@@ -80,6 +80,10 @@ public class StarFallLineReachedPacket {
             for (int dz = -PATCH_RADIUS; dz <= PATCH_RADIUS; dz++) {
                 if (dx * dx + dz * dz > PATCH_RADIUS * PATCH_RADIUS) continue;
                 BlockPos top = center.offset(dx, -1, dz);
+                // A column near the very edge of the loaded/simulation area isn't guaranteed
+                // loaded - an unguarded getBlockState/setBlock here risks the same synchronous
+                // chunk-load deadlock already fixed in LotusChaseStructure.
+                if (!level.hasChunkAt(top)) continue;
                 if (!level.getBlockState(top).isAir()) {
                     level.setBlock(top, sand, 3);
                 }

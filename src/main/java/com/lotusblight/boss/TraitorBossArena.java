@@ -95,9 +95,19 @@ public final class TraitorBossArena {
         place(lotusPos, ModBlocks.LOTUS_HEART.get().defaultBlockState());
     }
 
+    /**
+     * Used to setBlock unconditionally for every snapshotted position - teardown() can fire well
+     * after build() (victory/abort can happen once the player has died, disconnected, or wandered
+     * off), so unlike build() (which runs right where a present player is standing, effectively
+     * always loaded), these chunks are not guaranteed to still be loaded. An unguarded setBlock on
+     * one that isn't would force a synchronous chunk load on the server thread - the same deadlock
+     * class already fixed in LotusChaseStructure (see its own javadoc for the real freeze it caused).
+     */
     public void teardown() {
         for (Map.Entry<BlockPos, BlockState> entry : snapshot.entrySet()) {
-            level.setBlock(entry.getKey(), entry.getValue(), 3);
+            if (level.hasChunkAt(entry.getKey())) {
+                level.setBlock(entry.getKey(), entry.getValue(), 3);
+            }
             PROTECTED.remove(GlobalPos.of(level.dimension(), entry.getKey()));
         }
         snapshot.clear();
@@ -128,6 +138,7 @@ public final class TraitorBossArena {
     }
 
     private void place(BlockPos pos, BlockState state) {
+        if (!level.hasChunkAt(pos)) return;
         snapshot.computeIfAbsent(pos, level::getBlockState);
         level.setBlock(pos, state, 3);
         PROTECTED.put(GlobalPos.of(level.dimension(), pos), this);

@@ -163,6 +163,12 @@ public class LotusEvents {
     }
 
     private BlockPos findWaterColumn(ServerLevel level, int x, int z) {
+        // A starter search's radius grows up to STARTER_MAX_RADIUS (512) blocks from the player -
+        // well past render distance for most setups, so this column is not guaranteed loaded.
+        // Without this guard, every one of the ~130 getFluidState/getBlockState calls below on an
+        // unloaded chunk forces Minecraft's synchronous chunk-generate-on-demand path on the
+        // server thread - the same deadlock class already fixed once in LotusChaseStructure.
+        if (!level.hasChunkAt(new BlockPos(x, level.getMinBuildHeight(), z))) return null;
         int top = Math.min(level.getMaxBuildHeight() - 2, 160);
         int bottom = Math.max(level.getMinBuildHeight() + 1, 32);
         for (int y = top; y >= bottom; y--) {
@@ -217,34 +223,41 @@ public class LotusEvents {
     private static final int STARTER_RADIUS_STEP = 32;
     private static final int STARTER_PROBE_INTERVAL_TICKS = 4;
 
-    /** One probe (one column scan) per call, budgeted to run at most once every few ticks — see the class javadoc on pendingStarterSearches' use site. */
+    /**
+     * One probe (one column scan) per pending player per call, budgeted to run at most once every
+     * few ticks — see the class javadoc on pendingStarterSearches' use site. Used to only ever
+     * advance whichever entry a fresh HashMap iterator returned first, so a second player joining
+     * while an earlier player's search was still running (which can take ~500 ticks/25s before
+     * falling back to a guaranteed pond) had their own search silently stall until the first one
+     * finished — now every pending player gets a probe each interval, not just one of them.
+     */
     private void tickStarterSearches(net.minecraft.server.MinecraftServer server) {
         if (pendingStarterSearches.isEmpty()) return;
         if (server.getTickCount() % STARTER_PROBE_INTERVAL_TICKS != 0) return;
 
         var it = pendingStarterSearches.entrySet().iterator();
-        if (!it.hasNext()) return;
-        var entry = it.next();
-        StarterSearch search = entry.getValue();
+        while (it.hasNext()) {
+            StarterSearch search = it.next().getValue();
 
-        int x = search.center.getX() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
-        int z = search.center.getZ() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
-        BlockPos water = findWaterColumn(search.level, x, z);
-        if (water != null && search.level.getBlockState(water.above()).isAir()) {
-            placeTutorialLotus(search.level, water);
-            it.remove();
-            return;
-        }
-
-        search.attemptsAtRadius++;
-        if (search.attemptsAtRadius >= STARTER_ATTEMPTS_PER_RADIUS) {
-            search.attemptsAtRadius = 0;
-            search.radius += STARTER_RADIUS_STEP;
-            if (search.radius > STARTER_MAX_RADIUS) {
-                // A new player must always have a safe water lesson nearby.
-                BlockPos pondWater = createTutorialPond(search.level, search.center);
-                placeTutorialLotus(search.level, pondWater);
+            int x = search.center.getX() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
+            int z = search.center.getZ() + RANDOM.nextInt(search.radius * 2 + 1) - search.radius;
+            BlockPos water = findWaterColumn(search.level, x, z);
+            if (water != null && search.level.getBlockState(water.above()).isAir()) {
+                placeTutorialLotus(search.level, water);
                 it.remove();
+                continue;
+            }
+
+            search.attemptsAtRadius++;
+            if (search.attemptsAtRadius >= STARTER_ATTEMPTS_PER_RADIUS) {
+                search.attemptsAtRadius = 0;
+                search.radius += STARTER_RADIUS_STEP;
+                if (search.radius > STARTER_MAX_RADIUS) {
+                    // A new player must always have a safe water lesson nearby.
+                    BlockPos pondWater = createTutorialPond(search.level, search.center);
+                    placeTutorialLotus(search.level, pondWater);
+                    it.remove();
+                }
             }
         }
     }
