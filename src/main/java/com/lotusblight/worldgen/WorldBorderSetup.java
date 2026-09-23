@@ -25,6 +25,12 @@ public final class WorldBorderSetup {
         var border = overworld.getWorldBorder();
         border.setCenter(spawn.getX(), spawn.getZ());
         border.setSize(STORY_BORDER_SIZE);
+        // Vanilla's own border damage-per-second/warning visuals are replaced entirely by
+        // QuarantineBarrier's bounce mechanic - zeroed out so they never fire alongside it.
+        border.setDamagePerBlock(0);
+        border.setDamageSafeZone(Double.MAX_VALUE);
+        border.setWarningBlocks(0);
+        border.setWarningTime(0);
         data.setConfigured(true);
     }
 
