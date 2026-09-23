@@ -58,7 +58,8 @@ public final class SpreadTables {
         // reusing the existing 5 infected ground blocks rather than new ones (see the pending
         // per-biome table for dedicated analogs later).
         registerCategory(ModBlocks.INFECTED_SOIL.get(),
-                Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.MUD, Blocks.PODZOL, Blocks.MYCELIUM, Blocks.ROOTED_DIRT);
+                Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.MUD, Blocks.PODZOL, Blocks.MYCELIUM, Blocks.ROOTED_DIRT,
+                Blocks.GRASS_BLOCK);
         registerCategory(ModBlocks.LOTUS_SAND.get(),
                 Blocks.SAND, Blocks.RED_SAND, Blocks.SANDSTONE, Blocks.RED_SANDSTONE);
         registerCategory(ModBlocks.LOTUS_GRAVEL.get(),
@@ -120,16 +121,22 @@ public final class SpreadTables {
         return ModBlocks.LOTUS_LEAVES.get().defaultBlockState();
     }
 
-    /** Grass converts only onto ground that is ALREADY infected beneath it — never drives new ground conversion itself. */
+    /**
+     * Decorative plant OVERLAYS only - grass/tall grass/ferns, which occupy their own position
+     * standing on top of a separate ground block, so "is my supporting soil already infected"
+     * is a meaningful question for them. GRASS_BLOCK itself used to be lumped in here too, but a
+     * grass block IS the ground (not a plant sitting on separate soil) - checking the block below
+     * IT meant checking whatever is several layers further down (usually untouched stone), which
+     * spread almost never reaches from the side at the same Y level. That made grass block
+     * conversion practically never happen ("трава остаётся нетронутой"). It's registered in the
+     * generic GROUND_TABLE now instead, converting the same direct way stone/dirt/sand do.
+     */
     public static boolean isCleanGrass(BlockState state) {
-        return state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.GRASS) || state.is(Blocks.TALL_GRASS)
+        return state.is(Blocks.GRASS) || state.is(Blocks.TALL_GRASS)
                 || state.is(Blocks.FERN) || state.is(Blocks.LARGE_FERN);
     }
 
     public static BlockState infectedGrass(BlockState clean) {
-        // blossom_grass (the dedicated grass analogue) was cut - a grass block just becomes
-        // infected_soil like every other dirt-family block instead of its own special case.
-        if (clean.is(Blocks.GRASS_BLOCK)) return ModBlocks.INFECTED_SOIL.get().defaultBlockState();
         return null; // Tall grass/ferns just die off when their soil infects rather than converting to a lotus analogue.
     }
 }

@@ -305,13 +305,30 @@ public class InfectionSpreadEngine {
      */
     private static final int LAND_BIAS_DRAWS = 6;
 
+    /**
+     * The land-bias draws above only ever excluded water - once phase 3 unlocks tree conversion,
+     * every converted log/leaf pushes a CANOPY-height position into the frontier too, and nothing
+     * filtered those out. A frontier that fills up with tree-top entries starves ground conversion
+     * exactly the way it used to be starved by water (see the doc comment above): randomNeighbour's
+     * own dy range is only +/-1 from whatever source got picked, so an attempt sourced from a
+     * canopy position searches more canopy, essentially never reaching back down to ground level.
+     * This is what let an outbreak reach phase 4 (and fire the guaranteed mini-biome burst) almost
+     * entirely through water+tree conversions, with the ground underneath never actually touched -
+     * "инфекция только деревья трогает". Bias against canopy sources the same way water already is.
+     */
+    private boolean isCanopySource(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.LEAVES);
+    }
+
     private BlockPos pickFrontierSource(ServerLevel level, Deque<BlockPos> frontier, BlockPos anchor) {
         if (frontier.isEmpty()) return anchor;
         List<BlockPos> asList = null;
         for (int attempt = 0; attempt < LAND_BIAS_DRAWS; attempt++) {
             if (asList == null) asList = new ArrayList<>(frontier);
             BlockPos candidate = asList.get(level.random.nextInt(asList.size()));
-            if (!level.getFluidState(candidate).is(Fluids.WATER) && !level.getFluidState(candidate).is(ModFluids.INFECTED_WATER.get())) {
+            if (!level.getFluidState(candidate).is(Fluids.WATER) && !level.getFluidState(candidate).is(ModFluids.INFECTED_WATER.get())
+                    && !isCanopySource(level, candidate)) {
                 return candidate;
             }
         }
@@ -608,8 +625,14 @@ public class InfectionSpreadEngine {
         int surfaceY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, candidate.getX(), candidate.getZ());
         BlockPos ground = new BlockPos(candidate.getX(), surfaceY - 1, candidate.getZ());
         if (Math.abs(ground.getY() - anchor.getY()) > 6) return null; // stay near the anchor's own elevation
+        // Used to also accept isCleanGround (untouched vanilla terrain) - the phase-4 guaranteed
+        // burst (see guaranteeMiniBiomeGrowth) could then scatter ~30 lotus trees across ground
+        // that was never actually infected, anywhere within GUARANTEED_GROWTH_RADIUS of the
+        // anchor. That's exactly what read as "only the trees ever change, the ground doesn't" -
+        // the trees weren't tied to real ground conversion at all. Only grow on ground the
+        // infection has actually already converted.
         BlockState below = level.getBlockState(ground);
-        if (!SpreadTables.isInfectedGround(below) && !SpreadTables.isCleanGround(below)) return null;
+        if (!SpreadTables.isInfectedGround(below)) return null;
         return ground.above();
     }
 
