@@ -92,6 +92,7 @@ public class LotusBlight {
                 output.accept(ModItems.METEORITE_CHESTPLATE.get());
                 output.accept(ModItems.METEORITE_LEGGINGS.get());
                 output.accept(ModItems.METEORITE_BOOTS.get());
+                output.accept(ModItems.STAR_LIGHT_VIAL.get());
             }).build());
 
     /**
@@ -203,11 +204,15 @@ public class LotusBlight {
     private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
         event.registerEntityRenderer(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.client.renderer.entity.WolfRenderer::new);
+        // Reuses ZombieRenderer's humanoid model/animation rig via a thin subclass (HonchoRenderer)
+        // that overrides the hardcoded vanilla zombie texture with Honcho's own original one.
+        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoRenderer::new);
     }
 
     /** Forge requires every living entity type to have a registered attribute supplier or it crashes the instant one is spawned. Reuses vanilla Wolf's own attribute map - same base stats, GuardianManager-style code tunes health/damage per instance afterward. */
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
+        event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
     }
 
     /**

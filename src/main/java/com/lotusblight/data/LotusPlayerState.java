@@ -85,6 +85,19 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String HONCHO_QUEST_KEY = "HonchoQuestDone";
+
+    /** Whether this player has already given Honcho their star light vial - he only asks once (see com.lotusblight.entity.HonchoEntity). */
+    public static boolean hasCompletedHonchoQuest(Player player) {
+        return root(player, false).getBoolean(HONCHO_QUEST_KEY);
+    }
+
+    public static void markHonchoQuestComplete(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_QUEST_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static boolean hasFullMapVisibility(Player player) {
         return root(player, false).getBoolean(FULL_MAP_VISIBILITY_KEY);
     }

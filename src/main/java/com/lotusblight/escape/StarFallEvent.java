@@ -56,7 +56,17 @@ public final class StarFallEvent {
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowStarFallPacket(allianceBranch));
             if (player.level() instanceof ServerLevel level) {
                 MeteorShowerEventManager.forceShower(level, MeteorShowerEventManager.ShowerScale.LARGE);
+                spawnHoncho(level, player);
             }
         }
+    }
+
+    /** "появляется ПОСЛЕ [StarFall]" - one Honcho per player who lives through StarFall, dropped in near them; he's persistent and just wanders/waits from then on (see HonchoEntity). */
+    private void spawnHoncho(ServerLevel level, ServerPlayer player) {
+        var entity = com.lotusblight.registry.ModEntities.HONCHO.get().create(level);
+        if (entity == null) return;
+        var pos = player.blockPosition().offset(2, 0, 2);
+        entity.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0f, 0f);
+        level.addFreshEntity(entity);
     }
 }

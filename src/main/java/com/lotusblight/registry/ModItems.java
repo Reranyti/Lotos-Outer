@@ -100,5 +100,9 @@ public final class ModItems {
     public static final RegistryObject<Item> METEORITE_LEGGINGS = ITEMS.register("meteorite_leggings", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.LEGGINGS, new Item.Properties()));
     public static final RegistryObject<Item> METEORITE_BOOTS = ITEMS.register("meteorite_boots", () -> new LotusArmorItem(MeteoriteArmorMaterial.METEORITE, ArmorItem.Type.BOOTS, new Item.Properties()));
 
+    // --- Honcho's quest item (see com.lotusblight.entity.HonchoEntity) - original design built around star_light.png's own motif ---
+    public static final RegistryObject<Item> STAR_LIGHT_VIAL = ITEMS.register("star_light_vial", () -> new com.lotusblight.item.StarLightVialItem(new Item.Properties().stacksTo(1)
+            .food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(0).saturationMod(0f).alwaysEat().build())));
+
     private ModItems() {}
 }

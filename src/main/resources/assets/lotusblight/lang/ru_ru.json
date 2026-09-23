@@ -98,5 +98,7 @@
   "item.lotusblight.meteorite_helmet": "Метеоритный шлем",
   "item.lotusblight.meteorite_chestplate": "Метеоритный нагрудник",
   "item.lotusblight.meteorite_leggings": "Метеоритные поножи",
-  "item.lotusblight.meteorite_boots": "Метеоритные ботинки"
+  "item.lotusblight.meteorite_boots": "Метеоритные ботинки",
+  "item.lotusblight.star_light_vial": "Флакон Звёздного Света",
+  "entity.lotusblight.honcho": "Хончо"
 }
