@@ -53,7 +53,12 @@ public final class LotusCommands {
                         .then(Commands.argument("passes", IntegerArgumentType.integer(1, 500))
                                 .executes(ctx -> timewarp(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "passes")))))
                 .then(chaseCommands())
-                .then(starFallCommands()));
+                .then(starFallCommands())
+                .then(worldCommands())
+                .then(meteoriteCommands())
+                .then(blackHeartCommands())
+                .then(borderCommands())
+                .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource()))));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------
@@ -329,6 +334,98 @@ public final class LotusCommands {
                 (net.minecraft.server.level.ServerLevel) player.level(),
                 net.exmo.meteor_shower.event.MeteorShowerEventManager.ShowerScale.LARGE);
         source.sendSuccess(() -> Component.literal("StarFall (" + (allianceBranch ? "альянс" : "война") + ") запущен для " + player.getGameProfile().getName()), true);
+        return 1;
+    }
+
+    // ---- /lotus world ... (world-wide infection totals) --------------------------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> worldCommands() {
+        return Commands.literal("world")
+                .then(Commands.literal("status").executes(ctx -> worldStatus(ctx.getSource())));
+    }
+
+    private static int worldStatus(CommandSourceStack source) {
+        long totalInfected = 0;
+        for (ServerLevel level : source.getServer().getAllLevels()) {
+            for (OutbreakRecord outbreak : OutbreakSavedData.get(level).allOutbreaks()) {
+                totalInfected += outbreak.infectedBlockCount();
+            }
+        }
+        long finalTotal = totalInfected;
+        int reference = com.lotusblight.LotusConfig.WORLD_INFECTION_REFERENCE.get();
+        float percent = reference == 0 ? 0f : (float) totalInfected / reference * 100f;
+        float chaseAt = 15f;
+        float starFallAt = 30f;
+        source.sendSuccess(() -> Component.literal(String.format(
+                "Всего заражено: %d / %d (%.2f%%). Побег открывается на %.0f%%, StarFall на %.0f%%.",
+                finalTotal, reference, percent, chaseAt, starFallAt)), false);
+        return 1;
+    }
+
+    // ---- /lotus meteorite ... (meteorite spread testing) --------------------------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> meteoriteCommands() {
+        return Commands.literal("meteorite")
+                .then(Commands.literal("seed")
+                        .executes(ctx -> meteoriteSeed(ctx.getSource(), BlockPos.containing(ctx.getSource().getPosition())))
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> meteoriteSeed(ctx.getSource(), BlockPosArgument.getLoadedBlockPos(ctx, "pos")))));
+    }
+
+    private static int meteoriteSeed(CommandSourceStack source, BlockPos pos) {
+        ServerLevel level = source.getLevel();
+        level.setBlock(pos, ModBlocks.METEORITE_STONE.get().defaultBlockState(), 3);
+        com.lotusblight.spread.MeteoriteSpreadEngine.seed(level, pos);
+        source.sendSuccess(() -> Component.literal("Метеоритный спред посажен в " + pos.toShortString() + "."), true);
+        return 1;
+    }
+
+    // ---- /lotus blackheart ... (BlackHeartManager testing) -------------------------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> blackHeartCommands() {
+        return Commands.literal("blackheart")
+                .then(Commands.literal("get")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> blackHeartGet(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+                .then(Commands.literal("set")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("count", IntegerArgumentType.integer(0, 20))
+                                        .executes(ctx -> blackHeartSet(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), IntegerArgumentType.getInteger(ctx, "count"))))));
+    }
+
+    private static int blackHeartGet(CommandSourceStack source, ServerPlayer player) {
+        int count = LotusPlayerState.getBlackHeartCount(player);
+        source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + ": чёрных сердец " + count), false);
+        return count;
+    }
+
+    private static int blackHeartSet(CommandSourceStack source, ServerPlayer player, int count) {
+        com.lotusblight.effect.BlackHeartManager.forceCount(player, count);
+        source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + " -> чёрных сердец " + count), true);
+        return 1;
+    }
+
+    // ---- /lotus border ... (quarantine world border status) ------------------------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> borderCommands() {
+        return Commands.literal("border")
+                .then(Commands.literal("status").executes(ctx -> borderStatus(ctx.getSource())));
+    }
+
+    private static int borderStatus(CommandSourceStack source) {
+        var border = source.getServer().overworld().getWorldBorder();
+        source.sendSuccess(() -> Component.literal(String.format(
+                "Граница: размер %.0f, центр (%.0f, %.0f)",
+                border.getSize(), border.getCenterX(), border.getCenterZ())), false);
+        return 1;
+    }
+
+    // ---- /lotus book (opens the command reference GUI, see LotusCommandBookScreen) -------------
+
+    private static int openCommandBook(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new com.lotusblight.map.OpenCommandBookPacket());
         return 1;
     }
 }

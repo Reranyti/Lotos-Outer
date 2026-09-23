@@ -49,6 +49,12 @@ public final class BlackHeartManager {
         player.displayClientMessage(Component.literal("— Чёрное сердце. Оно не помогает — оно забирает."), true);
     }
 
+    /** Admin/testing override (see com.lotusblight.command.LotusCommands) - sets the count directly and reapplies the health modifier, instead of the real one-per-golden-item path. */
+    public static void forceCount(ServerPlayer player, int count) {
+        LotusPlayerState.setBlackHeartCount(player, count);
+        applyModifier(player, count);
+    }
+
     private static void applyModifier(ServerPlayer player, int blackHeartCount) {
         AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
         if (attr == null) return;

@@ -304,6 +304,13 @@ public final class LotusPlayerState {
         return newCount;
     }
 
+    /** Admin/testing override (see com.lotusblight.command.LotusCommands) - real play only ever reaches this via incrementBlackHeartCount. */
+    public static void setBlackHeartCount(Player player, int count) {
+        CompoundTag root = root(player, true);
+        root.putInt(BLACK_HEART_COUNT_KEY, Math.max(0, count));
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static void clearBlackHeartCount(Player player) {
         CompoundTag root = root(player, true);
         root.putInt(BLACK_HEART_COUNT_KEY, 0);
