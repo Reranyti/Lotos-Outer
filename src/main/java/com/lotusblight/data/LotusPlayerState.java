@@ -86,8 +86,9 @@ public final class LotusPlayerState {
     }
 
     private static final String HONCHO_QUEST_KEY = "HonchoQuestDone";
+    private static final String HONCHO_DEPENDENCY_KEY = "HonchoDependencyCount";
 
-    /** Whether this player has already given Honcho their star light vial - he only asks once (see com.lotusblight.entity.HonchoEntity). */
+    /** Whether this player has ever given Honcho a vial at least once - unlocks the repeatable feeding below, doesn't gate it after the first time. */
     public static boolean hasCompletedHonchoQuest(Player player) {
         return root(player, false).getBoolean(HONCHO_QUEST_KEY);
     }
@@ -96,6 +97,23 @@ public final class LotusPlayerState {
         CompoundTag root = root(player, true);
         root.putBoolean(HONCHO_QUEST_KEY, true);
         player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /**
+     * "передача Хончо делает Хончо зависимее от вас" - every vial fed to him after the first counts
+     * toward this, not just a one-time quest (see HonchoEntity/HonchoRewardManager, mirrors how
+     * TrueLightHeartsManager/BlackHeartManager both use a stacking count instead of a flat flag).
+     */
+    public static int getHonchoDependencyCount(Player player) {
+        return root(player, false).getInt(HONCHO_DEPENDENCY_KEY);
+    }
+
+    public static int incrementHonchoDependencyCount(Player player) {
+        CompoundTag root = root(player, true);
+        int newCount = root.getInt(HONCHO_DEPENDENCY_KEY) + 1;
+        root.putInt(HONCHO_DEPENDENCY_KEY, newCount);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return newCount;
     }
 
     private static final String HONCHO_ASSISTANT_ASKED_KEY = "HonchoAssistantAsked";
