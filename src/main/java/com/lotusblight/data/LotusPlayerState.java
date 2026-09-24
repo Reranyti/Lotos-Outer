@@ -98,6 +98,19 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String HONCHO_ASSISTANT_ASKED_KEY = "HonchoAssistantAsked";
+
+    /** War-branch-only "let me be your assistant" scene - asked once, on first meeting Honcho (see HonchoEntity). */
+    public static boolean hasAskedHonchoAssistant(Player player) {
+        return root(player, false).getBoolean(HONCHO_ASSISTANT_ASKED_KEY);
+    }
+
+    public static void markAskedHonchoAssistant(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_ASSISTANT_ASKED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static boolean hasFullMapVisibility(Player player) {
         return root(player, false).getBoolean(FULL_MAP_VISIBILITY_KEY);
     }

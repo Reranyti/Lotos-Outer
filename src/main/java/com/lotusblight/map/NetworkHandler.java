@@ -52,5 +52,7 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, ShowStarFallPacket.class, ShowStarFallPacket::encode, ShowStarFallPacket::decode, ShowStarFallPacket::handle);
         CHANNEL.registerMessage(id++, StarFallLineReachedPacket.class, StarFallLineReachedPacket::encode, StarFallLineReachedPacket::decode, StarFallLineReachedPacket::handle);
         CHANNEL.registerMessage(id++, OpenCommandBookPacket.class, OpenCommandBookPacket::encode, OpenCommandBookPacket::decode, OpenCommandBookPacket::handle);
+        CHANNEL.registerMessage(id++, ShowHonchoAssistantPacket.class, ShowHonchoAssistantPacket::encode, ShowHonchoAssistantPacket::decode, ShowHonchoAssistantPacket::handle);
+        CHANNEL.registerMessage(id++, HonchoAssistantChoicePacket.class, HonchoAssistantChoicePacket::encode, HonchoAssistantChoicePacket::decode, HonchoAssistantChoicePacket::handle);
     }
 }

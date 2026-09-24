@@ -69,6 +69,17 @@ public class HonchoEntity extends Zombie {
         if (this.level().isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.SUCCESS;
         }
+
+        // "Позволь мне стать твоим помощником... (только на ветке войны)" - a one-time scene shown
+        // the very first time a RESISTANCE player meets Honcho, before his normal vial-quest text.
+        if (LotusPlayerState.getDialogueBranch(serverPlayer) == LotusPlayerState.BRANCH_RESISTANCE
+                && !LotusPlayerState.hasAskedHonchoAssistant(serverPlayer)) {
+            LotusPlayerState.markAskedHonchoAssistant(serverPlayer);
+            com.lotusblight.map.NetworkHandler.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> serverPlayer),
+                    new com.lotusblight.map.ShowHonchoAssistantPacket());
+            return InteractionResult.CONSUME;
+        }
+
         ItemStack held = player.getItemInHand(hand);
 
         if (LotusPlayerState.hasCompletedHonchoQuest(serverPlayer)) {

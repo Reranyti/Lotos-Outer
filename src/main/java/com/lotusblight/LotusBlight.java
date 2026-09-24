@@ -189,6 +189,8 @@ public class LotusBlight {
         CriteriaTriggers.register(com.lotusblight.advancement.AllianceGuardianSlaughterTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.WorldLotusLectureTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.TraitorBossDefeatedTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.HonchoBestBossTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.HonchoCruelTrigger.INSTANCE);
         MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes
