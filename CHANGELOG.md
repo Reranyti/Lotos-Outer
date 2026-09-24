@@ -7,6 +7,86 @@ after the fact, without rewriting any past commits. Going forward,
 `gradle.properties`' `mod_version` is bumped alongside the commit that
 finishes each batch of work below.
 
+Versioning switched from `major.minor.patch` to a flat `1.NNNN` counter at
+`1.1010` — every entry below `1.1010` still uses the old three-part numbers
+as they were actually committed at the time.
+
+*Note: commit messages between `1.7.0` and `1.67.x` didn't embed a version
+number, so that stretch isn't individually reconstructable here — see
+`git log` for the raw history of that range. Everything from `1.68.0` onward
+is transcribed directly from its own commit message.*
+
+## 1.1010 — Versioning switch
+- Switched `mod_version` from `major.minor.patch` to a flat `1.NNNN` counter.
+
+## 1.101.0 — Honcho ambient line
+- Rare ambient line for whoever is currently feeding Honcho, echoing "the
+  light used to guide him, now the player does" without quoting anything.
+
+## 1.100.0 — Meteorite patches, Blessing territory, map waypoints
+- StarFall's meteorite impact patch radius widened substantially (9 → 24).
+- Impact sites now carry their own "territory" flag (not a real Minecraft
+  biome) recognized by the same checks that already treat the real Blessing
+  biome specially (guardian spawn skip, infection spread penalty) — set the
+  instant the site is seeded, ahead of the slower block-by-block spread.
+- Meteorite impact positions now show as waypoints on the minimap.
+
+## 1.96.0 – 1.99.0 — Honcho
+- New original quest NPC appearing once after a player survives StarFall:
+  brings him a Star Light Vial, gets a permanent health blessing and lore in
+  return. A short-lived duplicate NPC ("Horichoniy", a WanderingTrader-based
+  vendor) was added by mistake and removed again the same day.
+- War-branch-only "let me be your assistant" scene on first meeting, with a
+  Yes/No choice each granting its own advancement.
+- The vial quest became repeatable instead of one-time: every vial deepens a
+  real dependency — Honcho follows whoever fed him and visibly weakens
+  (Weakness + Slowness) if 20 minutes pass without another one.
+
+## 1.93.0 – 1.94.1 — Quarantine world border
+- World border capped at 1,000,000 blocks, centered on spawn, for story
+  reasons ("the site was sealed under quarantine").
+- Fully custom (not vanilla) purple force-field wall rendered at the nearest
+  edge, plus a bounce-back-and-can't-die-from-it mechanic replacing vanilla's
+  own border damage, plus a blood-red sky tint on approach.
+
+## 1.91.0 – 1.92.0 — Per-biome infection color overhaul
+- Every biome with a dictated fog gradient now derives its own ground/wood
+  tint from that gradient instead of one of 8 shared group colors.
+- Stone/sand/gravel intentionally kept one shared tone across every biome
+  (they're minerals, not biome-tied organics) — fixed from an accidental
+  identical color bug, not turned into 50 more variants.
+- Infected water's underwater fog now follows the same per-biome gradient
+  instead of one fixed dark green everywhere.
+- Infection spread speed now fades smoothly with distance from the nearest
+  player instead of freezing outbreaks outside a fixed radius entirely.
+
+## 1.87.0 – 1.90.0 — Post-audit bug-fix wave
+- A second full-mod workflow audit found and fixed: an unguarded
+  synchronous-chunk-load deadlock (also present in three other spots besides
+  the one already fixed in the Escape lab), a starter-water-search fairness
+  bug starving later-joining players, grass blocks almost never actually
+  converting during infection spread, and tree canopies starving ground
+  conversion of frontier attempts.
+- Several one-off crashes/bugs on specific Forge builds and StarFall's own
+  branch mix-up were fixed the same week.
+
+## 1.85.0 – 1.86.0 — Meteorite gear, real StarFall trigger
+- Crafting recipes for the whole `lotus_alloy` tool/armor set, the grafting
+  rod, seer lens and vitamin — previously creative-only.
+- StarFall now fires on its own once world infection crosses 30%, instead of
+  only via the admin test command.
+- Full meteorite tool/armor tier (between diamond and netherite).
+
+## 1.68.0 – 1.84.0 — Traitor branch, Escape, StarFall
+- Full traitor storyline: guardian-kill/cleanse-powder betrayal triggers, a
+  6-wave boss fight, and its own incineration cutscene.
+- "Побег от лотоса" — a persistent, sealed escape-the-lab event with a
+  real/decoy junction, unlocked only once world infection crosses 15%.
+- StarFall — a one-time Star Light encounter with a full alliance/war branch
+  script, ending in either a permanent resource or a real consequence
+  depending on the player's choices, backed by the Ex Meteor Shower mod for
+  its comet visuals.
+
 ## 1.6.0 — Inner voice system, glowing berries fixed
 - `glowing_berry` was registered but unreachable (bush dropped itself, not the
   food item) — right-click the bush to harvest instead of breaking it.
