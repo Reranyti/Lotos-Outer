@@ -33,6 +33,7 @@ public final class LotusHudOverlay {
     private static final int COLOR_OUTBREAK_LOW = 0xFF53C56E;
     private static final int COLOR_OUTBREAK_HIGH = 0xFFFF4F9A;
     private static final int COLOR_OUTBREAK_HIDDEN = 0x80B8C8BE;
+    private static final int COLOR_METEORITE = 0xFFB388FF;
 
     private static boolean hidden;
 
@@ -86,6 +87,14 @@ public final class LotusHudOverlay {
             int color = markerColor(marker);
             int half = marker.heartAnchor() ? 2 : 1;
             g.fill(mx - half, mz - half, mx + half + 1, mz + half + 1, color);
+        }
+
+        for (net.minecraft.core.BlockPos pos : ClientMapCache.meteoriteMarkers()) {
+            double dx = pos.getX() + 0.5 - px;
+            double dz = pos.getZ() + 0.5 - pz;
+            int mx = mapCenterX + Math.round((float) (dx * scale));
+            int mz = mapCenterY + Math.round((float) (dz * scale));
+            g.fill(mx - 1, mz - 1, mx + 2, mz + 2, COLOR_METEORITE);
         }
 
         g.disableScissor();

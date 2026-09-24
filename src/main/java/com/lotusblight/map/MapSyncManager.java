@@ -113,6 +113,13 @@ public final class MapSyncManager {
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer),
                 new PlayerStateSyncPacket(LotusPlayerState.getDialogueBranch(serverPlayer), fullVisibility, LotusPlayerState.hasHeardInnerVoice(serverPlayer), LotusPlayerState.hasSeenGuardian(serverPlayer), LotusPlayerState.getAllianceCleanseUses(serverPlayer)));
 
+        // "показывай вейпойнты" на местах падения метеоритов - reuses the exact same per-player sync
+        // cadence as outbreak markers, just from a different SavedData source (positions only).
+        List<net.minecraft.core.BlockPos> meteoritePositions = com.lotusblight.data.MeteoriteSpreadSavedData.get(level).allSources().stream()
+                .map(com.lotusblight.data.MeteoriteSpreadRecord::pos)
+                .toList();
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MeteoriteMarkerSyncPacket(meteoritePositions));
+
         // Mossy Glands aren't secret like hidden outbreaks - there are only NATURAL_GLAND_COUNT of
         // them and just finding them at all was the reported problem (bug #21), so every player
         // always gets the full list, no discovery gating.

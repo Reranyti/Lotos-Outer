@@ -68,10 +68,11 @@ public class StarFallLineReachedPacket {
         ctx.setPacketHandled(true);
     }
 
-    // "и на его месте вокруг 80 блоков нового биома" - not a literal 80-block radius (that's
-    // ~16,000 blocks, well past the scale of any other patch/spread feature in this mod); reading
-    // it as "a patch of about that many blocks total" instead, roughly matching a radius-9 circle.
-    private static final int PATCH_RADIUS = 9;
+    // "нужно прям реально огромные кусики метеорита" - the original radius-9 reading of "80 blocks"
+    // was itself already an interpretation (a literal 80-block radius is ~16,000 blocks); this
+    // widens the immediate impact footprint substantially instead of leaving it to
+    // MeteoriteSpreadEngine's slower organic growth to eventually catch up.
+    private static final int PATCH_RADIUS = 24;
 
     private static void placePurpleBlessingPatch(ServerLevel level, BlockPos center) {
         var sand = ModBlocks.BLESSING_SAND_PURPLE.get().defaultBlockState();

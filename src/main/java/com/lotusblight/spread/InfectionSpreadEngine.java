@@ -268,8 +268,10 @@ public class InfectionSpreadEngine {
     private static final int BLESSING_ATTEMPTS_PENALTY = 1;
     private static final int BLESSING_RADIUS_PENALTY = 1;
 
+    /** Real vanilla Blessing biome OR a meteorite impact site's own "world property" (see MeteoriteSpreadEngine#isBlessingTerritory) - both read as Blessing territory for this check. */
     private boolean isInBlessingBiome(ServerLevel level, BlockPos pos) {
-        return level.getBiome(pos).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME);
+        return level.getBiome(pos).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)
+                || MeteoriteSpreadEngine.isBlessingTerritory(level, pos);
     }
 
     private static final int OCEAN_ATTEMPTS_BONUS = 3;

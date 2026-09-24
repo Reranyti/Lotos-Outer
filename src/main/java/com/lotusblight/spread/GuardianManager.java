@@ -163,8 +163,10 @@ public final class GuardianManager {
             if (!level.hasChunkAt(outbreak.pos())) continue;
             // Same rule InfectionSpreadEngine#isInBlessingBiome already applies to spread itself -
             // the blessing biome is the infection's one sanctuary from spread, so it shouldn't be
-            // patrolled by the infection's own guardians either.
-            if (level.getBiome(outbreak.pos()).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)) continue;
+            // patrolled by the infection's own guardians either - a meteorite impact site's own
+            // "world property" (see MeteoriteSpreadEngine#isBlessingTerritory) counts the same way.
+            if (level.getBiome(outbreak.pos()).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)
+                    || com.lotusblight.spread.MeteoriteSpreadEngine.isBlessingTerritory(level, outbreak.pos())) continue;
             if (!withinActiveRange(level, outbreak.pos(), activeRangeSq)) continue;
             if (livingGuardianCount(level, outbreak.id(), outbreak.pos()) >= MAX_GUARDIANS_PER_OUTBREAK) continue;
 

@@ -44,6 +44,25 @@ public class MeteoriteSpreadEngine {
         MeteoriteSpreadSavedData.get(level).registerSource(pos, level.getGameTime());
     }
 
+    /** How far out an impact site's own "world property" (not a real Minecraft biome, see class doc) counts as Blessing territory for mechanics that check isInBlessingBiome. */
+    private static final double TERRITORY_RADIUS = 96.0;
+
+    /**
+     * "место падения... ставит своё [свойство]... а потом уже захват через биом" - the impact site
+     * itself is marked as Blessing territory the instant it's seeded (MeteoriteSpreadSavedData
+     * already records it immediately, before a single block visibly converts), independent of how
+     * far the actual block-by-block spread has physically reached since. Lets mechanics that only
+     * ever checked the real vanilla Blessing biome (guardian spawn skip, spread penalty near
+     * Blessing) treat a meteorite impact site the same way, without touching real biome data at all.
+     */
+    public static boolean isBlessingTerritory(ServerLevel level, BlockPos pos) {
+        double rangeSq = TERRITORY_RADIUS * TERRITORY_RADIUS;
+        for (MeteoriteSpreadRecord source : MeteoriteSpreadSavedData.get(level).allSources()) {
+            if (source.pos().distSqr(pos) <= rangeSq) return true;
+        }
+        return false;
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;

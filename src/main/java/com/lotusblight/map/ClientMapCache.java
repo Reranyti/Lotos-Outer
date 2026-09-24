@@ -13,6 +13,8 @@ public final class ClientMapCache {
     private static volatile List<MapMarker> markers = List.of();
     private static volatile List<Long> infectedChunkKeys = List.of();
     private static volatile long lastUpdateMs = 0L;
+    /** Meteorite impact site positions - see MeteoriteMarkerSyncPacket. Positions only, no phase/progress like outbreak markers have. */
+    private static volatile List<net.minecraft.core.BlockPos> meteoriteMarkers = List.of();
 
     private ClientMapCache() {
     }
@@ -21,6 +23,14 @@ public final class ClientMapCache {
         markers = List.copyOf(newMarkers);
         infectedChunkKeys = List.copyOf(newInfectedChunkKeys);
         lastUpdateMs = System.currentTimeMillis();
+    }
+
+    public static void updateMeteoriteMarkers(List<net.minecraft.core.BlockPos> positions) {
+        meteoriteMarkers = List.copyOf(positions);
+    }
+
+    public static List<net.minecraft.core.BlockPos> meteoriteMarkers() {
+        return meteoriteMarkers;
     }
 
     public static List<MapMarker> markers() {
@@ -40,6 +50,7 @@ public final class ClientMapCache {
     public static void clear() {
         markers = List.of();
         infectedChunkKeys = List.of();
+        meteoriteMarkers = List.of();
         lastUpdateMs = 0L;
     }
 }
