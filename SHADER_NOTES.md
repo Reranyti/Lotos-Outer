@@ -1,35 +1,39 @@
-# Визуальная совместимость Lotus Blight
+# Визуальная совместимость Lotus Blight (обновлено под v1.1010)
 
-## Streams Reflowing
+## Streams Reflowing — интеграция реализована
 
-Страница Modrinth: https://modrinth.com/mod/streams-reflowing/versions
+Изначально рассматривался вопрос мягкой совместимости. Статус сейчас: реализовано и работает.
+`STREAMS_REFLOWING_LOADED` в `InfectionSpreadEngine` реагирует на реальную скорость течения (через
+патченный `getFlow()`), а не только на факт наличия воды — заражение по-настоящему быстрее следует
+за течением реки, чем за стоячим озером, если Streams Reflowing установлен. Без него используется
+обычное поведение вида воды.
 
-На странице указано, что Streams Reflowing поддерживает Minecraft 1.20.1–1.20.6, платформы Fabric, Forge и NeoForge, а также клиент и сервер. Поэтому целевой набор Forge 1.20.1 совместим с указанным модом. Для Lotus Blight безопаснее использовать мягкую совместимость: реагировать на фактически существующие блоки воды и направление русла, не добавляя жёсткую зависимость от внутреннего API Streams Reflowing.
+## Complementary Shaders / Oculus — статус не менялся, рекомендация остаётся актуальной
 
-## Complementary Shaders
+Практическая связка для Forge 1.20.1 (Oculus на клиенте + Complementary Reimagined как shader pack)
+не изменилась с исходной версии документа. Мод по-прежнему не полагается на шейдер для базовой
+читаемости — цвета видны и без него, шейдер лишь подчёркивает воду и свечение.
 
-Официальная страница: https://www.complementary.dev/shaders/
+Важное уточнение, добавленное после реального опыта с игроками: Embeddium (используемый частью
+тестеров вместо ванильного рендера) явно НЕ поддерживает связку с Oculus официально — при
+использовании обоих модов вместе игра сама предупреждает об этом при старте («Embeddium instance
+tainted by mods: [oculus]»). Это не баг мода, но стоит иметь в виду при диагностике визуальных
+проблем у тестеров с этой связкой модов: сначала исключить конфликт Embeddium/Oculus, прежде чем
+искать причину в собственном коде мода.
 
-Complementary описывает себя как шейдерпак с высоким качеством, детализацией и производительностью. Доступны два стиля: Unbound рассчитан на более реалистичное изображение, а Reimagined — на переосмысление Minecraft с сохранением узнаваемого ванильного стиля. Официальная страница отмечает, что оба стиля можно настраивать после установки, включая реалистичную воду в Reimagined.
+## Собственная визуализация тумана — не было в исходном документе
 
-## Предварительный выбор
-
-Для Lotus Blight лучше начать с Complementary Reimagined. Он должен сохранить читаемость зелёной листвы и розовых лепестков, а настройка воды и свечения поможет подчеркнуть цветущие реки. В моде стоит использовать умеренную яркость частиц, нефритово-зелёную заражённую почву, розовые цветы и слабое розовое свечение Сердца лотоса. Не следует полагаться только на шейдер: основные цвета должны быть видимы и без него.
+Мод больше не полагается только на сторонние шейдеры для атмосферы. Реализована собственная
+система тумана (`InfectionFogRenderer`, `QuarantineFogRenderer`): цвет тумана плавно меняется по
+биому (через `BiomeFogColors`, свой градиент почти для каждого ванильного биома) и по близости к
+активному очагу или карантинной границе — работает одинаково с шейдером и без него.
 
 ## References
 
-[1]: https://modrinth.com/mod/streams-reflowing/versions — Streams Reflowing, страница версий Modrinth.
-[2]: https://www.complementary.dev/shaders/ — Complementary Shaders, официальный сайт.
+[1]: https://modrinth.com/mod/streams-reflowing/versions — Streams Reflowing.
+[2]: https://www.complementary.dev/shaders/ — Complementary Shaders.
+[3]: https://modrinth.com/mod/oculus — Oculus.
+[4]: https://modrinth.com/shader/complementary-reimagined/versions — Complementary Reimagined.
 
-## Forge shader loader
-
-Страница Oculus на Modrinth: https://modrinth.com/mod/oculus
-
-Oculus описан как неофициальная ветка Iris, адаптированная для FML. На странице указана поддержка Minecraft 1.20–1.20.1, платформ Forge и NeoForge, клиентская сторона. Также заявлена совместимость с существующими ShaderMod/OptiFine shader packs без изменений.
-
-Complementary Reimagined на Modrinth отмечен как совместимый с Minecraft 1.20.x и с Iris/OptiFine; его теги включают Colored Lighting, Atmosphere, Bloom, Foliage, Reflections и Shadows. Практическая связка для Forge 1.20.1: Oculus на клиенте + Complementary Reimagined как shader pack.
-
-## References
-
-[3]: https://modrinth.com/mod/oculus — Oculus, страница Modrinth.
-[4]: https://modrinth.com/shader/complementary-reimagined/versions — Complementary Reimagined, версии и совместимость на Modrinth.
+Актуализация 2026-09-24 — реальный код (`InfectionSpreadEngine`, `InfectionFogRenderer`,
+`BiomeFogColors`) и наблюдения за реальными тестовыми сессиями с Embeddium/Oculus.
