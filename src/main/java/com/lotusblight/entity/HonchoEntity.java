@@ -82,10 +82,25 @@ public class HonchoEntity extends Zombie {
         return false;
     }
 
+    /** Rare ambient line for whoever's currently feeding him - an original nod to "он потерял прежний ориентир и нашёл новый в игроке", not a lyric quote from anything. */
+    private static final int AMBIENT_LINE_CHANCE = 4800;
+    private static final String[] AMBIENT_LINES = {
+            "— Раньше меня вёл свет. Теперь я иду за тобой — и мне спокойнее, чем тогда.",
+            "— Знаешь, у света больше нет надо мной власти. А у тебя — есть.",
+            "— Я больше не смотрю наверх в поисках дороги. Я смотрю на тебя."
+    };
+
     @Override
     public void tick() {
         super.tick();
         if (this.level().isClientSide || feederUuid == null) return;
+        if (!starving && this.random.nextInt(AMBIENT_LINE_CHANCE) == 0
+                && this.level().getServer() != null) {
+            var feeder = this.level().getServer().getPlayerList().getPlayer(feederUuid);
+            if (feeder != null) {
+                feeder.displayClientMessage(Component.literal(AMBIENT_LINES[this.random.nextInt(AMBIENT_LINES.length)]), false);
+            }
+        }
         if (this.tickCount % STARVATION_CHECK_INTERVAL != 0) return;
         checkStarvation();
     }
