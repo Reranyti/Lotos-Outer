@@ -22,23 +22,33 @@ import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.UUID;
 
 /**
  * "Хончо... поклоняется звёздному свету... появляется ПОСЛЕ [StarFall]" - a friendly quest NPC,
- * spawned once per world after a player lives through StarFall (see StarFallEvent). Technically
- * a Zombie subclass purely for its ready-made humanoid skeleton/animation - every hostile goal is
- * stripped and replaced with plain wander/look-at-player behaviour, and it never targets or attacks
- * anything. Original character design (see HonchoRenderer's texture) - "referencing" a DOORS
- * entity by name/role in the story is fine, but no borrowed artwork.
+ * spawned once per world after a player lives through StarFall (see StarFallEvent). Still a Zombie
+ * subclass for its AI/attribute plumbing - every hostile goal is stripped and replaced with plain
+ * wander/look-at-player behaviour, and it never targets or attacks anything - but the RENDERED
+ * model is no longer vanilla zombie geometry ("КАКОЙ НАХУЙ ЗОМБИ" - user's explicit objection to
+ * that): see HonchoModel/HonchoGeoRenderer for his own GeckoLib geometry, matched to honcho.png's
+ * existing UV layout. Original character design - "referencing" a DOORS entity by name/role in the
+ * story is fine, but no borrowed artwork.
  *
  * "передача Хончо делает Хончо зависимее от вас... зависимость от игрока в прямом смысле" - once he's
  * been fed his first vial, he actually follows whoever fed him (see FollowFeederGoal) and, if too
  * long passes without another vial, visibly weakens (see #checkStarvation) - a real, felt
  * dependency, not just a stacking stat.
  */
-public class HonchoEntity extends Zombie {
+public class HonchoEntity extends Zombie implements GeoEntity {
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     /** How long (ticks) Honcho can go without a fresh vial before he starts to weaken. */
     private static final int STARVATION_TICKS = 20 * 60 * 20; // 20 minutes
     private static final int STARVATION_CHECK_INTERVAL = 200;
@@ -211,5 +221,15 @@ public class HonchoEntity extends Zombie {
 
     UUID getFeederUuid() {
         return feederUuid;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, state -> state.setAndContinue(IDLE)));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 }

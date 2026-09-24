@@ -56,5 +56,7 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, HonchoAssistantChoicePacket.class, HonchoAssistantChoicePacket::encode, HonchoAssistantChoicePacket::decode, HonchoAssistantChoicePacket::handle);
         CHANNEL.registerMessage(id++, MeteoriteMarkerSyncPacket.class, MeteoriteMarkerSyncPacket::encode, MeteoriteMarkerSyncPacket::decode, MeteoriteMarkerSyncPacket::handle);
         CHANNEL.registerMessage(id++, ReputationSyncPacket.class, ReputationSyncPacket::encode, ReputationSyncPacket::decode, ReputationSyncPacket::handle);
+        CHANNEL.registerMessage(id++, ShowHonchoMeetingPacket.class, ShowHonchoMeetingPacket::encode, ShowHonchoMeetingPacket::decode, ShowHonchoMeetingPacket::handle);
+        CHANNEL.registerMessage(id++, HonchoMeetingChoicePacket.class, HonchoMeetingChoicePacket::encode, HonchoMeetingChoicePacket::decode, HonchoMeetingChoicePacket::handle);
     }
 }

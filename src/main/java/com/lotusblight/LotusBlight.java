@@ -191,6 +191,8 @@ public class LotusBlight {
         CriteriaTriggers.register(com.lotusblight.advancement.TraitorBossDefeatedTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.HonchoBestBossTrigger.INSTANCE);
         CriteriaTriggers.register(com.lotusblight.advancement.HonchoCruelTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.HonchoTripRudeTrigger.INSTANCE);
+        CriteriaTriggers.register(com.lotusblight.advancement.HonchoTripPleasedTrigger.INSTANCE);
         MinecraftForge.EVENT_BUS.register(new JourneyMapSyncTicker());
 
         // Config-screen button in the mods list — soft dependency, only touches YACL classes
@@ -208,7 +210,7 @@ public class LotusBlight {
         event.registerEntityRenderer(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.client.renderer.entity.WolfRenderer::new);
         // Reuses ZombieRenderer's humanoid model/animation rig via a thin subclass (HonchoRenderer)
         // that overrides the hardcoded vanilla zombie texture with Honcho's own original one.
-        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoRenderer::new);
+        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoGeoRenderer::new);
     }
 
     /** Forge requires every living entity type to have a registered attribute supplier or it crashes the instant one is spawned. Reuses vanilla Wolf's own attribute map - same base stats, GuardianManager-style code tunes health/damage per instance afterward. */

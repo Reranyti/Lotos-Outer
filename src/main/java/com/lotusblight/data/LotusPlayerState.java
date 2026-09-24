@@ -116,6 +116,36 @@ public final class LotusPlayerState {
         return newCount;
     }
 
+    private static final String HONCHO_MET_KEY = "HonchoMet";
+    private static final String HONCHO_MEETING_PENDING_KEY = "HonchoMeetingPending";
+
+    /**
+     * "у нас нет норм встречи с хончо...на войне" - the rare, one-time "trip and see a hand" scene
+     * (see HonchoMeetingManager) that stands in for a proper first meeting, separate from the
+     * "become my assistant" scene below (which still fires on ordinary interaction regardless).
+     */
+    public static boolean hasMetHoncho(Player player) {
+        return root(player, false).getBoolean(HONCHO_MET_KEY);
+    }
+
+    public static void markMetHoncho(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_MET_KEY, true);
+        root.putBoolean(HONCHO_MEETING_PENDING_KEY, false);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Set the instant the rare trip chance rolls true, so HonchoMeetingManager doesn't roll again for this player before they've answered the choice. */
+    public static boolean isHonchoMeetingPending(Player player) {
+        return root(player, false).getBoolean(HONCHO_MEETING_PENDING_KEY);
+    }
+
+    public static void markHonchoMeetingPending(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_MEETING_PENDING_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     private static final String HONCHO_ASSISTANT_ASKED_KEY = "HonchoAssistantAsked";
 
     /** War-branch-only "let me be your assistant" scene - asked once, on first meeting Honcho (see HonchoEntity). */
