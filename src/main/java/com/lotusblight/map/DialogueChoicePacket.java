@@ -44,7 +44,14 @@ public class DialogueChoicePacket {
                     || (packet.branch != LotusPlayerState.BRANCH_RESISTANCE && packet.branch != LotusPlayerState.BRANCH_ALLIANCE)) {
                 return;
             }
-            LotusPlayerState.setDialogueBranch(player, packet.branch);
+            boolean locked = LotusPlayerState.setDialogueBranch(player, packet.branch);
+            // "репутация...плохие действия плохо хорошие хорошо" - committing to a side is the single
+            // biggest one-time signal of where the player stands with the Lotus, only counted once
+            // thanks to setDialogueBranch's own one-way lock (locked is false on a repeat attempt).
+            if (locked) {
+                LotusPlayerState.addReputation(player, com.lotusblight.data.Faction.LOTUS,
+                        packet.branch == LotusPlayerState.BRANCH_ALLIANCE ? 10 : -10);
+            }
             ChatOverhaulBranchColor.applyBranchColor(player, packet.branch);
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),

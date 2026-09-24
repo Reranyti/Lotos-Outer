@@ -1,6 +1,8 @@
 package com.lotusblight.client;
 
+import com.lotusblight.data.Faction;
 import com.lotusblight.dialogue.LotusWikiLibrary;
+import com.lotusblight.map.ClientReputationCache;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -28,7 +30,12 @@ public final class LotusWikiScreen extends Screen {
     private static final int FLASH_COLOR = 0xFFFFD54F;
     private static final int NORMAL_COLOR = 0xFFE4E7D8;
 
-    private boolean journalTab;
+    private static final int TAB_WIKI = 0;
+    private static final int TAB_JOURNAL = 1;
+    /** Only reachable once ClientReputationCache.starFallSeen() - "репутация...после старфолла". */
+    private static final int TAB_REPUTATION = 2;
+
+    private int tab = TAB_WIKI;
     private int pageIndex;
     private long pageShownAtMs;
     private Button prevButton;
@@ -40,7 +47,7 @@ public final class LotusWikiScreen extends Screen {
     }
 
     private List<String> pages() {
-        return journalTab ? LotusWikiLibrary.JOURNAL_PAGES : LotusWikiLibrary.WIKI_PAGES;
+        return tab == TAB_JOURNAL ? LotusWikiLibrary.JOURNAL_PAGES : LotusWikiLibrary.WIKI_PAGES;
     }
 
     @Override
@@ -59,7 +66,8 @@ public final class LotusWikiScreen extends Screen {
     }
 
     private void switchTab() {
-        journalTab = !journalTab;
+        int tabCount = ClientReputationCache.starFallSeen() ? 3 : 2;
+        tab = (tab + 1) % tabCount;
         pageIndex = 0;
         updateButtons();
         pageShownAtMs = System.currentTimeMillis();
@@ -166,9 +174,17 @@ public final class LotusWikiScreen extends Screen {
     }
 
     private void updateButtons() {
-        tabButton.setMessage(Component.literal(journalTab ? "-> Вики" : "-> Дневник"));
-        prevButton.active = pageIndex > 0;
-        nextButton.active = pageIndex < pages().size() - 1;
+        String nextLabel = switch (tab) {
+            case TAB_WIKI -> "-> Дневник";
+            case TAB_JOURNAL -> ClientReputationCache.starFallSeen() ? "-> Репутация" : "-> Вики";
+            default -> "-> Вики";
+        };
+        tabButton.setMessage(Component.literal(nextLabel));
+        boolean paged = tab != TAB_REPUTATION;
+        prevButton.visible = paged;
+        nextButton.visible = paged;
+        prevButton.active = paged && pageIndex > 0;
+        nextButton.active = paged && pageIndex < pages().size() - 1;
     }
 
     @Override
@@ -181,29 +197,49 @@ public final class LotusWikiScreen extends Screen {
         g.fill(left, top, left + WIDTH, top + HEIGHT, 0xF20B100D);
         g.fill(left + 10, top + 10, left + WIDTH - 150, top + 34, 0xFF263C2B);
 
-        String heading = journalTab ? "ДНЕВНИК" : "ВИКИ LOTUS BLIGHT";
+        String heading = switch (tab) {
+            case TAB_JOURNAL -> "ДНЕВНИК";
+            case TAB_REPUTATION -> "РЕПУТАЦИЯ";
+            default -> "ВИКИ LOTUS BLIGHT";
+        };
         g.drawString(this.font, heading, left + 18, top + 18, 0xFFF1A9CF, false);
 
-        List<String> pages = pages();
-        String rawText = pages.isEmpty() ? "" : pages.get(pageIndex);
-        boolean voiceEntry = rawText.startsWith(LotusWikiLibrary.VOICE_MARKER);
-        String pageText = voiceEntry ? rawText.substring(LotusWikiLibrary.VOICE_MARKER.length()) : rawText;
-
-        if (voiceEntry) {
-            drawSparkles(g, left, top);
-            drawVoiceOverlayText(g, wrapPlain(pageText, WIDTH - 36), left + 18, top + 46, mouseX, mouseY);
+        if (tab == TAB_REPUTATION) {
+            renderReputation(g, left, top);
         } else {
-            var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
-            int textColor = currentTextColor();
-            for (int i = 0; i < lines.size(); i++) {
-                g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);
+            List<String> pages = pages();
+            String rawText = pages.isEmpty() ? "" : pages.get(pageIndex);
+            boolean voiceEntry = rawText.startsWith(LotusWikiLibrary.VOICE_MARKER);
+            String pageText = voiceEntry ? rawText.substring(LotusWikiLibrary.VOICE_MARKER.length()) : rawText;
+
+            if (voiceEntry) {
+                drawSparkles(g, left, top);
+                drawVoiceOverlayText(g, wrapPlain(pageText, WIDTH - 36), left + 18, top + 46, mouseX, mouseY);
+            } else {
+                var lines = this.font.split(Component.literal(pageText), WIDTH - 36);
+                int textColor = currentTextColor();
+                for (int i = 0; i < lines.size(); i++) {
+                    g.drawString(this.font, lines.get(i), left + 18, top + 46 + i * 11, textColor, false);
+                }
             }
+
+            String counter = (pageIndex + 1) + " / " + pages.size();
+            g.drawString(this.font, counter, left + WIDTH / 2 - this.font.width(counter) / 2, top + HEIGHT - 26, 0xFF9AD47D, false);
         }
 
-        String counter = (pageIndex + 1) + " / " + pages.size();
-        g.drawString(this.font, counter, left + WIDTH / 2 - this.font.width(counter) / 2, top + HEIGHT - 26, 0xFF9AD47D, false);
-
         super.render(g, mouseX, mouseY, partialTick);
+    }
+
+    /** "плохие действия плохо хорошие хорошо" - a plain signed number per faction, colored red/green/grey by sign, no page navigation. */
+    private void renderReputation(GuiGraphics g, int left, int top) {
+        Faction[] factions = Faction.values();
+        for (int i = 0; i < factions.length; i++) {
+            Faction faction = factions[i];
+            int value = ClientReputationCache.reputation(faction);
+            int color = value > 0 ? 0xFF7CD672 : (value < 0 ? 0xFFE0645A : 0xFFAAAAAA);
+            String line = faction.displayName() + ": " + (value > 0 ? "+" + value : String.valueOf(value));
+            g.drawString(this.font, line, left + 18, top + 46 + i * 16, color, false);
+        }
     }
 
     @Override

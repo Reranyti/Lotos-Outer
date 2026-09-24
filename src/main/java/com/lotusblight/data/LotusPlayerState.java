@@ -417,4 +417,37 @@ public final class LotusPlayerState {
         root.putLong(TRUE_LIGHT_HEARTS_EXPIRES_KEY, gameTime);
         player.getPersistentData().put(ROOT_TAG, root);
     }
+
+    private static final String REPUTATION_PREFIX = "Reputation_";
+    private static final int REPUTATION_MIN = -100;
+    private static final int REPUTATION_MAX = 100;
+
+    /** "репутация...плохие действия плохо хорошие хорошо" - a simple signed score per faction, clamped so no single event can push a relationship past a hard floor/ceiling. */
+    public static int getReputation(Player player, Faction faction) {
+        return root(player, false).getInt(REPUTATION_PREFIX + faction.name());
+    }
+
+    /** Returns the new total after clamping. */
+    public static int addReputation(Player player, Faction faction, int delta) {
+        CompoundTag root = root(player, true);
+        String key = REPUTATION_PREFIX + faction.name();
+        int newValue = Math.max(REPUTATION_MIN, Math.min(REPUTATION_MAX, root.getInt(key) + delta));
+        root.putInt(key, newValue);
+        player.getPersistentData().put(ROOT_TAG, root);
+        return newValue;
+    }
+
+    private static final String HONCHO_CLOSER_KEY = "HonchoCloser";
+    /** "3 пузырька и тогда хончо будет ближе" - the dependency-count threshold for HonchoEntity's one-time "closer" milestone (tighter follow distance, one extra line). */
+    public static final int HONCHO_CLOSER_THRESHOLD = 3;
+
+    public static boolean isHonchoCloser(Player player) {
+        return root(player, false).getBoolean(HONCHO_CLOSER_KEY);
+    }
+
+    public static void markHonchoCloser(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_CLOSER_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
 }

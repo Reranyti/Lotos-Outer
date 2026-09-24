@@ -43,9 +43,17 @@ public class HonchoEntity extends Zombie {
     private static final int STARVATION_TICKS = 20 * 60 * 20; // 20 minutes
     private static final int STARVATION_CHECK_INTERVAL = 200;
 
+    /** Tightened once by markCloser() at LotusPlayerState.HONCHO_CLOSER_THRESHOLD vials - "хончо будет ближе". */
+    private static final float DEFAULT_FOLLOW_STOP_DISTANCE = 3.0f;
+    private static final float DEFAULT_FOLLOW_START_DISTANCE = 12.0f;
+    private static final float CLOSER_FOLLOW_STOP_DISTANCE = 1.5f;
+    private static final float CLOSER_FOLLOW_START_DISTANCE = 6.0f;
+
     private UUID feederUuid;
     private long lastFedGameTime;
     private boolean starving;
+    private float followStopDistance = DEFAULT_FOLLOW_STOP_DISTANCE;
+    private float followStartDistance = DEFAULT_FOLLOW_START_DISTANCE;
 
     public HonchoEntity(EntityType<? extends Zombie> type, Level level) {
         super(type, level);
@@ -65,7 +73,7 @@ public class HonchoEntity extends Zombie {
     protected void registerGoals() {
         // Deliberately none of Zombie's own hostile goals (attack/break-door/target-nearest-player).
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new FollowFeederGoal(this, 1.0, 3.0f, 12.0f));
+        this.goalSelector.addGoal(1, new FollowFeederGoal(this, 1.0));
         this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0f));
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.7));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
@@ -160,8 +168,29 @@ public class HonchoEntity extends Zombie {
         serverPlayer.displayClientMessage(Component.literal(firstTime
                 ? "— ...Это он. Настоящий свет. Спасибо тебе — теперь я снова его чувствую."
                 : "— Снова свет... Я всё больше завишу от тебя, и мне это не мешает."), false);
-        HonchoRewardManager.grantBlessing(serverPlayer);
+        int dependencyCount = HonchoRewardManager.grantBlessing(serverPlayer);
+        LotusPlayerState.addReputation(serverPlayer, com.lotusblight.data.Faction.SCIENTISTS, 2);
+        if (dependencyCount == LotusPlayerState.HONCHO_CLOSER_THRESHOLD && !LotusPlayerState.isHonchoCloser(serverPlayer)) {
+            LotusPlayerState.markHonchoCloser(serverPlayer);
+            markCloser();
+            serverPlayer.displayClientMessage(Component.literal(
+                    "— Знаешь... мне больше не нужно, чтобы ты был так далеко. Я буду рядом."), false);
+        }
         return InteractionResult.CONSUME;
+    }
+
+    /** "3 пузырька и тогда хончо будет ближе" - a one-time, permanent tightening of how close FollowFeederGoal keeps him. */
+    private void markCloser() {
+        followStopDistance = CLOSER_FOLLOW_STOP_DISTANCE;
+        followStartDistance = CLOSER_FOLLOW_START_DISTANCE;
+    }
+
+    float getFollowStopDistance() {
+        return followStopDistance;
+    }
+
+    float getFollowStartDistance() {
+        return followStartDistance;
     }
 
     @Override
@@ -169,6 +198,7 @@ public class HonchoEntity extends Zombie {
         super.addAdditionalSaveData(tag);
         if (feederUuid != null) tag.putUUID("FeederUuid", feederUuid);
         tag.putLong("LastFedGameTime", lastFedGameTime);
+        tag.putBoolean("Closer", followStopDistance == CLOSER_FOLLOW_STOP_DISTANCE);
     }
 
     @Override
@@ -176,6 +206,7 @@ public class HonchoEntity extends Zombie {
         super.readAdditionalSaveData(tag);
         if (tag.hasUUID("FeederUuid")) feederUuid = tag.getUUID("FeederUuid");
         lastFedGameTime = tag.getLong("LastFedGameTime");
+        if (tag.getBoolean("Closer")) markCloser();
     }
 
     UUID getFeederUuid() {

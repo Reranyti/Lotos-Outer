@@ -58,6 +58,7 @@ public final class LotusCommands {
                 .then(meteoriteCommands())
                 .then(blackHeartCommands())
                 .then(borderCommands())
+                .then(reputationCommands())
                 .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource()))));
     }
 
@@ -418,6 +419,38 @@ public final class LotusCommands {
                 "Граница: размер %.0f, центр (%.0f, %.0f)",
                 border.getSize(), border.getCenterX(), border.getCenterZ())), false);
         return 1;
+    }
+
+    // ---- /lotus reputation ... (per-faction standing, see LotusPlayerState#addReputation) -------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> reputationCommands() {
+        var builder = Commands.literal("reputation")
+                .then(Commands.literal("get")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reputationGetAll(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))));
+        for (com.lotusblight.data.Faction faction : com.lotusblight.data.Faction.values()) {
+            builder.then(Commands.literal("set")
+                    .then(Commands.literal(faction.name().toLowerCase(java.util.Locale.ROOT))
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100))
+                                            .executes(ctx -> reputationSet(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), faction, IntegerArgumentType.getInteger(ctx, "value")))))));
+        }
+        return builder;
+    }
+
+    private static int reputationGetAll(CommandSourceStack source, ServerPlayer player) {
+        StringBuilder sb = new StringBuilder(player.getGameProfile().getName()).append(": ");
+        for (com.lotusblight.data.Faction faction : com.lotusblight.data.Faction.values()) {
+            sb.append(faction.displayName()).append('=').append(LotusPlayerState.getReputation(player, faction)).append(' ');
+        }
+        source.sendSuccess(() -> Component.literal(sb.toString().trim()), false);
+        return 1;
+    }
+
+    private static int reputationSet(CommandSourceStack source, ServerPlayer player, com.lotusblight.data.Faction faction, int value) {
+        int newValue = LotusPlayerState.addReputation(player, faction, value - LotusPlayerState.getReputation(player, faction));
+        source.sendSuccess(() -> Component.literal(player.getGameProfile().getName() + " -> " + faction.displayName() + " = " + newValue), true);
+        return newValue;
     }
 
     // ---- /lotus book (opens the command reference GUI, see LotusCommandBookScreen) -------------

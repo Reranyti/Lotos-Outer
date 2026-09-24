@@ -120,6 +120,12 @@ public final class MapSyncManager {
                 .toList();
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new MeteoriteMarkerSyncPacket(meteoritePositions));
 
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), new ReputationSyncPacket(
+                LotusPlayerState.hasSeenStarFall(serverPlayer),
+                LotusPlayerState.getReputation(serverPlayer, com.lotusblight.data.Faction.LOTUS),
+                LotusPlayerState.getReputation(serverPlayer, com.lotusblight.data.Faction.SCIENTISTS),
+                LotusPlayerState.getReputation(serverPlayer, com.lotusblight.data.Faction.STAR_LIGHT)));
+
         // Mossy Glands aren't secret like hidden outbreaks - there are only NATURAL_GLAND_COUNT of
         // them and just finding them at all was the reported problem (bug #21), so every player
         // always gets the full list, no discovery gating.

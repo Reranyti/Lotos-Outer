@@ -14,15 +14,11 @@ import java.util.EnumSet;
 final class FollowFeederGoal extends Goal {
     private final HonchoEntity honcho;
     private final double speedModifier;
-    private final float startDistance;
-    private final float stopDistance;
     private ServerPlayer feeder;
 
-    FollowFeederGoal(HonchoEntity honcho, double speedModifier, float stopDistance, float startDistance) {
+    FollowFeederGoal(HonchoEntity honcho, double speedModifier) {
         this.honcho = honcho;
         this.speedModifier = speedModifier;
-        this.stopDistance = stopDistance;
-        this.startDistance = startDistance;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -32,14 +28,15 @@ final class FollowFeederGoal extends Goal {
         if (uuid == null || !(honcho.level() instanceof net.minecraft.server.level.ServerLevel level)) return false;
         var player = level.getServer().getPlayerList().getPlayer(uuid);
         if (player == null || player.level() != honcho.level() || !player.isAlive()) return false;
-        if (honcho.distanceTo(player) < startDistance) return false;
+        // Read live so HonchoEntity's "closer" milestone (see markCloser) tightens the distance immediately, not just for goals started after it fires.
+        if (honcho.distanceTo(player) < honcho.getFollowStartDistance()) return false;
         feeder = player;
         return true;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return feeder != null && feeder.isAlive() && feeder.level() == honcho.level() && honcho.distanceTo(feeder) > stopDistance;
+        return feeder != null && feeder.isAlive() && feeder.level() == honcho.level() && honcho.distanceTo(feeder) > honcho.getFollowStopDistance();
     }
 
     @Override

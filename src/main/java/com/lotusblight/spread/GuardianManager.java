@@ -306,6 +306,7 @@ public final class GuardianManager {
 
     private void onAllianceGuardianKilled(ServerPlayer player) {
         int total = LotusPlayerState.incrementAllianceGuardianKills(player);
+        LotusPlayerState.addReputation(player, com.lotusblight.data.Faction.LOTUS, -3);
         if (total != ALLIANCE_BETRAYAL_KILL_COUNT) return;
         triggerBetrayal(player);
     }
@@ -436,6 +437,7 @@ public final class GuardianManager {
             player.displayClientMessage(Component.literal("Страж лотоса признал тебя своим."), true);
 
             GuardianTamedTrigger.INSTANCE.trigger(player);
+            LotusPlayerState.addReputation(player, com.lotusblight.data.Faction.LOTUS, 3);
             int total = LotusPlayerState.incrementTamedGuardianCount(player);
             if (total == PACK_ADVANCEMENT_SIZE) {
                 GuardianPackTamedTrigger.INSTANCE.trigger(player);

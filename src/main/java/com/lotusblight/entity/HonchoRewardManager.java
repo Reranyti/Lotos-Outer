@@ -25,11 +25,12 @@ public final class HonchoRewardManager {
 
     private HonchoRewardManager() {}
 
-    /** Called once per vial fed, however many times that ends up being - the dependency count itself is what actually accumulates. */
-    public static void grantBlessing(ServerPlayer player) {
+    /** Called once per vial fed, however many times that ends up being - the dependency count itself is what actually accumulates. Returns the new total, so callers can react to specific milestones. */
+    public static int grantBlessing(ServerPlayer player) {
         int count = LotusPlayerState.incrementHonchoDependencyCount(player);
         applyModifier(player, count);
         player.heal((float) BONUS_HEALTH_PER_VIAL);
+        return count;
     }
 
     private static void applyModifier(ServerPlayer player, int dependencyCount) {
