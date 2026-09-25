@@ -28,6 +28,12 @@ public final class VineBarrierGenerator {
 
     public static boolean tryGrow(ServerLevel level, UUID outbreakId, BlockPos origin) {
         Direction.Axis axis = level.random.nextBoolean() ? Direction.Axis.X : Direction.Axis.Z;
+        // The wall spans one block either side of origin - either end can sit in an unloaded chunk.
+        BlockPos endA = axis == Direction.Axis.X ? origin.offset(-1, 0, 0) : origin.offset(0, 0, -1);
+        BlockPos endB = axis == Direction.Axis.X ? origin.offset(1, 0, 0) : origin.offset(0, 0, 1);
+        if (!level.hasChunkAt(endA) || !level.hasChunkAt(endB)) {
+            return false;
+        }
         List<BlockPos> solid = new ArrayList<>();
         List<BlockPos> weakPoints = new ArrayList<>();
 
@@ -39,8 +45,7 @@ public final class VineBarrierGenerator {
                         ? origin.offset(span, height, 0)
                         : origin.offset(0, height, span);
                 total++;
-                BlockState state = level.getBlockState(pos);
-                if (state.isAir() || state.canBeReplaced() || state.is(ModBlocks.INFECTED_SOIL.get())) {
+                if (isReplaceable(level.getBlockState(pos))) {
                     replaceable++;
                 }
             }
@@ -58,6 +63,9 @@ public final class VineBarrierGenerator {
                 BlockPos pos = axis == Direction.Axis.X
                         ? origin.offset(span, height, 0)
                         : origin.offset(0, height, span);
+                // The check above tolerates one solid cell - leave it standing instead of
+                // overwriting it (that used to delete chests, furnaces, even the anchor).
+                if (!isReplaceable(level.getBlockState(pos))) continue;
                 boolean isWeakPoint = height == 0;
                 BlockState toPlace = isWeakPoint
                         ? ModBlocks.LIANA_WEAK_POINT.get().defaultBlockState()
@@ -75,5 +83,9 @@ public final class VineBarrierGenerator {
         OutbreakSavedData.get(level).registerBarrier(barrier);
         level.playSound(null, origin, SoundEvents.VINE_PLACE, SoundSource.BLOCKS, 0.8f, 0.6f);
         return true;
+    }
+
+    private static boolean isReplaceable(BlockState state) {
+        return state.isAir() || state.canBeReplaced() || state.is(ModBlocks.INFECTED_SOIL.get());
     }
 }
