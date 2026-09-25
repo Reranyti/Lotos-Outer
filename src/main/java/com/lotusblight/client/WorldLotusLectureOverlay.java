@@ -175,4 +175,15 @@ public final class WorldLotusLectureOverlay {
         g.blit(texture, x, y, size, size, 8.0f, 8.0f, 8, 8, 64, 64);
         g.blit(texture, x, y, size, size, 40.0f, 8.0f, 8, 8, 64, 64);
     }
+
+    public static void reset() {
+        queue.clear();
+        activeLine = null;
+        cachedLines = null;
+        chaosTicksLeft = 0;
+        if (musicInstance != null) {
+            Minecraft.getInstance().getSoundManager().stop(musicInstance);
+            musicInstance = null;
+        }
+    }
 }

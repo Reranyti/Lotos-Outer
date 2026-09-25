@@ -75,8 +75,15 @@ public final class HonchoAssistantOverlay {
         if (event.getAction() != GLFW.GLFW_PRESS) return;
 
         if (onQuestion) {
-            if (event.getKey() == GLFW.GLFW_KEY_Y) answer(true);
-            else if (event.getKey() == GLFW.GLFW_KEY_N) answer(false);
+            if (event.getKey() == GLFW.GLFW_KEY_Y) {
+                answer(true);
+            } else if (event.getKey() == GLFW.GLFW_KEY_N) {
+                answer(false);
+                // N is also the default atlas key and its click is already queued by the time this
+                // event fires - drain it so answering doesn't pop the atlas open.
+                while (LotusKeybinds.OPEN_ATLAS.consumeClick()) {
+                }
+            }
             return;
         }
         if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
@@ -116,5 +123,17 @@ public final class HonchoAssistantOverlay {
         }
         String hint = onQuestion ? "[Y] Да    [N] Нет" : "[Enter] продолжить";
         g.drawString(mc.font, hint, left + width - mc.font.width(hint) - 8, top + boxHeight - 10, HINT_COLOR, false);
+    }
+
+    public static void reset() {
+        queue.clear();
+        activeLine = null;
+        onQuestion = false;
+        cachedLines = null;
+    }
+
+    /** True while the Y/N question is on screen - its N answer shares a key with the atlas keybind. */
+    public static boolean isAskingQuestion() {
+        return activeLine != null && onQuestion;
     }
 }

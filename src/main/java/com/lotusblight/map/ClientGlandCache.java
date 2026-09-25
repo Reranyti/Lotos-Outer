@@ -17,4 +17,8 @@ public final class ClientGlandCache {
     public static List<BlockPos> positions() {
         return positions;
     }
+
+    public static void clear() {
+        positions = List.of();
+    }
 }

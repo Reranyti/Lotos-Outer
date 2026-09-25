@@ -181,4 +181,11 @@ public final class StarFallOverlay {
             g.drawString(mc.font, hint, left + width - mc.font.width(hint) - 8, top + boxHeight - 10, HINT_COLOR, false);
         }
     }
+
+    public static void reset() {
+        queue.clear();
+        activeLine = null;
+        cachedLines = null;
+        locking = false;
+    }
 }
