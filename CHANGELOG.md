@@ -79,7 +79,7 @@ is transcribed directly from its own commit message.*
 
 ## 1.68.0 – 1.84.0 — Traitor branch, Escape, StarFall
 - Full traitor storyline: guardian-kill/cleanse-powder betrayal triggers, a
-  6-wave boss fight, and its own incineration cutscene.
+  5-wave boss fight, and its own incineration cutscene.
 - "Побег от лотоса" — a persistent, sealed escape-the-lab event with a
   real/decoy junction, unlocked only once world infection crosses 15%.
 - StarFall — a one-time Star Light encounter with a full alliance/war branch

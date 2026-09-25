@@ -35,7 +35,7 @@ import java.util.UUID;
 
 /**
  * The traitor-branch boss fight itself - everything from "the arena appears around the player"
- * (see {@link TraitorBossArena}) through 6 waves of mobs to the victory rewards. Reuses
+ * (see {@link TraitorBossArena}) through 5 waves of mobs to the victory rewards. Reuses
  * {@link GuardianManager}'s regular/heart guardian stats wholesale (now-public
  * {@link GuardianManager#applyGuardianStats}) instead of duplicating those numbers, but tags its
  * own mobs with {@link #BOSS_MOB_TAG} rather than {@code GuardianManager.GUARDIAN_TAG} so none of

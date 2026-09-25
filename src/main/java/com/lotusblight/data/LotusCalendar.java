@@ -39,7 +39,8 @@ public final class LotusCalendar {
     }
 
     /**
-     * @param elapsedGameDays total whole Minecraft days since world creation (gameTime / 24000).
+     * @param elapsedGameDays whole Minecraft days elapsed - the HUD passes dayTime / 24000, so nights
+     *                        skipped by sleeping count as days too.
      */
     public static Date dateFor(long elapsedGameDays) {
         long day = elapsedGameDays;
