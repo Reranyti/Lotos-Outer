@@ -26,13 +26,15 @@ public class LotusLeavesBlock extends Block {
         super(properties);
     }
 
+    /** Solid block - entityInside never fires for it, so the dose happens while standing on the canopy. */
     @Override
-    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
         if (!level.isClientSide && entity instanceof LivingEntity living && !(entity instanceof Player player && player.getAbilities().invulnerable)) {
             if (level.getRandom().nextInt(30) == 0) {
                 living.addEffect(new MobEffectInstance(ModEffects.LOTUS_SPORES.get(), 100, 0));
             }
         }
+        super.stepOn(level, pos, state, entity);
     }
 
     @Override

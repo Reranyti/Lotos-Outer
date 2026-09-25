@@ -62,14 +62,15 @@ public final class LotusRootsBlock extends Block implements SimpleWaterloggedBlo
         return super.updateShape(state, direction, neighbor, level, pos, neighborPos);
     }
 
+    // The wiki/lore have always described these roots as spreading spores on contact. This is a full,
+    // solid block, so entityInside never fires for it - standing on it is the contact.
     @Override
-    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        // The wiki/lore have always described these roots as spreading spores on contact.
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
         if (!level.isClientSide && entity instanceof LivingEntity living && !(entity instanceof Player player && player.getAbilities().invulnerable)) {
             if (level.random.nextInt(20) == 0) {
                 living.addEffect(new MobEffectInstance(ModEffects.LOTUS_SPORES.get(), 100, 0));
             }
         }
-        super.entityInside(state, level, pos, entity);
+        super.stepOn(level, pos, state, entity);
     }
 }
