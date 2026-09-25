@@ -5,7 +5,6 @@ import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.spread.InfectionPhases;
 import com.lotusblight.registry.ModBlocks;
-import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModItems;
 import com.lotusblight.item.LotusWikiItem;
 import net.minecraftforge.api.distmarker.Dist;
@@ -350,11 +349,9 @@ public class LotusEvents {
         // up for real instead of guessing at the category's single "representative" vanilla block.
         net.minecraft.world.level.block.state.BlockState origin = com.lotusblight.spread.SpreadTables.originalGroundBlock(infected);
         if (origin != null) return origin;
-        if (infected.is(ModBlocks.LOTUS_DIRT.get())) return Blocks.DIRT.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LOG.get())) return Blocks.OAK_LOG.defaultBlockState();
         if (infected.is(ModBlocks.LOTUS_LEAVES.get())) return Blocks.OAK_LEAVES.defaultBlockState();
-        if (infected.is(ModBlocks.INFECTED_WATER.get())) return Blocks.WATER.defaultBlockState();
-        if (infected.is(ModBlocks.LOTUS_ROOTS.get()) || infected.is(ModBlocks.TANGLED_ROOTS.get())) {
+        if (infected.is(ModBlocks.LOTUS_ROOTS.get())) {
             // Decorative growth, not real ground - clear it back to whatever it was actually
             // sitting in (water if waterlogged, air otherwise), never solid dirt.
             boolean waterlogged = infected.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)
@@ -438,22 +435,10 @@ public class LotusEvents {
     }
 
     /**
-     * Same gap as onBlockBreak above, for the other two common ways infected ground disappears
-     * without going through cleansing powder: bucketing up infected water (BreakEvent never fires
-     * for fluids at all) and explosions (BreakEvent doesn't fire for those either - Forge has a
-     * dedicated event for exactly this). "ЗАКРЫВАЙ ВСЕ ДЫРЫ СРАЗУ" - these two are the practical
-     * remaining gaps; a command like /setblock or /fill bypassing both is still possible, but
-     * that's an admin/debug action, not something normal play does organically.
+     * Same gap as onBlockBreak above, for explosions: BreakEvent doesn't fire for those either -
+     * Forge has a dedicated event for exactly this. The bucket-based gap that used to sit alongside
+     * this no longer applies - infected water isn't a real fluid to bucket up anymore.
      */
-    @SubscribeEvent
-    public void onFillBucket(net.minecraftforge.event.entity.player.FillBucketEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (!(event.getTarget() instanceof net.minecraft.world.phys.BlockHitResult hit)) return;
-        BlockPos pos = hit.getBlockPos();
-        if (!level.getFluidState(pos).is(ModFluids.INFECTED_WATER.get())) return;
-        decrementInfectedCount(level, pos, 1);
-    }
-
     @SubscribeEvent
     public void onExplosion(net.minecraftforge.event.level.ExplosionEvent.Detonate event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;

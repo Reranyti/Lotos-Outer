@@ -7,7 +7,6 @@ import com.lotusblight.registry.ModItems;
 import com.lotusblight.registry.ModEffects;
 import com.lotusblight.registry.ModSounds;
 import com.lotusblight.registry.ModVillagers;
-import com.lotusblight.registry.ModFluids;
 import com.lotusblight.registry.ModBiomes;
 import com.lotusblight.registry.ModFeatures;
 import net.minecraftforge.common.BiomeManager;
@@ -58,7 +57,6 @@ public class LotusBlight {
                 output.accept(ModItems.SCIENTIST_PAGE.get());
                 output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
                 output.accept(ModItems.LOTUS_MAP.get());
-                output.accept(ModItems.INFECTED_WATER_BUCKET.get());
                 output.accept(ModItems.CLEANSING_POWDER.get());
                 output.accept(ModItems.LOTUS_ORE_ITEM.get());
                 output.accept(ModItems.LOTUS_ALLOY.get());
@@ -73,7 +71,6 @@ public class LotusBlight {
                 output.accept(ModItems.BLESSING_SAND_ITEM.get());
                 output.accept(ModItems.LOTUS_LOG_ITEM.get());
                 output.accept(ModItems.LOTUS_LEAVES_ITEM.get());
-                output.accept(ModItems.BLESSING_LOG_ITEM.get());
                 output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
                 output.accept(ModItems.LOTUS_AXE.get());
                 output.accept(ModItems.LOTUS_SWORD.get());
@@ -111,16 +108,13 @@ public class LotusBlight {
                 output.accept(ModBlocks.INFECTED_LOTUS.get());
                 output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
                 output.accept(ModItems.LOTUS_SHOOT_ITEM.get());
-                output.accept(ModItems.INFECTED_WATER_BUCKET.get());
                 output.accept(ModBlocks.INFECTED_SOIL.get());
                 output.accept(ModItems.LOTUS_STONE_ITEM.get());
                 output.accept(ModItems.LOTUS_SAND_ITEM.get());
                 output.accept(ModItems.LOTUS_GRAVEL_ITEM.get());
                 output.accept(ModItems.LOTUS_TERRACOTTA_ITEM.get());
-                output.accept(ModItems.LOTUS_DIRT_ITEM.get());
                 output.accept(ModItems.LOTUS_ORE_ITEM.get());
                 output.accept(ModBlocks.LOTUS_ROOTS.get());
-                output.accept(ModItems.TANGLED_ROOTS_ITEM.get());
                 output.accept(ModItems.LIANA_BARRIER_ITEM.get());
                 output.accept(ModItems.LIANA_WEAK_POINT_ITEM.get());
                 output.accept(ModItems.GLOW_BERRIES_ITEM.get());
@@ -129,15 +123,12 @@ public class LotusBlight {
                 output.accept(ModItems.BLESSING_NODULE_ITEM.get());
                 output.accept(ModItems.BLESSING_SOIL_ITEM.get());
                 output.accept(ModItems.BLESSING_SAND_ITEM.get());
-                output.accept(ModItems.BLESSING_LOG_ITEM.get());
                 output.accept(ModItems.BLESSING_LEAVES_ITEM.get());
             }).build());
 
     public LotusBlight() {
         FMLJavaModLoadingContext context = FMLJavaModLoadingContext.get();
         IEventBus modBus = context.getModEventBus();
-        ModFluids.FLUID_TYPES.register(modBus);
-        ModFluids.FLUIDS.register(modBus);
         ModBlocks.BLOCKS.register(modBus);
         ModFeatures.FEATURES.register(modBus);
         com.lotusblight.registry.ModEntities.ENTITY_TYPES.register(modBus);

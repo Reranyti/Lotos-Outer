@@ -22,8 +22,6 @@ import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.BucketItem;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -32,7 +30,6 @@ import net.minecraftforge.registries.RegistryObject;
 public final class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, LotusBlight.MODID);
     public static final RegistryObject<Item> LOTUS_SEED = ITEMS.register("lotus_seed", () -> new LotusSeedItem(new Item.Properties().stacksTo(16)));
-    public static final RegistryObject<Item> INFECTED_WATER_BUCKET = ITEMS.register("infected_water_bucket", () -> new BucketItem(ModFluids.INFECTED_WATER, new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET)));
     public static final RegistryObject<Item> LOTUS_MAP = ITEMS.register("lotus_map", () -> new LotusMapItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LOTUS_WIKI = ITEMS.register("lotus_wiki", () -> new LotusWikiItem(new Item.Properties()));
     // --- Calendar crafting chain: paper_stack (9 paper) + iron_rim (3 iron) -> calendar (see recipes) ---
@@ -50,11 +47,9 @@ public final class ModItems {
     public static final RegistryObject<Item> LOTUS_SAND_ITEM = ITEMS.register("lotus_sand", () -> new BlockItem(ModBlocks.LOTUS_SAND.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_TERRACOTTA_ITEM = ITEMS.register("lotus_terracotta", () -> new BlockItem(ModBlocks.LOTUS_TERRACOTTA.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_GRAVEL_ITEM = ITEMS.register("lotus_gravel", () -> new BlockItem(ModBlocks.LOTUS_GRAVEL.get(), new Item.Properties()));
-    public static final RegistryObject<Item> LOTUS_DIRT_ITEM = ITEMS.register("lotus_dirt", () -> new BlockItem(ModBlocks.LOTUS_DIRT.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_SHOOT_ITEM = ITEMS.register("lotus_shoot", () -> new BlockItem(ModBlocks.LOTUS_SHOOT.get(), new Item.Properties()));
     public static final RegistryObject<Item> LIANA_BARRIER_ITEM = ITEMS.register("liana_barrier", () -> new BlockItem(ModBlocks.LIANA_BARRIER.get(), new Item.Properties()));
     public static final RegistryObject<Item> LIANA_WEAK_POINT_ITEM = ITEMS.register("liana_weak_point", () -> new BlockItem(ModBlocks.LIANA_WEAK_POINT.get(), new Item.Properties()));
-    public static final RegistryObject<Item> TANGLED_ROOTS_ITEM = ITEMS.register("tangled_roots", () -> new BlockItem(ModBlocks.TANGLED_ROOTS.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_ALLOY = ITEMS.register("lotus_alloy", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_PICKAXE = ITEMS.register("lotus_pickaxe", () -> new LotusPickaxeItem(Tiers.DIAMOND, 4, -2.7f, new Item.Properties().durability(900)));
     public static final RegistryObject<Item> LOTUS_ROOTS_ITEM = ITEMS.register("lotus_roots", () -> new BlockItem(ModBlocks.LOTUS_ROOTS.get(), new Item.Properties()));
@@ -69,7 +64,6 @@ public final class ModItems {
     public static final RegistryObject<Item> METEORITE_STONE_ITEM = ITEMS.register("meteorite_stone", () -> new BlockItem(ModBlocks.METEORITE_STONE.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_LOG_ITEM = ITEMS.register("lotus_log", () -> new BlockItem(ModBlocks.LOTUS_LOG.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_LEAVES_ITEM = ITEMS.register("lotus_leaves", () -> new BlockItem(ModBlocks.LOTUS_LEAVES.get(), new Item.Properties()));
-    public static final RegistryObject<Item> BLESSING_LOG_ITEM = ITEMS.register("blessing_log", () -> new BlockItem(ModBlocks.BLESSING_LOG.get(), new Item.Properties()));
     public static final RegistryObject<Item> BLESSING_LEAVES_ITEM = ITEMS.register("blessing_leaves", () -> new BlockItem(ModBlocks.BLESSING_LEAVES.get(), new Item.Properties()));
     // --- "Побег от лотоса" event item: a burst of Speed, most useful while a chase is active ---
     public static final RegistryObject<Item> VITAMIN = ITEMS.register("vitamin", () -> new VitaminItem(new Item.Properties().stacksTo(16)

@@ -1,6 +1,5 @@
 package com.lotusblight.worldgen;
 
-import com.lotusblight.registry.ModFluids;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.material.Fluids;
@@ -18,12 +17,10 @@ public final class WaterClearance {
 
     private WaterClearance() {}
 
-    /** Was Fluids.WATER only - a pond partway infected (INFECTED_WATER) failed this check on tiles that are still very much open water, just the wrong fluid type, making seeds refuse to plant on perfectly good water near any existing outbreak. */
     public static boolean hasClearWaterAround(ServerLevel level, BlockPos waterPos, int radius) {
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
-                var fluid = level.getFluidState(waterPos.offset(dx, 0, dz));
-                if (!fluid.is(Fluids.WATER) && !fluid.is(ModFluids.INFECTED_WATER.get())) {
+                if (!level.getFluidState(waterPos.offset(dx, 0, dz)).is(Fluids.WATER)) {
                     return false;
                 }
             }

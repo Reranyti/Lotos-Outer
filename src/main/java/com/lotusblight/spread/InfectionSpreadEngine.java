@@ -6,7 +6,6 @@ import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.registry.ModEffects;
-import com.lotusblight.registry.ModFluids;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -265,6 +264,7 @@ public class InfectionSpreadEngine {
             // exact transition into phase 4 should trigger this, not every phase at or above it.
             if (newPhase == 4) {
                 guaranteeMiniBiomeGrowth(level, outbreak.pos());
+                com.lotusblight.worldgen.LotusBiomeConverter.convertToLotusMarsh(level, outbreak.pos());
             }
             maybeSpawnHeart(level, data, outbreak, newPhase);
         }
@@ -367,8 +367,7 @@ public class InfectionSpreadEngine {
         for (int attempt = 0; attempt < LAND_BIAS_DRAWS; attempt++) {
             if (asList == null) asList = new ArrayList<>(frontier);
             BlockPos candidate = asList.get(level.random.nextInt(asList.size()));
-            if (!level.getFluidState(candidate).is(Fluids.WATER) && !level.getFluidState(candidate).is(ModFluids.INFECTED_WATER.get())
-                    && !isCanopySource(level, candidate)) {
+            if (!level.getFluidState(candidate).is(Fluids.WATER) && !isCanopySource(level, candidate)) {
                 return candidate;
             }
         }
@@ -415,8 +414,7 @@ public class InfectionSpreadEngine {
         if (!level.hasChunkAt(target)) return null;
 
         // Water has priority: infection follows the actual water layout (soft Streams Reflowing compatibility).
-        if (LotusConfig.STREAMS_COMPATIBILITY.get()
-                && (level.getFluidState(source).is(Fluids.WATER) || level.getFluidState(source).is(ModFluids.INFECTED_WATER.get()))) {
+        if (LotusConfig.STREAMS_COMPATIBILITY.get() && level.getFluidState(source).is(Fluids.WATER)) {
             // With Streams Reflowing loaded, vanilla's getFlow() reports its realistic river flow
             // field (direction AND speed — see STREAMS_REFLOWING_LOADED javadoc) instead of vanilla's
             // weak default. Fast-flowing water (a real river) lets infection chase the current several
@@ -433,31 +431,18 @@ public class InfectionSpreadEngine {
 
         BlockState targetState = level.getBlockState(target);
 
-        // Clean water source -> infected water. This is the "reincarnation" the wiki always
-        // claimed but nothing ever actually did: INFECTED_WATER is a fully registered fluid
-        // (own bucket, cleansing powder reverses it) that no code path ever placed, so natural
-        // spread visually never touched water at all. Roots/shoots grow only once the water
-        // here is already infected, one tick later.
-        if (level.getFluidState(target).is(Fluids.WATER) && level.getFluidState(target).isSource()) {
-            level.setBlock(target, ModBlocks.INFECTED_WATER.get().defaultBlockState(), 3);
-            bloom(level, target, GREEN);
-            return target;
-        }
-
-        if (level.getFluidState(target).is(ModFluids.INFECTED_WATER.get()) && level.getFluidState(target).isSource()) {
-            if (!targetState.is(ModBlocks.LOTUS_ROOTS.get()) && level.random.nextInt(3) != 0) {
-                // The fluid here is confirmed INFECTED_WATER by the branch condition above - mark
-                // the root as such so it reports the real fluid back (see LotusRootsBlock#INFECTED)
-                // instead of silently reverting this tile's rendered fluid to plain water.
+        // "заражённая вода...ПЕРЕПИСЫВАНИЕМ ВОДЫ НЕ ЗАНИМАТСЯ" - infected water used to be a real,
+        // separate fluid (own block/bucket) that spread would swap plain water source blocks into,
+        // then decorate on a later tick. Water is never rewritten anymore - infection of water is a
+        // purely conceptual/data thing (biome territory + fog tint), so this decorates a clean
+        // water source directly, in one tick, without ever touching the fluid itself.
+        if (level.getFluidState(target).is(Fluids.WATER) && level.getFluidState(target).isSource()
+                && !targetState.is(ModBlocks.LOTUS_ROOTS.get())) {
+            if (level.random.nextInt(3) != 0) {
                 level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
-                        .setValue(BlockStateProperties.WATERLOGGED, true).setValue(com.lotusblight.world.LotusRootsBlock.INFECTED, true), 3);
+                        .setValue(BlockStateProperties.WATERLOGGED, true), 3);
                 bloom(level, target, GREEN);
-                // This tile was already counted as infected the moment it became INFECTED_WATER
-                // (the branch above) - decorating it with roots afterward is the same tile, not
-                // new territory, so it must NOT return a position here or tickOutbreak would
-                // increment infectedBlockCount a second time for it, inflating progress/phase
-                // faster than the infection actually spread.
-                return null;
+                return target;
             }
             BlockPos padPos = target.above();
             BlockPos flowerPos = padPos.above();

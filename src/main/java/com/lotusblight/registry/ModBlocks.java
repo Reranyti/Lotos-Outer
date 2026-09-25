@@ -11,7 +11,6 @@ import com.lotusblight.world.LotusRootsBlock;
 import com.lotusblight.world.LianaBarrierBlock;
 import com.lotusblight.world.LianaWeakPointBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -25,13 +24,11 @@ public final class ModBlocks {
     public static final RegistryObject<Block> INFECTED_LOTUS = BLOCKS.register("infected_lotus", () -> new LotusMainBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(-1.0f, 3600000.0f).sound(SoundType.GRASS).noOcclusion()));
     public static final RegistryObject<Block> LOTUS_MIMIC = BLOCKS.register("lotus_mimic", () -> new LotusMimicBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.25f).sound(SoundType.GRASS).noOcclusion()));
     public static final RegistryObject<Block> LOTUS_SHOOT = BLOCKS.register("lotus_shoot", () -> new LotusShootBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(-1.0f, 3600000.0f).sound(SoundType.GRASS).noOcclusion()));
-    public static final RegistryObject<LiquidBlock> INFECTED_WATER = BLOCKS.register("infected_water", () -> new LiquidBlock(ModFluids.INFECTED_WATER, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).noCollission().strength(100.0f).noLootTable()));
     public static final RegistryObject<Block> INFECTED_SOIL = BLOCKS.register("infected_soil", () -> new com.lotusblight.world.InfectedGroundBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.6f).sound(SoundType.GRASS)));
     public static final RegistryObject<Block> LOTUS_STONE = BLOCKS.register("lotus_stone", () -> new com.lotusblight.world.InfectedGroundBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1.5f).sound(SoundType.STONE)));
     public static final RegistryObject<Block> LOTUS_SAND = BLOCKS.register("lotus_sand", () -> new com.lotusblight.world.InfectedGroundBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PINK).strength(0.5f).sound(SoundType.SAND)));
     public static final RegistryObject<Block> LOTUS_TERRACOTTA = BLOCKS.register("lotus_terracotta", () -> new com.lotusblight.world.InfectedGroundBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PINK).strength(1.25f).sound(SoundType.STONE)));
     public static final RegistryObject<Block> LOTUS_GRAVEL = BLOCKS.register("lotus_gravel", () -> new com.lotusblight.world.InfectedGroundBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(0.6f).sound(SoundType.GRAVEL)));
-    public static final RegistryObject<Block> LOTUS_DIRT = BLOCKS.register("lotus_dirt", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(0.5f).sound(SoundType.GRASS)));
     public static final RegistryObject<Block> LOTUS_ORE = BLOCKS.register("lotus_ore", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f, 6.0f).sound(SoundType.STONE)));
     public static final RegistryObject<Block> LOTUS_ROOTS = BLOCKS.register("lotus_roots", () -> new LotusRootsBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.4f).sound(SoundType.WOOD).noOcclusion()));
     public static final RegistryObject<Block> LOTUS_HEART = BLOCKS.register("lotus_heart", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f).sound(SoundType.AMETHYST).lightLevel(state -> 6)));
@@ -46,13 +43,9 @@ public final class ModBlocks {
     public static final RegistryObject<Block> METEORITE_STONE = BLOCKS.register("meteorite_stone", () -> new com.lotusblight.world.MeteoriteStoneBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(4.0f).requiresCorrectToolForDrops().sound(SoundType.NETHERITE_BLOCK)));
     public static final RegistryObject<Block> LOTUS_LOG = BLOCKS.register("lotus_log", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(2.0f).sound(SoundType.WOOD)));
     public static final RegistryObject<Block> LOTUS_LEAVES = BLOCKS.register("lotus_leaves", () -> new com.lotusblight.world.LotusLeavesBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.2f).sound(SoundType.GRASS).noOcclusion()));
-    public static final RegistryObject<Block> BLESSING_LOG = BLOCKS.register("blessing_log", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(2.2f).sound(SoundType.WOOD)));
     public static final RegistryObject<Block> BLESSING_LEAVES = BLOCKS.register("blessing_leaves", () -> new Block(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(0.2f).sound(SoundType.GLASS).noOcclusion()));
     public static final RegistryObject<Block> LIANA_BARRIER = BLOCKS.register("liana_barrier", () -> new LianaBarrierBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(-1.0f, 3600000.0f).sound(SoundType.WOOD).noOcclusion()));
     public static final RegistryObject<Block> LIANA_WEAK_POINT = BLOCKS.register("liana_weak_point", () -> new LianaWeakPointBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PINK).strength(1.5f).sound(SoundType.WOOD).noOcclusion()));
-
-    /** Underwater obstruction root grown by the roots-and-mini-lotuses system (com.lotusblight.spread.roots) — unlike LOTUS_ROOTS it has real collision and briefly slows entities that push through it. */
-    public static final RegistryObject<Block> TANGLED_ROOTS = BLOCKS.register("tangled_roots", () -> new com.lotusblight.world.TangledRootsBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GREEN).strength(0.5f).sound(SoundType.WOOD).noOcclusion()));
 
     private ModBlocks() {}
 }

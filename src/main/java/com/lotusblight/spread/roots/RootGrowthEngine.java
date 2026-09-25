@@ -144,11 +144,11 @@ public final class RootGrowthEngine {
         }
 
         boolean underwater = level.getFluidState(next).is(Fluids.WATER) && level.getFluidState(next).isSource();
+        // TangledRootsBlock (real collision, briefly slowed entities) is gone - underwater growth
+        // now places the same LOTUS_ROOTS as everywhere else, just waterlogged.
+        level.setBlock(next, ModBlocks.LOTUS_ROOTS.get().defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, underwater), 3);
         if (underwater) {
-            level.setBlock(next, ModBlocks.TANGLED_ROOTS.get().defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true), 3);
             data.incrementChunkCount(new ChunkPos(next), 1);
-        } else {
-            level.setBlock(next, ModBlocks.LOTUS_ROOTS.get().defaultBlockState(), 3);
         }
         level.sendParticles(ROOT_GREEN, next.getX() + 0.5, next.getY() + 0.4, next.getZ() + 0.5, 3, 0.2, 0.15, 0.2, 0.01);
         level.playSound(null, next, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.2f, 0.7f);
@@ -236,7 +236,7 @@ public final class RootGrowthEngine {
 
                 BlockState here = level.getBlockState(probe);
                 boolean underwaterSource = level.getFluidState(probe).is(Fluids.WATER) && level.getFluidState(probe).isSource();
-                if (underwaterSource && !here.is(ModBlocks.TANGLED_ROOTS.get()) && !here.is(ModBlocks.LOTUS_ROOTS.get())) {
+                if (underwaterSource && !here.is(ModBlocks.LOTUS_ROOTS.get())) {
                     return probe.immutable();
                 }
                 if (here.isAir()) {

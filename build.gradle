@@ -185,6 +185,21 @@ dependencies {
     // Curios API integration attempted and reverted — see LotusSeerLensItem's javadoc and
     // IDEAS_AND_MODS.md for why `implements ICurioItem` directly isn't safe as a soft dependency.
 
+    // WorldEdit: hard dependency, per explicit request - used specifically for the one thing
+    // vanilla/Forge has no clean API for (rewriting an already-generated chunk's biome storage,
+    // see LotusTerritory's phase-4 "this is now real lotus_marsh" trigger). Block conversion stays
+    // on plain Level#setBlock - WorldEdit gives no benefit there and adds per-call overhead.
+    // Real Maven coordinate is "worldedit-forge-mc1.20" (no .1) - EngineHub didn't cut a separate
+    // 1.20.1 build since nothing changed between 1.20 and 1.20.1 that WorldEdit cares about. The
+    // Forge platform module alone doesn't carry the actual API classes (EditSession, BiomeType,
+    // CuboidRegion, ...) - those live in worldedit-core, needed alongside it, not obfuscated so no
+    // fg.deobf() wrapper.
+    // compileOnly, not implementation: WorldEdit ships its own worldedit-core inside its mod jar
+    // at runtime (it's the mandatory external mod itself, not something we bundle) - shading a
+    // second copy in here would duplicate classes on the classpath against the real installed mod.
+    compileOnly "com.sk89q.worldedit:worldedit-core:7.2.15"
+    compileOnly fg.deobf("com.sk89q.worldedit:worldedit-forge-mc1.20:7.2.15")
+
     // Ex Meteor Shower: soft dependency for real comet visuals during the StarFall event
     // (com.lotusblight.escape / StarFallOverlay). CurseForge project 1461322, file 7756940
     // (meteor_shower-0.0.4.2.jar, the current Forge 1.20.1 build).

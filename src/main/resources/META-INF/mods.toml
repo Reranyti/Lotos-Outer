@@ -136,6 +136,17 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# Hard dependency on WorldEdit, per explicit request - used to actually rewrite a chunk's biome
+# storage once an outbreak becomes a real "lotus_marsh" mini-biome (see LotusTerritory), which
+# neither vanilla nor Forge expose a clean API for otherwise. side=BOTH since the biome rewrite has
+# to happen server-side, not just be visible on the client.
+[[dependencies.${mod_id}]]
+    modId="worldedit"
+    mandatory=true
+    versionRange="[7.2,8.0)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't
 # stop your mod loading on the server for example.

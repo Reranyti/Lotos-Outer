@@ -87,15 +87,14 @@ public final class SpreadTables {
     public static boolean isInfectedGround(BlockState state) {
         return state.is(ModBlocks.INFECTED_SOIL.get()) || state.is(ModBlocks.LOTUS_SAND.get())
                 || state.is(ModBlocks.LOTUS_GRAVEL.get()) || state.is(ModBlocks.LOTUS_STONE.get())
-                || state.is(ModBlocks.LOTUS_TERRACOTTA.get()) || state.is(ModBlocks.LOTUS_DIRT.get());
+                || state.is(ModBlocks.LOTUS_TERRACOTTA.get());
     }
 
     /**
      * The exact vanilla block this infected ground block replaced, read back from its own
-     * LOTUS_ORIGIN state (see InfectedGroundBlock). Null for a block type with no registered
-     * category (e.g. LOTUS_DIRT, which the biome's own worldgen places directly and the spread
-     * engine never converts into) or an out-of-range index (shouldn't happen, but a future
-     * chatoverhaul-style jar/data mismatch is exactly the kind of thing this guards against).
+     * LOTUS_ORIGIN state (see InfectedGroundBlock). Null for an out-of-range index (shouldn't
+     * happen, but a future chatoverhaul-style jar/data mismatch is exactly the kind of thing this
+     * guards against).
      */
     public static BlockState originalGroundBlock(BlockState infected) {
         Block[] origins = ORIGINS_BY_INFECTED_BLOCK.get(infected.getBlock());
@@ -106,7 +105,7 @@ public final class SpreadTables {
     }
 
     public static boolean isCleanLog(BlockState state) {
-        return state.is(BlockTags.LOGS) && !state.is(ModBlocks.LOTUS_LOG.get()) && !state.is(ModBlocks.BLESSING_LOG.get());
+        return state.is(BlockTags.LOGS) && !state.is(ModBlocks.LOTUS_LOG.get());
     }
 
     public static boolean isCleanLeaves(BlockState state) {
