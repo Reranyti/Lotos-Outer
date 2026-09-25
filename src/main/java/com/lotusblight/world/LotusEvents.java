@@ -190,7 +190,9 @@ public class LotusEvents {
         // relog/version updates even on an existing world. A world-level SavedData (see its own
         // class doc) is guaranteed loaded before this event can fire; per-entity persistent data's
         // load-vs-event-fire ordering isn't something a one-time grant should depend on.
-        com.lotusblight.data.StarterKitSavedData starterKit = com.lotusblight.data.StarterKitSavedData.get(player.serverLevel());
+        // SavedData is per dimension - reading it from the level the player logged in to meant a
+        // login in the Nether or the End found no record there and handed out the kit again.
+        com.lotusblight.data.StarterKitSavedData starterKit = com.lotusblight.data.StarterKitSavedData.get(player.server.overworld());
         if (starterKit.hasReceived(player.getUUID())) return;
         starterKit.markReceived(player.getUUID());
         player.getInventory().add(new ItemStack(ModItems.LOTUS_SEED.get(), 3));
@@ -201,7 +203,10 @@ public class LotusEvents {
         // just found and fixed in EpicenterManager (unbounded synchronous world queries forcing
         // chunk generation), except this one fired on every single new player login instead of
         // once at world creation. Now spread across ticks via pendingStarterSearches below.
-        pendingStarterSearches.put(player.getUUID(), new StarterSearch(player.serverLevel(), player.blockPosition()));
+        // The tutorial pond only makes sense in the overworld (water boils away in the Nether).
+        if (player.serverLevel().dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+            pendingStarterSearches.put(player.getUUID(), new StarterSearch(player.serverLevel(), player.blockPosition()));
+        }
     }
 
     private static final class StarterSearch {
