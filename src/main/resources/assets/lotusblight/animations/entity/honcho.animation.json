@@ -1,10 +1,45 @@
 {
   "format_version": "1.8.0",
   "animations": {
-    "animation.honcho.idle": {
+    "idle": {
       "loop": true,
-      "animation_length": 1.0,
-      "bones": {}
+      "animation_length": 3.0,
+      "bones": {
+        "body": {
+          "rotation": {
+            "0.0": [15, 0, 0],
+            "1.5": [17, 0, 0],
+            "3.0": [15, 0, 0]
+          }
+        },
+        "head": {
+          "rotation": {
+            "0.0": [5.5, 0, 0],
+            "1.5": [3, 0, 0],
+            "3.0": [5.5, 0, 0]
+          }
+        },
+        "right_arm": {
+          "rotation": {
+            "0.0": [-85, 5, 0],
+            "1.5": [-88, 5, 0],
+            "3.0": [-85, 5, 0]
+          }
+        },
+        "left_arm": {
+          "rotation": {
+            "0.0": [-25, 0, -10],
+            "1.5": [-22, 0, -12],
+            "3.0": [-25, 0, -10]
+          }
+        },
+        "right_leg": {
+          "rotation": [-10, 0, 2]
+        },
+        "left_leg": {
+          "rotation": [8, 0, -2]
+        }
+      }
     }
   }
 }
