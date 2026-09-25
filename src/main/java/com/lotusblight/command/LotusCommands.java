@@ -166,6 +166,9 @@ public final class LotusCommands {
             return 0;
         }
         OutbreakSavedData data = OutbreakSavedData.get(source.getLevel());
+        // Testing override - it may add a heart even if one is already claimed, but it still has to
+        // mark the slot taken, or the next natural phase-4 outbreak grows yet another one.
+        data.claimHeart();
         data.updateOutbreak(nearest.withPhase(4).withPeakPhase(4).withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(4)));
         source.sendSuccess(() -> Component.literal("Сердце выращено в " + nearest.pos().toShortString() + "."), true);
         return 1;

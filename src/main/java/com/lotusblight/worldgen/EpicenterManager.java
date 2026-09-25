@@ -100,11 +100,13 @@ public final class EpicenterManager {
         if (!level.getBlockState(flowerPos).isAir()) return false;
 
         level.setBlock(flowerPos, ModBlocks.INFECTED_LOTUS.get().defaultBlockState(), 3);
-        InfectionSpreadEngine.promoteAnchorToHeart(level, flowerPos);
         // Claim the world's one-and-only heart here too, same as InfectionSpreadEngine's natural
         // path - this guaranteed distant epicenter runs early, so it should normally win the
-        // claim before any player-grown outbreak ever reaches phase 4.
-        data.claimHeart();
+        // claim before any player-grown outbreak ever reaches phase 4. If one already did, the
+        // epicenter stays a plain anchor instead of becoming a second heart.
+        if (data.claimHeart()) {
+            InfectionSpreadEngine.promoteAnchorToHeart(level, flowerPos);
+        }
         OutbreakRecord epicenter = data.registerOutbreak(flowerPos, level.getGameTime(), true)
                 .withPhase(4)
                 .withPeakPhase(4)

@@ -110,7 +110,11 @@ public final class RootGrowthEngine {
             // enough concurrently-eligible outbreaks (e.g. many phase 2+ anchors near a player)
             // grew this queue every sweep with nothing ever rejecting an offer. Capped the same
             // way the sibling worldgen queues already are.
-            queue.offer(new RootGrowthTask(outbreak.id(), level.dimension()), com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get());
+            // A dropped offer must release the "already queued" mark too, or this outbreak never gets
+            // another root task for the rest of the session.
+            if (!queue.tryOffer(new RootGrowthTask(outbreak.id(), level.dimension()), com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get())) {
+                queuedOutbreaks.remove(outbreak.id());
+            }
         }
     }
 
@@ -180,6 +184,9 @@ public final class RootGrowthEngine {
     private void maybeSpawnChildOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord parent, RootChainState chain, BlockPos at) {
         if (chain.chainLength < CHILD_MIN_CHAIN_LENGTH) return;
         if (level.random.nextDouble() >= CHILD_OUTBREAK_CHANCE) return;
+        // The mini-lotus sits on a lily pad, which only survives on water - a root tip on dry ground
+        // got a pad that popped on the next neighbour update, taking the shoot with it.
+        if (!level.getFluidState(at).is(net.minecraft.world.level.material.Fluids.WATER)) return;
 
         BlockPos padPos = at.above();
         BlockPos flowerPos = padPos.above();

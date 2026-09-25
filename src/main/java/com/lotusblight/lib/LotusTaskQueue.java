@@ -13,7 +13,14 @@ public final class LotusTaskQueue<T> {
 
     /** Silently drops the task instead of queuing it once {@code maxSize} pending tasks are already waiting. */
     public void offer(T task, int maxSize) {
-        if (task != null && tasks.size() < maxSize) tasks.offer(task);
+        tryOffer(task, maxSize);
+    }
+
+    /** Same as {@link #offer(Object, int)}, but reports whether the task was actually queued. */
+    public boolean tryOffer(T task, int maxSize) {
+        if (task == null || tasks.size() >= maxSize) return false;
+        tasks.offer(task);
+        return true;
     }
 
     public int size() {
