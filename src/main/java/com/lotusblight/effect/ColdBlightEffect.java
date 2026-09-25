@@ -11,7 +11,9 @@ public class ColdBlightEffect extends MobEffect {
 
     @Override
     public boolean isDurationEffectTick(int duration, int amplifier) {
-        return duration % 40 == 0;
+        // Standing on a nodule re-applies the effect every tick, so the duration never counts down
+        // far enough to line up with anything - the tickCount check below does the pacing alone.
+        return true;
     }
 
     @Override
