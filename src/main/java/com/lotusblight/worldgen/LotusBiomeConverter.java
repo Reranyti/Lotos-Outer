@@ -3,7 +3,7 @@ package com.lotusblight.worldgen;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.forge.ForgeAdapter;
-import com.sk89q.worldedit.math.BlockVector2;
+import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.biome.BiomeType;
 import com.sk89q.worldedit.world.biome.BiomeTypes;
 import net.minecraft.core.BlockPos;
@@ -31,13 +31,23 @@ public final class LotusBiomeConverter {
         if (lotusMarsh == null) return; // Registry not ready yet (shouldn't happen this late, but never crash the spread tick over it).
 
         var weWorld = ForgeAdapter.adapt(level);
-        // setBiome takes a single column (BlockVector2, whole height) at a time - no bulk-region
-        // overload - so this walks every column in the square instead of one Region call. One-time
-        // cost per outbreak reaching phase 4, not a per-tick operation.
+        // The 2D setBiome(BlockVector2) overload is a deprecated leftover from pre-1.18 column biomes -
+        // it only writes the single 4x4x4 cell at Y=0, so the surface never changed. Biomes are stored
+        // per 4x4x4 cell now, so one write per cell covers the whole volume. Columns in unloaded
+        // chunks are skipped - WorldEdit would load (or generate) them synchronously otherwise.
+        int minX = (center.getX() - CONVERSION_RADIUS) & ~3;
+        int minZ = (center.getZ() - CONVERSION_RADIUS) & ~3;
+        int maxX = center.getX() + CONVERSION_RADIUS;
+        int maxZ = center.getZ() + CONVERSION_RADIUS;
+        int minY = level.getMinBuildHeight();
+        int maxY = level.getMaxBuildHeight();
         try (EditSession editSession = WorldEdit.getInstance().newEditSessionBuilder().world(weWorld).build()) {
-            for (int x = center.getX() - CONVERSION_RADIUS; x <= center.getX() + CONVERSION_RADIUS; x++) {
-                for (int z = center.getZ() - CONVERSION_RADIUS; z <= center.getZ() + CONVERSION_RADIUS; z++) {
-                    editSession.setBiome(BlockVector2.at(x, z), lotusMarsh);
+            for (int x = minX; x <= maxX; x += 4) {
+                for (int z = minZ; z <= maxZ; z += 4) {
+                    if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                    for (int y = minY; y < maxY; y += 4) {
+                        editSession.setBiome(BlockVector3.at(x, y, z), lotusMarsh);
+                    }
                 }
             }
         }
@@ -55,6 +65,7 @@ public final class LotusBiomeConverter {
             if (player.blockPosition().distSqr(center) > (double) (CONVERSION_RADIUS + 64) * (CONVERSION_RADIUS + 64)) continue;
             for (int cx = minChunkX; cx <= maxChunkX; cx++) {
                 for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                    if (!level.hasChunk(cx, cz)) continue;
                     var chunk = level.getChunk(cx, cz);
                     player.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
                             chunk, level.getLightEngine(), null, null));
