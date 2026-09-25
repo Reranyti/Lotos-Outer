@@ -78,8 +78,12 @@ public final class BlackHeartManager {
     /** "при смерти можно только снять" - dying is the only cure. */
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        if (!event.isWasDeath()) return;
         if (!(event.getEntity() instanceof ServerPlayer newPlayer)) return;
+        if (!event.isWasDeath()) {
+            // End exit portal - the new player's attributes start fresh, the curse doesn't.
+            applyModifier(newPlayer, LotusPlayerState.getBlackHeartCount(newPlayer));
+            return;
+        }
         if (LotusPlayerState.getBlackHeartCount(newPlayer) <= 0) return;
         LotusPlayerState.clearBlackHeartCount(newPlayer);
         applyModifier(newPlayer, 0);

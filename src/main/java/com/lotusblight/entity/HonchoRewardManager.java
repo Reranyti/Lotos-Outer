@@ -49,4 +49,11 @@ public final class HonchoRewardManager {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         applyModifier(player, LotusPlayerState.getHonchoDependencyCount(player));
     }
+
+    /** The respawned player gets a fresh attribute map - put the blessing back instead of waiting for the next relog. */
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        applyModifier(player, LotusPlayerState.getHonchoDependencyCount(player));
+    }
 }
