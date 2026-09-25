@@ -374,6 +374,7 @@ public class InfectionSpreadEngine {
         for (int attempt = 0; attempt < LAND_BIAS_DRAWS; attempt++) {
             if (asList == null) asList = new ArrayList<>(frontier);
             BlockPos candidate = asList.get(level.random.nextInt(asList.size()));
+            if (!level.hasChunkAt(candidate)) continue;
             if (!level.getFluidState(candidate).is(Fluids.WATER) && !isCanopySource(level, candidate)) {
                 return candidate;
             }
@@ -397,7 +398,7 @@ public class InfectionSpreadEngine {
      */
     private boolean hasNearbyShoot(ServerLevel level, BlockPos pos) {
         for (BlockPos check : BlockPos.betweenClosed(pos.offset(-SHOOT_SPACING, -1, -SHOOT_SPACING), pos.offset(SHOOT_SPACING, 1, SHOOT_SPACING))) {
-            if (check.equals(pos)) continue;
+            if (check.equals(pos) || !level.hasChunkAt(check)) continue;
             BlockState state = level.getBlockState(check);
             if (state.is(ModBlocks.LOTUS_SHOOT.get()) || state.is(ModBlocks.INFECTED_LOTUS.get()) || state.is(ModBlocks.LOTUS_HEART.get())) {
                 return true;
@@ -417,6 +418,9 @@ public class InfectionSpreadEngine {
 
     /** Returns the converted position on success, or null if this attempt did nothing. */
     private BlockPos trySpreadOnce(ServerLevel level, BlockPos source, int radius, int phase) {
+        // Frontier entries (and the fallback pick) can sit in chunks that unloaded since they were
+        // converted - every block read below would force a synchronous chunk load on the tick.
+        if (!level.hasChunkAt(source)) return null;
         BlockPos target = randomNeighbour(level, source, radius);
         if (!level.hasChunkAt(target)) return null;
 
@@ -431,7 +435,7 @@ public class InfectionSpreadEngine {
             target = source;
             for (int hop = 0; hop < hops; hop++) {
                 BlockPos next = findWaterDownstream(level, target);
-                if (next.equals(target)) break;
+                if (next.equals(target) || !level.hasChunkAt(next)) break;
                 target = next;
             }
         }
@@ -543,6 +547,7 @@ public class InfectionSpreadEngine {
     private boolean isNearWater(ServerLevel level, Deque<BlockPos> frontier, BlockPos anchor) {
         int checked = 0;
         for (BlockPos pos : frontier) {
+            if (!level.hasChunkAt(pos)) continue;
             if (level.getFluidState(pos).is(Fluids.WATER) || level.getFluidState(pos.below()).is(Fluids.WATER)) return true;
             if (++checked >= 6) break;
         }
@@ -561,7 +566,7 @@ public class InfectionSpreadEngine {
         BlockPos best = source;
         double bestScore = -Double.MAX_VALUE;
         for (BlockPos candidate : BlockPos.betweenClosed(source.offset(-1, -1, -1), source.offset(1, 0, 1))) {
-            if (!level.getFluidState(candidate).is(Fluids.WATER)) continue;
+            if (!level.hasChunkAt(candidate) || !level.getFluidState(candidate).is(Fluids.WATER)) continue;
             double dx = candidate.getX() - source.getX();
             double dz = candidate.getZ() - source.getZ();
             double score = dx * flow.x + dz * flow.z - Math.max(0, candidate.getY() - source.getY()) * 0.75;
@@ -670,6 +675,11 @@ public class InfectionSpreadEngine {
 
     /** A 3-5 tall lotus-log trunk with a thick, multi-layer leaf canopy — the mini-biome's own tree, grown rather than converted. */
     private boolean tryGrowMiniTree(ServerLevel level, BlockPos base) {
+        // The canopy reaches 2 blocks out from the trunk, which can cross into an unloaded chunk.
+        if (!level.hasChunkAt(base.offset(-2, 0, -2)) || !level.hasChunkAt(base.offset(2, 0, 2))
+                || !level.hasChunkAt(base.offset(-2, 0, 2)) || !level.hasChunkAt(base.offset(2, 0, -2))) {
+            return false;
+        }
         int trunkHeight = 3 + level.random.nextInt(3);
         for (int i = 0; i < trunkHeight; i++) {
             if (!level.getBlockState(base.above(i)).isAir()) return false;
