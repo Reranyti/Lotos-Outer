@@ -51,9 +51,15 @@ public final class MossyGlandWorldgen {
         }
 
         if (totalProbes >= MAX_TOTAL_PROBES_PER_SEED) {
-            // Give up on this one seed for this session - tried very hard and found nowhere
-            // suitable. Doesn't block the game; just means fewer than 3 for now.
-            giveUp = true;
+            // "куда всех разворовали? Мшистых желёз нет" - this used to set the class-level giveUp
+            // flag, which onServerTick's own first check treats as "stop searching forever", not
+            // just "this one seed attempt failed". A single unlucky 2000-probe stretch (e.g. a
+            // center that landed in ocean) silently killed ALL THREE glands for the rest of the
+            // server session, not just the current one - the doc comment's "give up on this one
+            // seed" was never what the code actually did. Reset and try a fresh center instead;
+            // only the per-seed counters are actually scoped to one attempt.
+            totalProbes = 0;
+            currentCenter = null;
             return;
         }
 

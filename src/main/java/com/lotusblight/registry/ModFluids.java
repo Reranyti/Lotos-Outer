@@ -87,6 +87,23 @@ public final class ModFluids {
                 public net.minecraft.resources.ResourceLocation getRenderOverlayTexture(net.minecraft.client.Minecraft mc) {
                     return new net.minecraft.resources.ResourceLocation("textures/misc/underwater.png");
                 }
+
+                // Never overridden before - fell through to IClientFluidTypeExtensions.DEFAULT's
+                // solid white (0xFFFFFFFF), meaning the still/flowing texture rendered completely
+                // untinted ("вода вообще не красится в биомах"). Reuses the exact same per-biome
+                // gradient modifyFogColor already samples above, just keyed off the actual fluid
+                // block's biome instead of the camera's.
+                @Override
+                public int getTintColor(net.minecraft.world.level.material.FluidState state,
+                        net.minecraft.world.level.BlockAndTintGetter getter, net.minecraft.core.BlockPos pos) {
+                    net.minecraft.resources.ResourceLocation biomeId = null;
+                    if (getter instanceof net.minecraft.world.level.LevelReader reader) {
+                        biomeId = reader.getBiome(pos).unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+                    }
+                    int[] gradient = biomeId != null ? com.lotusblight.client.BiomeFogColors.gradientFor(biomeId) : null;
+                    int color = gradient != null ? com.lotusblight.client.BiomeFogColors.sample(gradient, 1.0f) : 0x08331A;
+                    return 0xFF000000 | color;
+                }
             });
         }
     });
