@@ -67,6 +67,8 @@ public final class LotusChaseEvent {
 
     private LotusChaseStructure structure;
     private UUID runnerUuid;
+    private static final int FORFEIT_HIT_DELAY_TICKS = 80;
+    private final java.util.Map<UUID, Long> pendingForfeitHits = new java.util.HashMap<>();
     private long runnerStartTick;
     private long dashReadyAtTick;
     private long nextObstacleAtTick;
@@ -86,6 +88,8 @@ public final class LotusChaseEvent {
         MinecraftServer server = event.getServer();
         ServerLevel overworld = server.overworld();
         long gameTick = overworld.getGameTime();
+        // Before the lab check - it doesn't depend on the lab being loaded at all.
+        deliverForfeitHits(server);
 
         ensureLabExists(overworld);
         if (structure == null) return; // area not chunk-loaded yet - retry next tick, see ensureLabExists
@@ -238,8 +242,23 @@ public final class LotusChaseEvent {
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || !LotusPlayerState.hasChaseForfeited(player)) return;
-        LotusPlayerState.setChaseForfeited(player, false);
-        player.hurt(player.damageSources().fall(), Float.MAX_VALUE);
+        // A freshly joined player is spawn-invulnerable for ~3 seconds and fall damage is simply
+        // dropped then - wait it out instead of hitting straight away.
+        pendingForfeitHits.put(player.getUUID(), event.getEntity().getServer().getTickCount() + (long) FORFEIT_HIT_DELAY_TICKS);
+    }
+
+    private void deliverForfeitHits(MinecraftServer server) {
+        if (pendingForfeitHits.isEmpty()) return;
+        var it = pendingForfeitHits.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            if (server.getTickCount() < entry.getValue()) continue;
+            it.remove();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null || !LotusPlayerState.hasChaseForfeited(player)) continue;
+            LotusPlayerState.setChaseForfeited(player, false);
+            player.hurt(player.damageSources().fall(), Float.MAX_VALUE);
+        }
     }
 
     private void endRun() {
