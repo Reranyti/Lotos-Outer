@@ -64,7 +64,7 @@ public final class LotusHudOverlay {
         GuiGraphics g = event.getGuiGraphics();
         int left = g.guiWidth() - SIZE - 8;
         int top = 8;
-        g.fill(left - 2, top - 2, left + SIZE + 2, top + SIZE + 28, COLOR_BACKDROP);
+        g.fill(left - 2, top - 2, left + SIZE + 2, top + SIZE + 40, COLOR_BACKDROP);
         g.fill(left, top, left + SIZE, top + SIZE, COLOR_PANEL);
         int mapCenterX = left + SIZE / 2;
         int mapCenterY = top + SIZE / 2;
@@ -105,6 +105,18 @@ public final class LotusHudOverlay {
             g.drawString(mc.font, "Ближайший: " + Math.round(Math.sqrt(nearestDistSq)) + " м", left, top + SIZE + 14, 0xFFFFD66E, false);
         } else {
             g.drawString(mc.font, "Очаги не обнаружены", left, top + SIZE + 14, 0xFF8CFF9F, false);
+        }
+
+        // "календарик с 13 майнкрафтовскими днями" - a self-contained world calendar, not tied to
+        // any real-world date, purely derived from elapsed game days (see LotusCalendar). Gated on
+        // actually owning the crafted calendar item, same "have the tool to see the info" logic as
+        // a vanilla clock/compass, rather than being free HUD info from the start.
+        if (mc.player.getInventory().contains(new net.minecraft.world.item.ItemStack(com.lotusblight.registry.ModItems.CALENDAR.get()))) {
+            var date = com.lotusblight.data.LotusCalendar.dateFor(mc.level.getDayTime() / 24000L);
+            String dateLine = date.monthName() + " " + date.dayOfMonth() + ", год " + date.year();
+            String weekLine = "Неделя " + date.weekOfMonth() + ", день " + date.dayOfWeek();
+            g.drawString(mc.font, dateLine, left, top + SIZE + 25, 0xFFCFE8FF, false);
+            g.drawString(mc.font, weekLine, left, top + SIZE + 36, 0xFF9FB8D0, false);
         }
     }
 

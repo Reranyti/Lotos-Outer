@@ -2,10 +2,8 @@ package com.lotusblight.client;
 
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -35,10 +33,13 @@ public final class InfectedGroundColor implements BlockColor {
         if (!(level instanceof LevelReader reader) || pos == null) return BiomeInfectionColors.NO_TINT;
         InfectedMaterial material = InfectedMaterial.of(state.getBlock());
         if (material == null) return BiomeInfectionColors.NO_TINT;
-        Holder<Biome> biome = reader.getBiome(pos);
-        net.minecraft.resources.ResourceLocation biomeId = biome.unwrapKey()
-                .map(net.minecraft.resources.ResourceKey::location)
-                .orElse(null);
+        // "лотос никогда не будет выглядеть так как выглядит наш биом" - a mature outbreak (phase
+        // 4+, heart-anchored) is conceptually a patch of the real lotus_marsh biome, so it forces
+        // that biome's own palette here instead of whatever ambient biome the block happens to
+        // physically sit in (see LotusTerritory - a "world property" check, not a real biome swap).
+        net.minecraft.resources.ResourceLocation biomeId = LotusTerritory.isLotusTerritory(pos)
+                ? LotusTerritory.LOTUS_MARSH
+                : reader.getBiome(pos).unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
         if (biomeId == null) return BiomeInfectionColors.NO_TINT;
         int biomeColor = BiomeInfectionColors.colorFor(biomeId, material);
         return blendTowardWhite(biomeColor, BLEND_STRENGTH);

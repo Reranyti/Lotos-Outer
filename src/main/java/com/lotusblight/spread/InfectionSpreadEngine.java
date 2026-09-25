@@ -198,6 +198,15 @@ public class InfectionSpreadEngine {
             // nothing anywhere actually checked the biome to make that true.
             attempts = Math.max(0, attempts - BLESSING_ATTEMPTS_PENALTY);
             radius = Math.max(1, radius - BLESSING_RADIUS_PENALTY);
+        } else if (isInLotusTerritory(level, outbreak.pos(), phase)) {
+            // "МНЕ НУЖНА МЕХАНИКА ЧТО НОРМАЛЬНО РАБОТАЕТ И ВЛИЯЕТ" - a purely visual "looks like
+            // lotus_marsh" fix wasn't the ask; this is the real, mirrored opposite of the Blessing
+            // penalty above - an actual growth-rate bonus, not cosmetics. True territory is either
+            // the real lotus_marsh biome (genuine biome-id correspondence, no Mixin needed since
+            // we're only reading it, not writing it) or an outbreak that has already earned its own
+            // mini-biome status (phase 4+) — both read as "home turf" for the Lotus.
+            attempts += LOTUS_ATTEMPTS_BONUS;
+            radius += LOTUS_RADIUS_BONUS;
         }
         if (openOcean) {
             // Open water is nothing but a spread medium for this infection, so it races through
@@ -267,11 +276,20 @@ public class InfectionSpreadEngine {
 
     private static final int BLESSING_ATTEMPTS_PENALTY = 1;
     private static final int BLESSING_RADIUS_PENALTY = 1;
+    private static final int LOTUS_ATTEMPTS_BONUS = 2;
+    private static final int LOTUS_RADIUS_BONUS = 2;
+    /** Matches InfectionPhases#canGrowVineBarrier's own "mini-biome" threshold - an outbreak this mature counts as the Lotus's home turf even outside the real biome. */
+    private static final int LOTUS_TERRITORY_PHASE = 4;
 
     /** Real vanilla Blessing biome OR a meteorite impact site's own "world property" (see MeteoriteSpreadEngine#isBlessingTerritory) - both read as Blessing territory for this check. */
     private boolean isInBlessingBiome(ServerLevel level, BlockPos pos) {
         return level.getBiome(pos).is(com.lotusblight.registry.ModBiomes.BLESSING_BIOME)
                 || MeteoriteSpreadEngine.isBlessingTerritory(level, pos);
+    }
+
+    /** Real vanilla lotus_marsh biome (genuine biome-id correspondence) OR an outbreak that has already grown into its own mini-biome (phase 4+) - see the "СООТВЕТСТВИЕ БИОМОВ" discussion this mirrors the Blessing penalty for. */
+    private boolean isInLotusTerritory(ServerLevel level, BlockPos pos, int phase) {
+        return level.getBiome(pos).is(com.lotusblight.registry.ModBiomes.LOTUS_BIOME) || phase >= LOTUS_TERRITORY_PHASE;
     }
 
     private static final int OCEAN_ATTEMPTS_BONUS = 3;

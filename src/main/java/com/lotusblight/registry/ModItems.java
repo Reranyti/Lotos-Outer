@@ -35,6 +35,10 @@ public final class ModItems {
     public static final RegistryObject<Item> INFECTED_WATER_BUCKET = ITEMS.register("infected_water_bucket", () -> new BucketItem(ModFluids.INFECTED_WATER, new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET)));
     public static final RegistryObject<Item> LOTUS_MAP = ITEMS.register("lotus_map", () -> new LotusMapItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> LOTUS_WIKI = ITEMS.register("lotus_wiki", () -> new LotusWikiItem(new Item.Properties()));
+    // --- Calendar crafting chain: paper_stack (9 paper) + iron_rim (3 iron) -> calendar (see recipes) ---
+    public static final RegistryObject<Item> PAPER_STACK = ITEMS.register("paper_stack", () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final RegistryObject<Item> IRON_RIM = ITEMS.register("iron_rim", () -> new Item(new Item.Properties().stacksTo(64)));
+    public static final RegistryObject<Item> CALENDAR = ITEMS.register("calendar", () -> new Item(new Item.Properties().stacksTo(1)));
     // --- Discoverable lore item: rare guardian drop, not handed out at spawn (see GuardianManager#onDrops) ---
     public static final RegistryObject<Item> SCIENTIST_PAGE = ITEMS.register("scientist_page", () -> new ScientistPageItem(new Item.Properties()));
     public static final RegistryObject<Item> LOTUS_MIMIC_ITEM = ITEMS.register("lotus_mimic", () -> new BlockItem(ModBlocks.LOTUS_MIMIC.get(), new Item.Properties()));

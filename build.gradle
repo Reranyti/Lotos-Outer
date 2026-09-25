@@ -145,6 +145,14 @@ repositories {
         }
     }
 
+    maven {
+        name = 'EngineHub'
+        url 'https://maven.enginehub.org/repo/'
+        content {
+            includeGroupByRegex("com\\.sk89q.*")
+        }
+    }
+
 }
 
 dependencies {

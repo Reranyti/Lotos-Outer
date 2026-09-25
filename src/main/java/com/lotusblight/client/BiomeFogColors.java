@@ -75,6 +75,16 @@ public final class BiomeFogColors {
         put("minecraft:lush_caves", 0x3F6B33, 0x1C2E17);
         put("minecraft:deep_dark", 0x0A120A, 0x1A2A40);
         put("minecraft:the_void", 0x0C140C);
+
+        // "лотос никогда не будет выглядеть так как выглядит наш биом" - our own two biomes were
+        // completely missing from this table, meaning infection color/fog inside our OWN signature
+        // biomes fell through to the generic fallback (0x08331A, a fixed dark green - what actually
+        // read as "the water is always green no matter what" in a heavily-infected world where
+        // lotus_marsh is common) instead of ever reflecting their own real palette. Anchored on
+        // these two biomes' own biome-json effects colors (grass_color/water_color), not arbitrary
+        // picks, so this is finally the actual lotus_marsh/blessing_tundra identity, not a guess.
+        put("lotusblight:lotus_marsh", 0x328C78, 0x2EFE0D);
+        put("lotusblight:blessing_tundra", 0x6C6772, 0x55FFFF);
     }
 
     private BiomeFogColors() {}

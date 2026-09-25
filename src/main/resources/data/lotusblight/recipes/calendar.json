@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "I": {
+      "item": "lotusblight:iron_rim"
+    },
+    "P": {
+      "item": "lotusblight:paper_stack"
+    }
+  },
+  "result": {
+    "item": "lotusblight:calendar",
+    "count": 1
+  }
+}

@@ -52,6 +52,9 @@ public class LotusBlight {
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.LOTUS_SEED.get());
                 output.accept(ModItems.LOTUS_WIKI.get());
+                output.accept(ModItems.PAPER_STACK.get());
+                output.accept(ModItems.IRON_RIM.get());
+                output.accept(ModItems.CALENDAR.get());
                 output.accept(ModItems.SCIENTIST_PAGE.get());
                 output.accept(ModItems.LOTUS_MIMIC_ITEM.get());
                 output.accept(ModItems.LOTUS_MAP.get());
