@@ -90,6 +90,28 @@ public class HonchoEntity extends Zombie implements GeoEntity {
         // No targetSelector goals at all - Honcho never picks a target, never attacks.
     }
 
+    // Zombie defaults that make no sense for a one-per-world quest NPC: burning at dawn, turning into
+    // a Drowned after a swim, and calling vanilla zombies in as reinforcements when hit.
+    @Override
+    protected boolean isSunSensitive() {
+        return false;
+    }
+
+    @Override
+    protected boolean convertsInWater() {
+        return false;
+    }
+
+    @Override
+    protected void randomizeReinforcementsChance() {
+    }
+
+    /** Zombie is an Enemy, so golems (and anything else hunting monsters) would go after him - nothing should pick Honcho as a target. */
+    @Override
+    public boolean canBeSeenAsEnemy() {
+        return false;
+    }
+
     @Override
     public boolean isAggressive() {
         return false;

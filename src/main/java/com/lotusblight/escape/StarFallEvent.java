@@ -1,6 +1,7 @@
 package com.lotusblight.escape;
 
 import com.lotusblight.LotusConfig;
+import com.lotusblight.data.HonchoSavedData;
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
@@ -61,12 +62,21 @@ public final class StarFallEvent {
         }
     }
 
-    /** "появляется ПОСЛЕ [StarFall]" - one Honcho per player who lives through StarFall, dropped in near them; he's persistent and just wanders/waits from then on (see HonchoEntity). */
+    /** "появляется ПОСЛЕ [StarFall]" - one Honcho per world (HonchoSavedData), dropped in near whoever lived through StarFall first; he's persistent and just wanders/waits from then on (see HonchoEntity). */
     private void spawnHoncho(ServerLevel level, ServerPlayer player) {
+        HonchoSavedData honchoData = HonchoSavedData.get(level.getServer().overworld());
+        if (honchoData.isSpawned()) return;
         var entity = com.lotusblight.registry.ModEntities.HONCHO.get().create(level);
         if (entity == null) return;
         var pos = player.blockPosition().offset(2, 0, 2);
         entity.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0f, 0f);
-        level.addFreshEntity(entity);
+        // A fixed +2/+2 offset lands inside a wall or a tree trunk often enough - fall back to the
+        // player's own spot, which is known to be free.
+        if (!level.hasChunkAt(pos) || !level.noCollision(entity)) {
+            entity.moveTo(player.getX(), player.getY(), player.getZ(), 0f, 0f);
+        }
+        if (level.addFreshEntity(entity)) {
+            honchoData.markSpawned();
+        }
     }
 }
