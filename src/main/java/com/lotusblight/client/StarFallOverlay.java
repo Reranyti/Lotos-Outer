@@ -137,6 +137,7 @@ public final class StarFallOverlay {
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Post event) {
+        if (!LotusClientHooks.isOverlayPass(event)) return;
         if (active() && System.currentTimeMillis() > lineExpireAtMs) {
             advance();
         }

@@ -5,9 +5,21 @@ import com.lotusblight.map.MapMarker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 
 public final class LotusClientHooks {
     private LotusClientHooks() {
+    }
+
+    /**
+     * RenderGuiOverlayEvent.Post fires once after EVERY registered HUD layer (20+ per frame), not
+     * once per frame. The mod's overlays hook it to draw on top of the HUD, so each one checks this
+     * and only draws after the chat layer - otherwise translucent fills stacked on themselves every
+     * frame and the minimap was redrawn dozens of times over.
+     */
+    public static boolean isOverlayPass(RenderGuiOverlayEvent.Post event) {
+        return event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type();
     }
 
     public static void openDialogue(BlockHitResult hit) {

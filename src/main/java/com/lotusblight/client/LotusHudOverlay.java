@@ -51,6 +51,7 @@ public final class LotusHudOverlay {
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Post event) {
+        if (!LotusClientHooks.isOverlayPass(event)) return;
         // JourneyMap (if installed) replaces this HUD with real waypoints — see
         // com.lotusblight.map.journeymap.LotusJourneyMapPlugin. Avoid drawing both.
         if (net.minecraftforge.fml.ModList.get().isLoaded("journeymap")) return;

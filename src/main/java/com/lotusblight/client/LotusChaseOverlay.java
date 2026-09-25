@@ -8,6 +8,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -55,14 +56,22 @@ public final class LotusChaseOverlay {
         }
     }
 
+    /** Counted per client tick, not per frame - the old per-render countdown ran the 1:50 clock out in a couple of seconds. */
     @SubscribeEvent
-    public static void onRender(RenderGuiOverlayEvent.Post event) {
-        if (!clockActive) return;
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !clockActive) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
         if (mc.level != null && !mc.isPaused()) {
             ticksLeft = Math.max(0, ticksLeft - 1);
         }
+    }
+
+    @SubscribeEvent
+    public static void onRender(RenderGuiOverlayEvent.Post event) {
+        if (!LotusClientHooks.isOverlayPass(event)) return;
+        if (!clockActive) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.options.hideGui) return;
 
         GuiGraphics g = event.getGuiGraphics();
         int seconds = ticksLeft / 20;

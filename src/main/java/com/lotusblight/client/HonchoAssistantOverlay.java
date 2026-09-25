@@ -86,6 +86,7 @@ public final class HonchoAssistantOverlay {
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Post event) {
+        if (!LotusClientHooks.isOverlayPass(event)) return;
         if (active() && !onQuestion && System.currentTimeMillis() > lineExpireAtMs) {
             advance();
         }

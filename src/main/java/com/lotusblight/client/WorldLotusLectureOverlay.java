@@ -114,6 +114,7 @@ public final class WorldLotusLectureOverlay {
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Post event) {
+        if (!LotusClientHooks.isOverlayPass(event)) return;
         if (active() && System.currentTimeMillis() > lineExpireAtMs) {
             advance();
         }
