@@ -54,6 +54,9 @@ public class LotusEvents {
     private static final DustParticleOptions GREEN = new DustParticleOptions(new Vector3f(0.2f, 0.95f, 0.35f), 1.0f);
     private static final DustParticleOptions PINK = new DustParticleOptions(new Vector3f(1.0f, 0.2f, 0.55f), 1.0f);
     private static final LotusTaskQueue<GlobalPos> PENDING_LOTUS_CHUNKS = new LotusTaskQueue<>();
+    // Same deferral as the lotus patches - setBlock from inside ChunkEvent.Load, while the chunk is
+    // still being promoted to a full LevelChunk, is exactly the moment the server can't safely write.
+    private static final LotusTaskQueue<GlobalPos> PENDING_BLESSING_CHUNKS = new LotusTaskQueue<>();
     private final LotusIntegrationManager integrations = new LotusIntegrationManager();
 
     /** Registers a new outbreak anchor in the persisted registry. Outbreaks start hidden until discovered (see the map system). */
@@ -74,7 +77,8 @@ public class LotusEvents {
             // single new chunk of the biome, guaranteeing dense decoration everywhere instead of
             // the sparse, barren feel the design calls for.
             if (RANDOM.nextInt(6) == 0) {
-                generateBlessingPatch(level, minX, minZ);
+                PENDING_BLESSING_CHUNKS.offer(GlobalPos.of(level.dimension(), new BlockPos(minX, 0, minZ)),
+                        com.lotusblight.LotusConfig.MAX_PENDING_WORLDGEN_TASKS.get());
             }
         } else {
             boolean lotusBiome = level.getBiome(probe).is(ModBiomes.LOTUS_BIOME);
@@ -92,13 +96,19 @@ public class LotusEvents {
                 generateLotusPatch(level, queued.pos().getX(), queued.pos().getZ());
             }
         });
+        LotusLib.process(PENDING_BLESSING_CHUNKS, LotusLib.MAX_WORLDGEN_TASKS_PER_TICK, queued -> {
+            ServerLevel level = server.getLevel(queued.dimension());
+            if (level != null && level.hasChunkAt(queued.pos())) {
+                generateBlessingPatch(level, queued.pos().getX(), queued.pos().getZ());
+            }
+        });
     }
 
     private void generateBlessingPatch(ServerLevel level, int minX, int minZ) {
         for (int i = 0; i < 1; i++) {
             int x = minX + 2 + RANDOM.nextInt(12);
             int z = minZ + 2 + RANDOM.nextInt(12);
-            int y = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z) - 1;
+            int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
             if (y < level.getMinBuildHeight() || y > 250) continue;
             BlockPos pos = new BlockPos(x, y, z);
             if (!level.getBlockState(pos).isAir()) pos = pos.above();
