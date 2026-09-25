@@ -159,6 +159,19 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String HONCHO_ASSISTANT_PENDING_KEY = "HonchoAssistantPending";
+
+    /** Set while the assistant question is on screen and not answered yet - the answer packet is only accepted then, and the scene is re-sent on the next login if the player left before answering. */
+    public static boolean isHonchoAssistantPending(Player player) {
+        return root(player, false).getBoolean(HONCHO_ASSISTANT_PENDING_KEY);
+    }
+
+    public static void setHonchoAssistantPending(Player player, boolean pending) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_ASSISTANT_PENDING_KEY, pending);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static boolean hasFullMapVisibility(Player player) {
         return root(player, false).getBoolean(FULL_MAP_VISIBILITY_KEY);
     }

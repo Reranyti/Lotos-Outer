@@ -171,6 +171,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
         if (LotusPlayerState.getDialogueBranch(serverPlayer) == LotusPlayerState.BRANCH_RESISTANCE
                 && !LotusPlayerState.hasAskedHonchoAssistant(serverPlayer)) {
             LotusPlayerState.markAskedHonchoAssistant(serverPlayer);
+            LotusPlayerState.setHonchoAssistantPending(serverPlayer, true);
             com.lotusblight.map.NetworkHandler.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> serverPlayer),
                     new com.lotusblight.map.ShowHonchoAssistantPacket());
             return InteractionResult.CONSUME;

@@ -2,8 +2,11 @@ package com.lotusblight.map;
 
 import com.lotusblight.LotusBlight;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
+
+import java.util.Optional;
 
 /**
  * Owns the mod's single {@link SimpleChannel}, used to push the player's
@@ -19,7 +22,9 @@ import net.minecraftforge.network.simple.SimpleChannel;
  * <pre>    com.lotusblight.map.NetworkHandler.register();</pre>
  */
 public final class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "1";
+    // Bumped whenever a packet is added, removed or changes shape - a mismatched client is refused
+    // at login instead of failing to decode mid-game.
+    private static final String PROTOCOL_VERSION = "2";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(LotusBlight.MODID, "map_sync"),
@@ -38,25 +43,27 @@ public final class NetworkHandler {
             return;
         }
         registered = true;
+        // Directions are explicit: without them any packet was accepted both ways, so a client could
+        // send e.g. ShowStarFallPacket to a LAN host and play the scene on the host's screen.
         int id = 0;
-        CHANNEL.registerMessage(id++, MapSyncPacket.class, MapSyncPacket::encode, MapSyncPacket::decode, MapSyncPacket::handle);
-        CHANNEL.registerMessage(id++, DialogueChoicePacket.class, DialogueChoicePacket::encode, DialogueChoicePacket::decode, DialogueChoicePacket::handle);
-        CHANNEL.registerMessage(id++, PlayerStateSyncPacket.class, PlayerStateSyncPacket::encode, PlayerStateSyncPacket::decode, PlayerStateSyncPacket::handle);
-        CHANNEL.registerMessage(id++, ShowInnerVoicePacket.class, ShowInnerVoicePacket::encode, ShowInnerVoicePacket::decode, ShowInnerVoicePacket::handle);
-        CHANNEL.registerMessage(id++, DialogueAnswerPacket.class, DialogueAnswerPacket::encode, DialogueAnswerPacket::decode, DialogueAnswerPacket::handle);
-        CHANNEL.registerMessage(id++, DialogueOpenedPacket.class, DialogueOpenedPacket::encode, DialogueOpenedPacket::decode, DialogueOpenedPacket::handle);
-        CHANNEL.registerMessage(id++, GlandSyncPacket.class, GlandSyncPacket::encode, GlandSyncPacket::decode, GlandSyncPacket::handle);
-        CHANNEL.registerMessage(id++, ShowWorldLotusLecturePacket.class, ShowWorldLotusLecturePacket::encode, ShowWorldLotusLecturePacket::decode, ShowWorldLotusLecturePacket::handle);
-        CHANNEL.registerMessage(id++, TraitorBossThemePacket.class, TraitorBossThemePacket::encode, TraitorBossThemePacket::decode, TraitorBossThemePacket::handle);
-        CHANNEL.registerMessage(id++, ChaseStatePacket.class, ChaseStatePacket::encode, ChaseStatePacket::decode, ChaseStatePacket::handle);
-        CHANNEL.registerMessage(id++, ShowStarFallPacket.class, ShowStarFallPacket::encode, ShowStarFallPacket::decode, ShowStarFallPacket::handle);
-        CHANNEL.registerMessage(id++, StarFallLineReachedPacket.class, StarFallLineReachedPacket::encode, StarFallLineReachedPacket::decode, StarFallLineReachedPacket::handle);
-        CHANNEL.registerMessage(id++, OpenCommandBookPacket.class, OpenCommandBookPacket::encode, OpenCommandBookPacket::decode, OpenCommandBookPacket::handle);
-        CHANNEL.registerMessage(id++, ShowHonchoAssistantPacket.class, ShowHonchoAssistantPacket::encode, ShowHonchoAssistantPacket::decode, ShowHonchoAssistantPacket::handle);
-        CHANNEL.registerMessage(id++, HonchoAssistantChoicePacket.class, HonchoAssistantChoicePacket::encode, HonchoAssistantChoicePacket::decode, HonchoAssistantChoicePacket::handle);
-        CHANNEL.registerMessage(id++, MeteoriteMarkerSyncPacket.class, MeteoriteMarkerSyncPacket::encode, MeteoriteMarkerSyncPacket::decode, MeteoriteMarkerSyncPacket::handle);
-        CHANNEL.registerMessage(id++, ReputationSyncPacket.class, ReputationSyncPacket::encode, ReputationSyncPacket::decode, ReputationSyncPacket::handle);
-        CHANNEL.registerMessage(id++, ShowHonchoMeetingPacket.class, ShowHonchoMeetingPacket::encode, ShowHonchoMeetingPacket::decode, ShowHonchoMeetingPacket::handle);
-        CHANNEL.registerMessage(id++, HonchoMeetingChoicePacket.class, HonchoMeetingChoicePacket::encode, HonchoMeetingChoicePacket::decode, HonchoMeetingChoicePacket::handle);
+        CHANNEL.registerMessage(id++, MapSyncPacket.class, MapSyncPacket::encode, MapSyncPacket::decode, MapSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, DialogueChoicePacket.class, DialogueChoicePacket::encode, DialogueChoicePacket::decode, DialogueChoicePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, PlayerStateSyncPacket.class, PlayerStateSyncPacket::encode, PlayerStateSyncPacket::decode, PlayerStateSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ShowInnerVoicePacket.class, ShowInnerVoicePacket::encode, ShowInnerVoicePacket::decode, ShowInnerVoicePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, DialogueAnswerPacket.class, DialogueAnswerPacket::encode, DialogueAnswerPacket::decode, DialogueAnswerPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, DialogueOpenedPacket.class, DialogueOpenedPacket::encode, DialogueOpenedPacket::decode, DialogueOpenedPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, GlandSyncPacket.class, GlandSyncPacket::encode, GlandSyncPacket::decode, GlandSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ShowWorldLotusLecturePacket.class, ShowWorldLotusLecturePacket::encode, ShowWorldLotusLecturePacket::decode, ShowWorldLotusLecturePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, TraitorBossThemePacket.class, TraitorBossThemePacket::encode, TraitorBossThemePacket::decode, TraitorBossThemePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ChaseStatePacket.class, ChaseStatePacket::encode, ChaseStatePacket::decode, ChaseStatePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ShowStarFallPacket.class, ShowStarFallPacket::encode, ShowStarFallPacket::decode, ShowStarFallPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, StarFallLineReachedPacket.class, StarFallLineReachedPacket::encode, StarFallLineReachedPacket::decode, StarFallLineReachedPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, OpenCommandBookPacket.class, OpenCommandBookPacket::encode, OpenCommandBookPacket::decode, OpenCommandBookPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ShowHonchoAssistantPacket.class, ShowHonchoAssistantPacket::encode, ShowHonchoAssistantPacket::decode, ShowHonchoAssistantPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, HonchoAssistantChoicePacket.class, HonchoAssistantChoicePacket::encode, HonchoAssistantChoicePacket::decode, HonchoAssistantChoicePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, MeteoriteMarkerSyncPacket.class, MeteoriteMarkerSyncPacket::encode, MeteoriteMarkerSyncPacket::decode, MeteoriteMarkerSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ReputationSyncPacket.class, ReputationSyncPacket::encode, ReputationSyncPacket::decode, ReputationSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, ShowHonchoMeetingPacket.class, ShowHonchoMeetingPacket::encode, ShowHonchoMeetingPacket::decode, ShowHonchoMeetingPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(id++, HonchoMeetingChoicePacket.class, HonchoMeetingChoicePacket::encode, HonchoMeetingChoicePacket::decode, HonchoMeetingChoicePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 }

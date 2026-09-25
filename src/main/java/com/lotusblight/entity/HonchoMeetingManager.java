@@ -6,6 +6,7 @@ import com.lotusblight.map.NetworkHandler;
 import com.lotusblight.map.ShowHonchoMeetingPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
@@ -44,5 +45,21 @@ public final class HonchoMeetingManager {
 
         LotusPlayerState.markHonchoMeetingPending(player);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowHonchoMeetingPacket());
+    }
+
+    /**
+     * Both Honcho scenes wait for an answer that only comes from the client. Logging out (or the
+     * game closing) with the question still open used to leave the pending flag set forever - the
+     * trip roll never fires again and the assistant question never comes back. Show it again.
+     */
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (LotusPlayerState.isHonchoMeetingPending(player) && !LotusPlayerState.hasMetHoncho(player)) {
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowHonchoMeetingPacket());
+        }
+        if (LotusPlayerState.isHonchoAssistantPending(player)) {
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new com.lotusblight.map.ShowHonchoAssistantPacket());
+        }
     }
 }

@@ -30,7 +30,7 @@ public class HonchoMeetingChoicePacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null || LotusPlayerState.hasMetHoncho(player)) return;
+            if (player == null || LotusPlayerState.hasMetHoncho(player) || !LotusPlayerState.isHonchoMeetingPending(player)) return;
             LotusPlayerState.markMetHoncho(player);
             if (packet.tookHand) {
                 HonchoTripPleasedTrigger.INSTANCE.trigger(player);

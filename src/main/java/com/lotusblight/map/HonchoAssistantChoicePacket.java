@@ -2,6 +2,7 @@ package com.lotusblight.map;
 
 import com.lotusblight.advancement.HonchoBestBossTrigger;
 import com.lotusblight.advancement.HonchoCruelTrigger;
+import com.lotusblight.data.LotusPlayerState;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,7 +30,10 @@ public class HonchoAssistantChoicePacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+            // Only an actually asked, still unanswered question counts - otherwise any client could
+            // hand itself both endings' advancements whenever it liked.
+            if (player == null || !LotusPlayerState.isHonchoAssistantPending(player)) return;
+            LotusPlayerState.setHonchoAssistantPending(player, false);
             if (packet.accepted) {
                 HonchoBestBossTrigger.INSTANCE.trigger(player);
                 player.displayClientMessage(Component.literal("— Спасибо... Я буду стараться."), false);
