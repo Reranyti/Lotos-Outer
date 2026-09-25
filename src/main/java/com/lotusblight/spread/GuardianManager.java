@@ -32,6 +32,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -221,14 +222,7 @@ public final class GuardianManager {
         wolf.setCustomName(Component.literal("Страж лотоса"));
         wolf.setCustomNameVisible(true);
         wolf.setPersistenceRequired();
-        // Vanilla Wolf only fights back once provoked - a guardian needs to actively hunt players
-        // on sight instead, so these are added on top of (not instead of) Wolf's own default goals.
-        wolf.goalSelector.addGoal(2, new MeleeAttackGoal(wolf, 1.0, true));
-        // A player who has joined the lotus (ALLIANCE branch) is helping this outbreak grow - see
-        // InfectionSpreadEngine#branchInfluence - so its own guardians recognizing and sparing them
-        // is the other half of that same choice actually mattering, not just a spread-rate number.
-        wolf.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(wolf, Player.class, true,
-                target -> target instanceof Player player && !LotusPlayerState.hasJoinedLotus(player)));
+        // Hostile goals are added in onGuardianJoin once addFreshEntity fires the join event.
         applyGuardianStats(wolf, outbreak.phase());
         // Read back by onDrops below - a plain Wolf has no phase of its own, so it has to be
         // stashed somewhere that survives to death.
@@ -236,6 +230,45 @@ public final class GuardianManager {
 
         level.addFreshEntity(wolf);
         outbreakGuardians.computeIfAbsent(outbreak.id(), id -> new ArrayList<>()).add(wolf.getUUID());
+    }
+
+    /**
+     * Goals live only on the in-memory entity - nothing saves them to NBT. A guardian coming back
+     * from disk (server restart, chunk reload) is rebuilt as a plain vanilla Wolf, so the hostile
+     * goals have to be put back every time one joins a level, not just once at spawn.
+     */
+    @SubscribeEvent
+    public void onGuardianJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide()) return;
+        if (!(event.getEntity() instanceof Wolf wolf) || wolf.isTame() || !wolf.getTags().contains(GUARDIAN_TAG)) return;
+        addHostileGoals(wolf);
+    }
+
+    public static void addHostileGoals(Wolf wolf) {
+        // Vanilla Wolf only fights back once provoked - a guardian needs to actively hunt players
+        // on sight instead, so these are added on top of (not instead of) Wolf's own default goals.
+        wolf.goalSelector.addGoal(2, new GuardianAttackGoal(wolf));
+        // A player who has joined the lotus (ALLIANCE branch) is helping this outbreak grow - see
+        // InfectionSpreadEngine#branchInfluence - so its own guardians recognizing and sparing them
+        // is the other half of that same choice actually mattering, not just a spread-rate number.
+        wolf.targetSelector.addGoal(1, new GuardianHuntGoal(wolf));
+    }
+
+    /**
+     * Own subclasses so taming can strip exactly these two - a plain instanceof MeleeAttackGoal /
+     * NearestAttackableTargetGoal check also removed vanilla Wolf's own attack and skeleton-hunting
+     * goals, leaving the new pet unable to fight for its owner.
+     */
+    private static final class GuardianAttackGoal extends MeleeAttackGoal {
+        GuardianAttackGoal(Wolf wolf) {
+            super(wolf, 1.0, true);
+        }
+    }
+
+    private static final class GuardianHuntGoal extends NearestAttackableTargetGoal<Player> {
+        GuardianHuntGoal(Wolf wolf) {
+            super(wolf, Player.class, true, target -> target instanceof Player player && !LotusPlayerState.hasJoinedLotus(player));
+        }
     }
 
     /** Vanilla Wolf baseline, used as the phase-3 (fresh mature outbreak) tier. */
@@ -429,8 +462,8 @@ public final class GuardianManager {
                 && wolf.getPersistentData().getUUID(NEUTRALIZED_BY_KEY).equals(player.getUUID());
         if (held.is(net.minecraft.world.item.Items.BONE) && neutralizedByThisPlayer) {
             wolf.removeTag(GUARDIAN_TAG);
-            wolf.goalSelector.removeAllGoals(goal -> goal instanceof MeleeAttackGoal);
-            wolf.targetSelector.removeAllGoals(goal -> goal instanceof NearestAttackableTargetGoal);
+            wolf.goalSelector.removeAllGoals(goal -> goal instanceof GuardianAttackGoal);
+            wolf.targetSelector.removeAllGoals(goal -> goal instanceof GuardianHuntGoal);
             wolf.tame(player);
             wolf.setCustomNameVisible(false);
             if (!player.getAbilities().instabuild) held.shrink(1);

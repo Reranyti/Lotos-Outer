@@ -19,11 +19,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Stray;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -221,9 +218,7 @@ public final class TraitorBossFight {
         wolf.setCustomName(Component.literal("Страж лотоса"));
         wolf.setCustomNameVisible(true);
         wolf.setPersistenceRequired();
-        wolf.goalSelector.addGoal(2, new MeleeAttackGoal(wolf, 1.0, true));
-        wolf.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(wolf, Player.class, true,
-                target -> target instanceof Player targetPlayer && !LotusPlayerState.hasJoinedLotus(targetPlayer)));
+        GuardianManager.addHostileGoals(wolf);
         GuardianManager.applyGuardianStats(wolf, phase);
 
         level.addFreshEntity(wolf);
@@ -243,9 +238,7 @@ public final class TraitorBossFight {
         wolf.setCustomName(Component.literal("Страж мирового лотоса"));
         wolf.setCustomNameVisible(true);
         wolf.setPersistenceRequired();
-        wolf.goalSelector.addGoal(2, new MeleeAttackGoal(wolf, 1.0, true));
-        wolf.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(wolf, Player.class, true,
-                target -> target instanceof Player targetPlayer && !LotusPlayerState.hasJoinedLotus(targetPlayer)));
+        GuardianManager.addHostileGoals(wolf);
 
         level.addFreshEntity(wolf);
         mobs.add(wolf.getUUID());
