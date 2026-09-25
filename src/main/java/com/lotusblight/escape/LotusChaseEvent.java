@@ -2,6 +2,7 @@ package com.lotusblight.escape;
 
 import com.lotusblight.LotusConfig;
 import com.lotusblight.data.LotusLabSavedData;
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.data.OutbreakRecord;
 import com.lotusblight.data.OutbreakSavedData;
 import com.lotusblight.map.ChaseStatePacket;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -123,12 +125,14 @@ public final class LotusChaseEvent {
             if (!overworld.hasChunkAt(entrance)) return;
             Direction facing = Direction.EAST;
             LotusChaseStructure built = new LotusChaseStructure(overworld, entrance, facing, overworld.random);
+            if (!built.isFootprintLoaded()) return;
             built.build();
             labData.markBuilt(entrance, facing, built.correctIsLeft());
             structure = built;
         } else {
             if (!overworld.hasChunkAt(labData.entrance())) return;
             LotusChaseStructure rebuilt = new LotusChaseStructure(overworld, labData.entrance(), labData.facing(), labData.correctIsLeft());
+            if (!rebuilt.isFootprintLoaded()) return;
             rebuilt.build();
             if (labData.isUnlocked() && runnerUuid == null) {
                 rebuilt.unsealEntrance();
@@ -212,6 +216,30 @@ public final class LotusChaseEvent {
             int interval = elapsed >= PHASE2_START_TICKS ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
             nextObstacleAtTick = gameTick + interval;
         }
+    }
+
+    /**
+     * "не может пойти назад" - quitting mid-run used to just end it with nothing lost, a free way out
+     * of the one outcome the chase is built around. Leaving counts as being caught.
+     */
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (runnerUuid == null || !(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!runnerUuid.equals(player.getUUID()) || !player.isAlive()) return;
+        endRun();
+        // Killing a player in the middle of being removed from the server isn't safe - drop the
+        // inventory now, where they were caught, and deliver the hit on their next login.
+        if (player.level() instanceof ServerLevel level) {
+            shakeOutInventory(level, player);
+        }
+        LotusPlayerState.setChaseForfeited(player, true);
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || !LotusPlayerState.hasChaseForfeited(player)) return;
+        LotusPlayerState.setChaseForfeited(player, false);
+        player.hurt(player.damageSources().fall(), Float.MAX_VALUE);
     }
 
     private void endRun() {

@@ -103,6 +103,26 @@ public final class LotusChaseStructure {
         return Math.abs(alongFacing) <= 1 && Math.abs(alongSide) <= half && dy >= 0 && dy <= 1;
     }
 
+    /**
+     * place() quietly skips unloaded chunks, so building while part of the footprint is unloaded left
+     * a lab with holes - possibly no exit room at all, making the run unwinnable - while the lab was
+     * already recorded as built. Samples every chunk the corridors pass through.
+     */
+    public boolean isFootprintLoaded() {
+        BlockPos junction = entrance.relative(facing, CORRIDOR_LENGTH);
+        int branchReach = BRANCH_LENGTH + WIDTH * 2 + 2;
+        return isLineLoaded(entrance, facing, CORRIDOR_LENGTH + 1)
+                && isLineLoaded(junction, facing.getCounterClockWise(), Math.max(branchReach, DEAD_END_LENGTH + 1))
+                && isLineLoaded(junction, facing.getClockWise(), Math.max(branchReach, DEAD_END_LENGTH + 1));
+    }
+
+    private boolean isLineLoaded(BlockPos from, Direction dir, int length) {
+        for (int i = 0; i <= length; i += 8) {
+            if (!level.hasChunkAt(from.relative(dir, i))) return false;
+        }
+        return level.hasChunkAt(from.relative(dir, length));
+    }
+
     /** Carves the whole permanent structure once. Starts sealed - call unsealEntrance() separately once the world has actually crossed the threshold. */
     public void build() {
         int half = WIDTH / 2;

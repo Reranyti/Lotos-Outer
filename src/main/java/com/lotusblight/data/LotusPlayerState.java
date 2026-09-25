@@ -159,6 +159,19 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String CHASE_FORFEITED_KEY = "ChaseForfeited";
+
+    /** Left the server in the middle of a Lotus Chase run - the caught outcome is finished on the next login (see LotusChaseEvent). */
+    public static boolean hasChaseForfeited(Player player) {
+        return root(player, false).getBoolean(CHASE_FORFEITED_KEY);
+    }
+
+    public static void setChaseForfeited(Player player, boolean forfeited) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(CHASE_FORFEITED_KEY, forfeited);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     private static final String HONCHO_ASSISTANT_PENDING_KEY = "HonchoAssistantPending";
 
     /** Set while the assistant question is on screen and not answered yet - the answer packet is only accepted then, and the scene is re-sent on the next login if the player left before answering. */
