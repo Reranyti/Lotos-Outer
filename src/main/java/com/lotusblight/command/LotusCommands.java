@@ -322,19 +322,22 @@ public final class LotusCommands {
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> starFallCommands() {
         return Commands.literal("starfall")
                 .then(Commands.argument("player", EntityArgument.player())
-                        .then(Commands.literal("war").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), false)))
-                        .then(Commands.literal("alliance").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), true))));
+                        // Same mapping as StarFallEvent: a war-branch player gets Star Light's friendly
+                        // script (ShowStarFallPacket's allianceBranch=true), an alliance player the hostile one.
+                        .then(Commands.literal("war").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), true)))
+                        .then(Commands.literal("alliance").executes(ctx -> starFallTrigger(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"), false))));
     }
 
     private static int starFallTrigger(CommandSourceStack source, ServerPlayer player, boolean allianceBranch) {
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new com.lotusblight.map.ShowStarFallPacket(allianceBranch));
+        if (!allianceBranch) com.lotusblight.escape.StarFallEvent.beginWarScene(player);
         // Real comets, not a placeholder - net.exmo.meteor_shower.event.MeteorShowerEventManager
         // is Ex Meteor Shower's own public trigger API (verified against the actual jar via
         // javap), now a hard dependency of this mod.
         net.exmo.meteor_shower.event.MeteorShowerEventManager.forceShower(
                 (net.minecraft.server.level.ServerLevel) player.level(),
                 net.exmo.meteor_shower.event.MeteorShowerEventManager.ShowerScale.LARGE);
-        source.sendSuccess(() -> Component.literal("StarFall (" + (allianceBranch ? "альянс" : "война") + ") запущен для " + player.getGameProfile().getName()), true);
+        source.sendSuccess(() -> Component.literal("StarFall (" + (allianceBranch ? "война" : "альянс") + ") запущен для " + player.getGameProfile().getName()), true);
         return 1;
     }
 

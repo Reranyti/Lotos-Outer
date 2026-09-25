@@ -1,6 +1,7 @@
 package com.lotusblight.map;
 
 import com.lotusblight.dialogue.StarFallLibrary;
+import com.lotusblight.escape.StarFallEvent;
 import com.lotusblight.registry.ModBlocks;
 import com.lotusblight.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -40,16 +41,16 @@ public class StarFallLineReachedPacket {
             if (player == null) return;
             var lines = StarFallLibrary.warLines();
             if (packet.lineIndex < 0 || packet.lineIndex >= lines.size()) return;
+            if (!StarFallEvent.acceptWarLine(player, packet.lineIndex, StarFallLibrary.WAR_FINAL_LINE_INDEX)) return;
 
             if (lines.get(packet.lineIndex).dealsDamage()) {
                 player.hurt(player.damageSources().magic(), 3.0f);
             }
             if (packet.lineIndex == StarFallLibrary.WAR_FINAL_LINE_INDEX) {
-                boolean hadRod = player.getInventory().items.stream().anyMatch(s -> s.is(ModItems.LOTUS_GRAFTING_ROD.get()))
-                        || player.getInventory().offhand.stream().anyMatch(s -> s.is(ModItems.LOTUS_GRAFTING_ROD.get()));
-                if (hadRod) {
-                    player.getInventory().removeItem(new ItemStack(ModItems.LOTUS_GRAFTING_ROD.get()));
-                } else if (player.level() instanceof ServerLevel level) {
+                // Inventory#removeItem(ItemStack) compares by reference, so handing it a fresh stack
+                // never matched anything - clear the actual slots instead.
+                boolean hadRod = removeGraftingRods(player);
+                if (!hadRod && player.level() instanceof ServerLevel level) {
                     // "посох удаляется если ты его брал, если не брал то на игрока падает метеорит
                     // и появляется ультра сильный блесковый биом (даже сильнее чем на альянсе)" -
                     // the immediate patch below is the footprint at the moment of impact;
@@ -74,6 +75,26 @@ public class StarFallLineReachedPacket {
     // MeteoriteSpreadEngine's slower organic growth to eventually catch up.
     private static final int PATCH_RADIUS = 24;
 
+    /** Ground only - not air, not something with contents (chests, furnaces), not bedrock/other unbreakable blocks. */
+    private static boolean canRecolor(ServerLevel level, BlockPos pos) {
+        var state = level.getBlockState(pos);
+        return !state.isAir() && !state.hasBlockEntity() && state.getDestroySpeed(level, pos) >= 0;
+    }
+
+    private static boolean removeGraftingRods(ServerPlayer player) {
+        boolean removed = false;
+        var inventory = player.getInventory();
+        for (var compartment : java.util.List.of(inventory.items, inventory.offhand)) {
+            for (int i = 0; i < compartment.size(); i++) {
+                if (compartment.get(i).is(ModItems.LOTUS_GRAFTING_ROD.get())) {
+                    compartment.set(i, ItemStack.EMPTY);
+                    removed = true;
+                }
+            }
+        }
+        return removed;
+    }
+
     private static void placePurpleBlessingPatch(ServerLevel level, BlockPos center) {
         var sand = ModBlocks.BLESSING_SAND_PURPLE.get().defaultBlockState();
         var soil = ModBlocks.BLESSING_SOIL_PURPLE.get().defaultBlockState();
@@ -85,11 +106,11 @@ public class StarFallLineReachedPacket {
                 // loaded - an unguarded getBlockState/setBlock here risks the same synchronous
                 // chunk-load deadlock already fixed in LotusChaseStructure.
                 if (!level.hasChunkAt(top)) continue;
-                if (!level.getBlockState(top).isAir()) {
+                if (canRecolor(level, top)) {
                     level.setBlock(top, sand, 3);
                 }
                 BlockPos below = top.below();
-                if (!level.getBlockState(below).isAir()) {
+                if (canRecolor(level, below)) {
                     level.setBlock(below, soil, 3);
                 }
             }

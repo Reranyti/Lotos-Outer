@@ -12,8 +12,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * The real, non-command trigger for StarFall (see {@link com.lotusblight.command.LotusCommands#starFallTrigger}
@@ -27,6 +32,35 @@ import net.minecraftforge.network.PacketDistributor;
 public final class StarFallEvent {
     private static final int SWEEP_INTERVAL_TICKS = 100;
     private static final float TRIGGER_FRACTION = 0.30f;
+
+    /**
+     * Last war-script line index the server has already applied per player, or -1 right after the
+     * scene was sent. StarFallLineReachedPacket comes from the client, so without this any client
+     * could replay the final line (damage, rod removal, a radius-24 meteor patch) as often as it
+     * liked, with or without ever being shown the scene.
+     */
+    private static final Map<UUID, Integer> WAR_SCENE_PROGRESS = new HashMap<>();
+
+    public static void beginWarScene(ServerPlayer player) {
+        WAR_SCENE_PROGRESS.put(player.getUUID(), -1);
+    }
+
+    /** True if this line is the next one the player may trigger; the final line closes the scene. Lines may be skipped (the shelter line is), never replayed. */
+    public static boolean acceptWarLine(ServerPlayer player, int lineIndex, int finalLineIndex) {
+        Integer last = WAR_SCENE_PROGRESS.get(player.getUUID());
+        if (last == null || lineIndex <= last || lineIndex > finalLineIndex) return false;
+        if (lineIndex == finalLineIndex) {
+            WAR_SCENE_PROGRESS.remove(player.getUUID());
+        } else {
+            WAR_SCENE_PROGRESS.put(player.getUUID(), lineIndex);
+        }
+        return true;
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        WAR_SCENE_PROGRESS.remove(event.getEntity().getUUID());
+    }
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -55,6 +89,7 @@ public final class StarFallEvent {
             // treats them as hostile and they get the damage/rod-removal script instead.
             boolean allianceBranch = branch == LotusPlayerState.BRANCH_RESISTANCE;
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ShowStarFallPacket(allianceBranch));
+            if (!allianceBranch) beginWarScene(player);
             if (player.level() instanceof ServerLevel level) {
                 MeteorShowerEventManager.forceShower(level, MeteorShowerEventManager.ShowerScale.LARGE);
                 spawnHoncho(level, player);
