@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "lotusblight:infected_soil",
+    "lotusblight:lotus_sand",
+    "lotusblight:lotus_gravel",
+    "lotusblight:blessing_soil",
+    "lotusblight:blessing_sand",
+    "lotusblight:blessing_soil_purple",
+    "lotusblight:blessing_sand_purple"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "lotusblight:meteorite_stone",
+    "lotusblight:lotus_stone",
+    "lotusblight:lotus_terracotta",
+    "lotusblight:lotus_ore",
+    "lotusblight:lotus_heart",
+    "lotusblight:blessing_nodule"
+  ]
+}

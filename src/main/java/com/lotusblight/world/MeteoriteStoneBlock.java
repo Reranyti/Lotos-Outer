@@ -24,19 +24,42 @@ public class MeteoriteStoneBlock extends Block {
         super(properties);
     }
 
+    /**
+     * entityInside only fires for blocks whose cell overlaps the entity's box - for a full cube that
+     * never happens, so the contact kill never went off. Standing on it and starting to hit it are
+     * the two real ways to touch a solid block.
+     */
     @Override
-    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (level.isClientSide || !(entity instanceof Player player)) return;
-        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
-        if (level instanceof ServerLevel serverLevel) {
-            player.hurt(serverLevel.damageSources().magic(), LETHAL_DAMAGE);
+    public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+        if (entity instanceof Player player) {
+            killIfResistance(level, player);
         }
+        super.stepOn(level, pos, state, entity);
     }
 
-    /** UNDECIDED (neutral) can't harvest it at all - matches getDestroyProgress(0) precedent elsewhere in this mod for "looks solid, isn't actually minable". */
+    @Override
+    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
+        killIfResistance(level, player);
+        super.attack(state, level, pos, player);
+    }
+
+    private static void killIfResistance(Level level, Player player) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
+        player.hurt(serverLevel.damageSources().magic(), LETHAL_DAMAGE);
+    }
+
+    /**
+     * UNDECIDED (neutral) can't harvest it at all - matches getDestroyProgress(0) precedent elsewhere in this mod for "looks solid, isn't actually minable".
+     * Mining progress is also computed on the client, where the player's persistent data is empty -
+     * the synced ClientPlayerStateCache has to be read there, or everyone reads as UNDECIDED.
+     */
     @Override
     public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
-        if (LotusPlayerState.getDialogueBranch(player) == LotusPlayerState.BRANCH_UNDECIDED) {
+        int branch = player.level().isClientSide()
+                ? com.lotusblight.map.ClientPlayerStateCache.dialogueBranch()
+                : LotusPlayerState.getDialogueBranch(player);
+        if (branch == LotusPlayerState.BRANCH_UNDECIDED) {
             return 0.0f;
         }
         return super.getDestroyProgress(state, player, level, pos);
