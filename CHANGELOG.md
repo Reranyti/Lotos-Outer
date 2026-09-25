@@ -16,6 +16,63 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.1042 — Beta: full audit release (1.1017 – 1.1042)
+A full read-through of the whole mod (175 classes, resources, design docs) with every confirmed
+bug fixed, then checked by building the jar and starting a dedicated server until `Done`. One
+commit per fix, kept on the `fix/audit-2026-09` branch for reference.
+
+Critical:
+- Player state (branch, traitor flag, Honcho progress, StarFall, reputation, one-time gifts) was
+  wiped on every death and End exit - Forge only carries over `PlayerPersisted`. Now copied on clone.
+- Meteorite stone could never be obtained: no `mineable` tags existed for any block of the mod,
+  and mining progress read an always-empty client state. The contact kill for the war branch never
+  fired either (`entityInside` on a full cube) - now `stepOn` and punching it.
+- Honcho, a Zombie underneath, burned at dawn, turned into a Drowned underwater, was attacked by
+  golems and could call reinforcements. All disabled; he now spawns once per world.
+- StarFall: the grafting rod was never removed (`removeItem` compares by reference), and the
+  client-sent line packet could be replayed to drop the radius-24 meteor patch at will.
+- Black hearts for golden items now apply to the Alliance branch (the one Star Light warns).
+
+Major:
+- Phase 4 biome rewrite only changed the Y=0 biome cell (WorldEdit's 2D `setBiome`); now every
+  4x4x4 cell over the full height.
+- Guardians turned into passive wolves after a restart or chunk reload (goals aren't saved).
+- All six HUD overlays were drawn once per HUD layer (20+ times a frame); the chase clock counted
+  frames instead of ticks and ran out in seconds.
+- The traitor advancement branch never loaded (missing parent `follow_the_current`).
+- Lotus spores and cold blight damage almost never landed (two unrelated counters).
+- Starter kit handed out again when logging in from another dimension.
+- The phase 4 tree burst, biome rewrite and announcement replayed whenever the block count dipped
+  under a threshold and climbed back - outbreaks now remember their peak phase.
+- Synchronous chunk loads in the spread engine; vine barriers and the boss arena overwrote chests.
+- Traitor boss arena was built inside the player; leftover wave mobs stayed in the world forever.
+- Roots and leaves never applied spores on contact.
+
+Found by starting a dedicated server:
+- The mod failed to construct without TerraBlender (class verification needed `terrablender.api.Region`
+  before the `isLoaded` check). TerraBlender is now a required dependency.
+- Client-only rendering, color handlers and the wiki/journal screens were referenced from common
+  classes, so the mod never loaded on a dedicated server.
+
+Dependencies:
+- Ex Meteor Shower needs OctoLib (and OctoLib needs Architectury) without declaring it - both are
+  now listed as required, so a missing one is reported by the loader instead of crashing.
+- Chat Overhaul declared as an optional dependency.
+
+Smaller fixes: packet directions and server-side validation, Honcho scenes re-shown if left
+unanswered, client state and music reset when leaving a world, the Honcho "N" answer no longer
+opens the atlas, the chase lab waits for its whole footprint to load and leaving mid-run counts as
+being caught, roots queue, lily pads on dry land, a second heart from the epicenter, scientist
+pages counted on pickup, `en_us.json` fallback, Honcho idle pose (the animation never played
+because of a name mismatch), boss wave count corrected to 5 in the docs.
+
+## 1.1011 – 1.1016
+- Faction reputation; Honcho moves closer after the 3rd vial (1.1011).
+- Honcho gets his own GeckoLib model instead of the zombie one, plus the trip-meeting scene (1.1012).
+- Infected water tint per biome fixed; Mossy Glands could fail to appear at all (1.1013).
+- Lotus territory as a real spread bonus, `honcho.geo.json` fix, own calendar (1.1014).
+- Real phase 4 biome transition through WorldEdit; infected water removed as a separate fluid (1.1016).
+
 ## 1.1010 — Versioning switch
 - Switched `mod_version` from `major.minor.patch` to a flat `1.NNNN` counter.
 
