@@ -18,8 +18,9 @@ import java.util.UUID;
 
 /**
  * "теперь любые золотые предметы на ветке войны дают черные сердца, тем больше золотых сердец тем
- * меньше оз макс при смерти можно только снять" - eating ANY golden food on the RESISTANCE branch
- * permanently lowers max health instead of helping (per StarFall's war script: "Оно не поможет").
+ * меньше оз макс при смерти можно только снять" - eating ANY golden food on the ALLIANCE branch
+ * permanently lowers max health instead of helping. Star Light's hostile StarFall script is the one
+ * ALLIANCE players get ("Оно не поможет"), so this has to follow the same branch.
  * One black heart = -2.0 max health (1 vanilla heart), stacking, cleared only by dying.
  */
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -34,7 +35,7 @@ public final class BlackHeartManager {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         var item = event.getItem().getItem();
         if (item != Items.GOLDEN_APPLE && item != Items.ENCHANTED_GOLDEN_APPLE && item != Items.GOLDEN_CARROT) return;
-        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_ALLIANCE) return;
 
         // "Оно не поможет" - strip whatever the golden item just granted instead of fighting the
         // vanilla food-effect pipeline to prevent it from applying in the first place.

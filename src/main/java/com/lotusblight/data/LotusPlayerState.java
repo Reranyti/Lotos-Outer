@@ -364,7 +364,7 @@ public final class LotusPlayerState {
     /**
      * "любые золотые предметы на ветке войны дают чёрные сердца, тем больше золотых сердец тем
      * меньше оз макс, при смерти можно только снять" - permanent max-health reduction per golden
-     * item eaten on the war branch (see LotusEvents#onGoldenItemEaten), cleared only on death.
+     * item eaten on the ALLIANCE branch (see BlackHeartManager), cleared only on death.
      */
     public static int getBlackHeartCount(Player player) {
         return root(player, false).getInt(BLACK_HEART_COUNT_KEY);
