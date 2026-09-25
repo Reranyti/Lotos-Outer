@@ -149,10 +149,8 @@ public class LotusBlight {
         }
         TABS.register(modBus);
         modBus.addListener(this::addVanillaCreativeItems);
-        modBus.addListener(this::registerRenderers);
-        modBus.addListener(this::registerRenderLayers);
-        modBus.addListener(this::registerBlockColors);
-        modBus.addListener(this::registerItemColors);
+        // Renderers, render layers and color handlers live in client.LotusClientSetup - referencing
+        // client classes from this class made the whole mod fail to construct on a dedicated server.
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new LotusEvents());
         MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
@@ -199,13 +197,6 @@ public class LotusBlight {
         }
     }
 
-    private void registerRenderers(net.minecraftforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(ModBlockEntities.LOTUS_CROWN.get(), context -> new com.lotusblight.client.gecko.LotusCrownBlockRenderer());
-        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.client.renderer.entity.WolfRenderer::new);
-        // Reuses ZombieRenderer's humanoid model/animation rig via a thin subclass (HonchoRenderer)
-        // that overrides the hardcoded vanilla zombie texture with Honcho's own original one.
-        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoGeoRenderer::new);
-    }
 
     /** Forge requires every living entity type to have a registered attribute supplier or it crashes the instant one is spawned. Reuses vanilla Wolf's own attribute map - same base stats, GuardianManager-style code tunes health/damage per instance afterward. */
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
@@ -213,45 +204,11 @@ public class LotusBlight {
         event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
     }
 
-    /**
-     * The heart's model switched from a cube_all (the painted icon texture wallpapered across
-     * all 6 faces, which is what made it look flat/tiled) to a floating cross emblem, matching
-     * how vanilla flowers use a single icon texture. That needs cutout rendering instead of the
-     * default solid layer, or the texture's transparent background renders as solid black.
-     */
-    private void registerRenderLayers(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
-        event.enqueueWork(() -> net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
-                ModBlocks.LOTUS_HEART.get(), net.minecraft.client.renderer.RenderType.cutout()));
-    }
 
-    /**
-     * The 5 infected ground blocks get a per-biome color accent (see InfectedGroundColor) instead
-     * of a fixed hand-painted look everywhere - reuses the same grass color vanilla already
-     * computes for every biome, so it works on any biome (vanilla or modded) with no new data.
-     */
-    private void registerBlockColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Block event) {
-        event.register(com.lotusblight.client.InfectedGroundColor.INSTANCE,
-                ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
-                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get(),
-                ModBlocks.LOTUS_LOG.get(), ModBlocks.LOTUS_LEAVES.get());
-    }
 
-    /**
-     * A model face with a tintindex renders solid black in item/inventory form unless something
-     * is registered here too - there's no world/biome to sample from in an inventory slot, so this
-     * just registers a flat white (no-op) multiplier, matching InfectedGroundColor's own
-     * no-context fallback.
-     */
-    private void registerItemColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) {
-        event.register((stack, tintIndex) -> 0xFFFFFF,
-                ModBlocks.INFECTED_SOIL.get(), ModBlocks.LOTUS_STONE.get(), ModBlocks.LOTUS_SAND.get(),
-                ModBlocks.LOTUS_GRAVEL.get(), ModBlocks.LOTUS_TERRACOTTA.get(),
-                ModBlocks.LOTUS_LOG.get(), ModBlocks.LOTUS_LEAVES.get());
-    }
 
     private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> terrablender.api.Regions.register(
-                new com.lotusblight.worldgen.terrablender.LotusRegion(new net.minecraft.resources.ResourceLocation(MODID, "overworld"), 2)));
+        event.enqueueWork(com.lotusblight.worldgen.terrablender.LotusTerraBlender::registerRegions);
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {

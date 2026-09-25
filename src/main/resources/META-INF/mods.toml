@@ -100,12 +100,11 @@ description='''${mod_description}'''
     versionRange="[3.6,4.0)"
     ordering="AFTER"
     side="CLIENT"
-# Soft dependency on TerraBlender: not required to load. If present, LotusRegion registers our
-# biomes through it for better overworld placement/compatibility; if absent, LotusBlight falls
-# back to the plain BiomeManager.addAdditionalOverworldBiomes calls.
+# Hard dependency on TerraBlender: LotusRegion places lotus_marsh/blessing_tundra through it. The
+# BiomeManager fallback in LotusBlight is left in place but is not a supported setup any more.
 [[dependencies.${mod_id}]]
     modId="terrablender"
-    mandatory=false
+    mandatory=true
     versionRange="[3.0.1,4.0)"
     ordering="AFTER"
     side="BOTH"
