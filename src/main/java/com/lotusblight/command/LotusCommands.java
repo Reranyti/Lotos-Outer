@@ -96,6 +96,7 @@ public final class LotusCommands {
         OutbreakSavedData data = OutbreakSavedData.get(level);
         OutbreakRecord record = data.registerOutbreak(pos.immutable(), level.getGameTime(), false)
                 .withPhase(phase)
+                .withPeakPhase(phase)
                 .withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(phase));
         data.updateOutbreak(record);
         // Setting/spawning phase 4 for testing used to unconditionally call promoteAnchorToHeart -
@@ -148,7 +149,7 @@ public final class LotusCommands {
         int blockCount = lower + Math.round(net.minecraft.util.Mth.clamp(progress, 0f, 1f) * (upper - lower));
         // Setting a phase for testing is just numbers - it should never silently swap the anchor
         // for the world's one Heart as a side effect. Use the explicit "heart" command for that.
-        data.updateOutbreak(nearest.withPhase(phase).withInfectedBlockCount(blockCount));
+        data.updateOutbreak(nearest.withPhase(phase).withPeakPhase(phase).withInfectedBlockCount(blockCount));
         source.sendSuccess(() -> Component.literal("Очаг в " + nearest.pos().toShortString() + " переведён на фазу " + phase + " (" + Math.round(progress * 100) + "%)."), true);
         return 1;
     }
@@ -165,7 +166,7 @@ public final class LotusCommands {
             return 0;
         }
         OutbreakSavedData data = OutbreakSavedData.get(source.getLevel());
-        data.updateOutbreak(nearest.withPhase(4).withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(4)));
+        data.updateOutbreak(nearest.withPhase(4).withPeakPhase(4).withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(4)));
         source.sendSuccess(() -> Component.literal("Сердце выращено в " + nearest.pos().toShortString() + "."), true);
         return 1;
     }

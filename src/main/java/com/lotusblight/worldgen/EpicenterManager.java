@@ -107,6 +107,7 @@ public final class EpicenterManager {
         data.claimHeart();
         OutbreakRecord epicenter = data.registerOutbreak(flowerPos, level.getGameTime(), true)
                 .withPhase(4)
+                .withPeakPhase(4)
                 .withInfectedBlockCount(InfectionPhases.minBlockCountForPhase(4));
         data.updateOutbreak(epicenter);
         return true;

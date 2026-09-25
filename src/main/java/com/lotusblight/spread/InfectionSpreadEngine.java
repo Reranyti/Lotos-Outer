@@ -241,7 +241,10 @@ public class InfectionSpreadEngine {
         int newCount = outbreak.infectedBlockCount() + converted;
         int newPhase = InfectionPhases.phaseForBlockCount(newCount);
         if (openOcean) {
-            newPhase = Math.min(newPhase, OCEAN_PHASE_CAP);
+            // hasNearbyLand is a random sample that skips unloaded columns, so an ocean-biome
+            // outbreak can read as "open ocean" on one pass and not the next. Only hold back growth
+            // here - never push an outbreak below a phase it already has.
+            newPhase = Math.min(newPhase, Math.max(OCEAN_PHASE_CAP, outbreak.phase()));
         }
         // Was only capped for the openOcean case - a maxPhaseCap-limited child outbreak (see
         // RootGrowthEngine) could keep computing an uncapped newPhase from its raw block count
@@ -253,8 +256,12 @@ public class InfectionSpreadEngine {
         newPhase = Math.min(newPhase, outbreak.maxPhaseCap());
         float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
 
-        OutbreakRecord updated = outbreak.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress);
-        if (newPhase > outbreak.phase()) {
+        OutbreakRecord updated = outbreak.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress)
+                .withPeakPhase(newPhase);
+        // Compared against the peak, not the current phase: the count can drop (mining, cleansing)
+        // and climb back over the same threshold, which used to replay the announcement, the tree
+        // burst and the biome rewrite every time.
+        if (newPhase > outbreak.peakPhase()) {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
             announcePhaseUp(level, outbreak.pos(), newPhase);
@@ -262,7 +269,7 @@ public class InfectionSpreadEngine {
             // outbreak advanced from phase 4 to phase 5, on top of the one it already got reaching
             // phase 4 - looked like trees spawning themselves out of nowhere (bug #6). Only the
             // exact transition into phase 4 should trigger this, not every phase at or above it.
-            if (newPhase == 4) {
+            if (newPhase >= 4 && outbreak.peakPhase() < 4) {
                 guaranteeMiniBiomeGrowth(level, outbreak.pos());
                 com.lotusblight.worldgen.LotusBiomeConverter.convertToLotusMarsh(level, outbreak.pos());
             }
@@ -714,7 +721,7 @@ public class InfectionSpreadEngine {
      * fully matured phase-4 outbreak never grew one at all.
      */
     private void maybeSpawnHeart(ServerLevel level, OutbreakSavedData data, OutbreakRecord outbreak, int newPhase) {
-        if (newPhase < 4 || outbreak.phase() >= 4) return;
+        if (newPhase < 4 || outbreak.peakPhase() >= 4) return;
         // Only one lotus heart is meant to ever exist in the world, like the End portal - a
         // singular landmark, not something every sufficiently-grown outbreak earns. Whichever
         // outbreak gets here first claims it; every other one still reaches phase 4 (the

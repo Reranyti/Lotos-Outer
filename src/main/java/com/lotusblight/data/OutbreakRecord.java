@@ -19,7 +19,8 @@ public record OutbreakRecord(
         boolean hidden,
         long createdGameTime,
         int infectedBlockCount,
-        int maxPhaseCap
+        int maxPhaseCap,
+        int peakPhase
 ) {
     public static final int MIN_PHASE = 1;
     /** Kept in sync with InfectionPhases.MAX_PHASE by hand - was hardcoded 4, which silently
@@ -35,24 +36,34 @@ public record OutbreakRecord(
      * field here does.
      */
     public OutbreakRecord withPhase(int newPhase) {
-        return new OutbreakRecord(id, pos, Math.max(MIN_PHASE, Math.min(maxPhaseCap, newPhase)), progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap);
+        return new OutbreakRecord(id, pos, Math.max(MIN_PHASE, Math.min(maxPhaseCap, newPhase)), progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
     }
 
     public OutbreakRecord withProgress(float newProgress) {
-        return new OutbreakRecord(id, pos, phase, Math.max(0f, Math.min(1f, newProgress)), hidden, createdGameTime, infectedBlockCount, maxPhaseCap);
+        return new OutbreakRecord(id, pos, phase, Math.max(0f, Math.min(1f, newProgress)), hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
     }
 
     public OutbreakRecord withHidden(boolean newHidden) {
-        return new OutbreakRecord(id, pos, phase, progress, newHidden, createdGameTime, infectedBlockCount, maxPhaseCap);
+        return new OutbreakRecord(id, pos, phase, progress, newHidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
     }
 
     public OutbreakRecord withInfectedBlockCount(int newCount) {
-        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, Math.max(0, newCount), maxPhaseCap);
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, Math.max(0, newCount), maxPhaseCap, peakPhase);
     }
 
     public OutbreakRecord withMaxPhaseCap(int newCap) {
         int clampedCap = Math.max(MIN_PHASE, Math.min(MAX_PHASE, newCap));
-        return new OutbreakRecord(id, pos, Math.min(phase, clampedCap), progress, hidden, createdGameTime, infectedBlockCount, clampedCap);
+        return new OutbreakRecord(id, pos, Math.min(phase, clampedCap), progress, hidden, createdGameTime, infectedBlockCount, clampedCap, peakPhase);
+    }
+
+    /**
+     * Highest phase this outbreak has ever reached. The live phase follows infectedBlockCount and can
+     * drop (cleansing, mining, the open-ocean cap); the one-time phase-up payoffs - announcement,
+     * the phase 4 tree burst and the WorldEdit biome rewrite - key off this instead, so dipping
+     * under a threshold and climbing back doesn't replay them.
+     */
+    public OutbreakRecord withPeakPhase(int newPeak) {
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, Math.max(peakPhase, newPeak));
     }
 
     public CompoundTag save(CompoundTag tag) {
@@ -66,6 +77,7 @@ public record OutbreakRecord(
         tag.putLong("CreatedGameTime", createdGameTime);
         tag.putInt("InfectedBlockCount", infectedBlockCount);
         tag.putInt("MaxPhaseCap", maxPhaseCap);
+        tag.putInt("PeakPhase", peakPhase);
         return tag;
     }
 
@@ -81,11 +93,13 @@ public record OutbreakRecord(
                 // Older saves predate this field entirely - default to uncapped rather than 0
                 // (which getInt returns for a missing key, and would wrongly cap every existing
                 // outbreak down to nothing the moment its save data is next loaded).
-                tag.contains("MaxPhaseCap") ? tag.getInt("MaxPhaseCap") : MAX_PHASE
+                tag.contains("MaxPhaseCap") ? tag.getInt("MaxPhaseCap") : MAX_PHASE,
+                // Older saves have no peak yet - the current phase is the best known lower bound.
+                tag.contains("PeakPhase") ? tag.getInt("PeakPhase") : tag.getInt("Phase")
         );
     }
 
     public static OutbreakRecord newAnchor(BlockPos pos, long gameTime, boolean hidden) {
-        return new OutbreakRecord(UUID.randomUUID(), pos, MIN_PHASE, 0f, hidden, gameTime, 0, MAX_PHASE);
+        return new OutbreakRecord(UUID.randomUUID(), pos, MIN_PHASE, 0f, hidden, gameTime, 0, MAX_PHASE, MIN_PHASE);
     }
 }

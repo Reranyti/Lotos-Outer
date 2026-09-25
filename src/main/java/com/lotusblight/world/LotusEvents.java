@@ -366,12 +366,26 @@ public class LotusEvents {
         return null;
     }
 
+    /**
+     * Only blocks the spread engine actually added to infectedBlockCount may take it back down.
+     * Dry roots (dropped on top of converted ground, or grown by RootGrowthEngine) were never
+     * counted, so mining a root patch used to push the outbreak back below its phase threshold.
+     * Waterlogged roots are what a converted water source turns into, and those are counted.
+     */
+    private static boolean countsTowardOutbreak(net.minecraft.world.level.block.state.BlockState state) {
+        if (state.is(ModBlocks.LOTUS_ROOTS.get())) {
+            return state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED);
+        }
+        return true;
+    }
+
     @SubscribeEvent
     public void onPlayerInteract(PlayerInteractEvent.RightClickItem event) {
         if (event.getItemStack().is(ModItems.CLEANSING_POWDER.get()) && event.getEntity().level() instanceof ServerLevel level) {
             OutbreakSavedData data = OutbreakSavedData.get(level);
             BlockPos pos = event.getEntity().blockPosition();
             int cleansed = 0;
+            int counted = 0;
             // Redesigned per user request: a full head-to-toe 5x6x5 wipe per single powder made
             // the item a straight win button. Shrunk to a compact 4x4x4 patch around the player's
             // feet - deliberate, repeated use instead of one throw clearing a whole outbreak.
@@ -381,10 +395,14 @@ public class LotusEvents {
                 // patch of infected river visibly filled it in with land instead of turning it
                 // back into water. Now every infected block type reverts to its real clean
                 // counterpart instead of one wrong catch-all.
-                net.minecraft.world.level.block.state.BlockState cleanState = cleanReplacementFor(level.getBlockState(target));
+                net.minecraft.world.level.block.state.BlockState infectedState = level.getBlockState(target);
+                net.minecraft.world.level.block.state.BlockState cleanState = cleanReplacementFor(infectedState);
                 if (cleanState != null) {
                     level.setBlock(target, cleanState, 3);
-                    data.incrementChunkCount(new ChunkPos(target), -1);
+                    if (countsTowardOutbreak(infectedState)) {
+                        data.incrementChunkCount(new ChunkPos(target), -1);
+                        counted++;
+                    }
                     cleansed++;
                     level.sendParticles(GREEN, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 4, 0.2, 0.2, 0.2, 0.01);
                 }
@@ -395,8 +413,8 @@ public class LotusEvents {
             // the bar. Now the nearest outbreak's count/phase/progress actually goes back down.
             if (cleansed > 0) {
                 OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
-                if (nearest != null) {
-                    int newCount = Math.max(0, nearest.infectedBlockCount() - cleansed);
+                if (nearest != null && counted > 0) {
+                    int newCount = Math.max(0, nearest.infectedBlockCount() - counted);
                     int newPhase = InfectionPhases.phaseForBlockCount(newCount);
                     float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
                     data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
@@ -435,7 +453,7 @@ public class LotusEvents {
     @SubscribeEvent
     public void onBlockBreak(net.minecraftforge.event.level.BlockEvent.BreakEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (cleanReplacementFor(event.getState()) == null) return;
+        if (cleanReplacementFor(event.getState()) == null || !countsTowardOutbreak(event.getState())) return;
         decrementInfectedCount(level, event.getPos(), 1);
     }
 
@@ -448,7 +466,8 @@ public class LotusEvents {
     public void onExplosion(net.minecraftforge.event.level.ExplosionEvent.Detonate event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         for (BlockPos pos : event.getAffectedBlocks()) {
-            if (cleanReplacementFor(level.getBlockState(pos)) != null) {
+            var state = level.getBlockState(pos);
+            if (cleanReplacementFor(state) != null && countsTowardOutbreak(state)) {
                 decrementInfectedCount(level, pos, 1);
             }
         }
