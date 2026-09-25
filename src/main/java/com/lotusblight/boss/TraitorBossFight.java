@@ -23,6 +23,7 @@ import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Stray;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -127,8 +128,12 @@ public final class TraitorBossFight {
     /** Position captured HERE, at the actual start tick - not back when triggerBetrayal ran scheduleStart. */
     private static void startFight(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
-        TraitorBossArena arena = new TraitorBossArena(level, player.blockPosition());
+        // Built around the block under the player - centered on their feet, the floor and the
+        // lotus heart landed in the very cells the player was standing in.
+        TraitorBossArena arena = new TraitorBossArena(level, player.blockPosition().below());
         arena.build();
+        BlockPos start = arena.playerStartPos();
+        player.teleportTo(start.getX() + 0.5, start.getY(), start.getZ() + 0.5);
 
         FightState state = new FightState();
         state.playerId = player.getUUID();
@@ -179,8 +184,28 @@ public final class TraitorBossFight {
         if (player != null) {
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new TraitorBossThemePacket(false));
         }
+        // Wave mobs are persistent - left alone they'd roam the world forever once the arena is gone.
+        for (UUID mobId : state.currentWaveMobs) {
+            if (state.level.getEntity(mobId) instanceof LivingEntity mob) {
+                mob.discard();
+            }
+        }
+        state.currentWaveMobs.clear();
         state.arena.teardown();
         ACTIVE.remove(state.playerId);
+    }
+
+    /**
+     * Fights live only in memory, so after a restart any boss mob loaded back from disk belongs to
+     * nothing - no wave tracks it and no arena holds it. Spawning always happens while its fight is
+     * already in ACTIVE, so an empty ACTIVE means an orphan.
+     */
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide() || !ACTIVE.isEmpty()) return;
+        if (event.getEntity().getTags().contains(BOSS_MOB_TAG)) {
+            event.setCanceled(true);
+        }
     }
 
     private static void victory(FightState state, ServerPlayer player) {

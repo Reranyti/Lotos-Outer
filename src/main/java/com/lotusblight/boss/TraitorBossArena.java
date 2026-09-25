@@ -3,9 +3,11 @@ package com.lotusblight.boss;
 import com.lotusblight.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.event.entity.player.FillBucketEvent;
@@ -42,8 +44,12 @@ public final class TraitorBossArena {
     // Original state of every position this arena has ever touched, captured once on first touch -
     // teardown() replays this exactly, including positions that were air before build().
     private final Map<BlockPos, BlockState> snapshot = new HashMap<>();
+    // Block entity data (chest/barrel/furnace contents) for the same positions - BlockState alone
+    // brought a chest back empty, and replacing it spilled its items inside the arena.
+    private final Map<BlockPos, CompoundTag> blockEntitySnapshot = new HashMap<>();
     private BlockPos lotusPos;
 
+    /** @param center the floor block's position - the block the player stands on, not their feet. */
     public TraitorBossArena(ServerLevel level, BlockPos center) {
         this.level = level;
         this.center = center;
@@ -105,12 +111,25 @@ public final class TraitorBossArena {
      */
     public void teardown() {
         for (Map.Entry<BlockPos, BlockState> entry : snapshot.entrySet()) {
-            if (level.hasChunkAt(entry.getKey())) {
-                level.setBlock(entry.getKey(), entry.getValue(), 3);
+            BlockPos pos = entry.getKey();
+            if (level.hasChunkAt(pos)) {
+                level.setBlock(pos, entry.getValue(), 3);
+                CompoundTag saved = blockEntitySnapshot.get(pos);
+                BlockEntity restored = saved == null ? null : level.getBlockEntity(pos);
+                if (restored != null) {
+                    restored.load(saved);
+                    restored.setChanged();
+                }
             }
-            PROTECTED.remove(GlobalPos.of(level.dimension(), entry.getKey()));
+            PROTECTED.remove(GlobalPos.of(level.dimension(), pos));
         }
         snapshot.clear();
+        blockEntitySnapshot.clear();
+    }
+
+    /** Where the player is put once the shell is up - off the central water/lotus, inside the walls. */
+    public BlockPos playerStartPos() {
+        return new BlockPos(center.getX() + FOOTPRINT_HALF - 1, center.getY() + 1, center.getZ());
     }
 
     /** Position of the central ModBlocks.LOTUS_HEART block - the buff-beam's origin point. */
@@ -139,7 +158,15 @@ public final class TraitorBossArena {
 
     private void place(BlockPos pos, BlockState state) {
         if (!level.hasChunkAt(pos)) return;
-        snapshot.computeIfAbsent(pos, level::getBlockState);
+        if (!snapshot.containsKey(pos)) {
+            snapshot.put(pos, level.getBlockState(pos));
+            BlockEntity existing = level.getBlockEntity(pos);
+            if (existing != null) {
+                blockEntitySnapshot.put(pos, existing.saveWithoutMetadata());
+                // Dropped before the replace so containers don't spill their contents.
+                level.removeBlockEntity(pos);
+            }
+        }
         level.setBlock(pos, state, 3);
         PROTECTED.put(GlobalPos.of(level.dimension(), pos), this);
     }
