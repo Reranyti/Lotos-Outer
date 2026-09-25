@@ -46,8 +46,15 @@ public class GlowingBerryItem extends Item {
     /** "нельзя на ветке альянса сьесть ягоды" - refuse the eat action outright instead of letting it start and consume, so the item stays in hand. RESISTANCE keeps eating them - the inner-voice scene (canTriggerInnerVoiceFreely) only ever fires for that branch, so blocking RESISTANCE here would break berries' own signature mechanic. */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (!level.isClientSide && LotusPlayerState.getDialogueBranch(player) == LotusPlayerState.BRANCH_ALLIANCE) {
-            player.displayClientMessage(Component.literal("— Эти ягоды не для тебя. Больше нет."), true);
+        // Checked on both sides - refusing only on the server let the client start the eating
+        // animation anyway.
+        int branch = level.isClientSide
+                ? com.lotusblight.map.ClientPlayerStateCache.dialogueBranch()
+                : LotusPlayerState.getDialogueBranch(player);
+        if (branch == LotusPlayerState.BRANCH_ALLIANCE) {
+            if (!level.isClientSide) {
+                player.displayClientMessage(Component.literal("— Эти ягоды не для тебя. Больше нет."), true);
+            }
             return InteractionResultHolder.fail(player.getItemInHand(hand));
         }
         return super.use(level, player, hand);

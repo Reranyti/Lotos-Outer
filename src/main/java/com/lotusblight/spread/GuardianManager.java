@@ -35,6 +35,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -476,6 +477,13 @@ public final class GuardianManager {
                 GuardianPackTamedTrigger.INSTANCE.trigger(player);
             }
         }
+    }
+
+    @SubscribeEvent
+    public void onPagePickedUp(PlayerEvent.ItemPickupEvent event) {
+        ItemStack stack = event.getStack();
+        if (!stack.is(ModItems.SCIENTIST_PAGE.get())) return;
+        LotusPlayerState.markScientistPageFound(event.getEntity(), com.lotusblight.item.ScientistPageItem.variantOf(stack));
     }
 
     /** A flat, air-above-solid-ground spot within radius of the anchor, avoiding water/lava. */

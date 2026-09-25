@@ -59,7 +59,8 @@ public class ScientistPageItem extends Item {
             if (!LotusPlayerState.hasFoundScientistPage(finder, i)) missing.add(i);
         }
         int variant = missing.get(random.nextInt(missing.size()));
-        LotusPlayerState.markScientistPageFound(finder, variant);
+        // Counted as found only once it's actually picked up (see GuardianManager#onPagePickedUp) -
+        // marking it here, at drop time, lost the page for good if it burned or despawned.
         ItemStack stack = new ItemStack(com.lotusblight.registry.ModItems.SCIENTIST_PAGE.get());
         stack.getOrCreateTag().putInt(VARIANT_TAG, variant);
         return stack;

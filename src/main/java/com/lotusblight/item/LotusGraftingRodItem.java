@@ -45,7 +45,12 @@ public final class LotusGraftingRodItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
 
-        if (!LotusPlayerState.hasJoinedLotus(player)) {
+        // The client has no real LotusPlayerState - it always read as "not joined" there and showed a
+        // failed use to an ALLIANCE player while the server did the work.
+        boolean joined = level.isClientSide()
+                ? com.lotusblight.map.ClientPlayerStateCache.dialogueBranch() == LotusPlayerState.BRANCH_ALLIANCE
+                : LotusPlayerState.hasJoinedLotus(player);
+        if (!joined) {
             if (!level.isClientSide()) {
                 player.displayClientMessage(Component.translatable("item.lotusblight.lotus_grafting_rod.not_joined"), true);
             }

@@ -36,7 +36,9 @@ public final class SingleBiomeWorldListener {
         if (player.getPersistentData().getBoolean(FLAG_KEY)) return;
         player.getPersistentData().putBoolean(FLAG_KEY, true);
 
-        ServerLevel level = player.serverLevel();
+        // The preset only ever applies to the overworld generator - checking whatever dimension the
+        // player happened to log in to (and setting the flag first) could miss it for good.
+        ServerLevel level = player.server.overworld();
         ChunkGenerator generator = level.getChunkSource().getGenerator();
         if (generator.getBiomeSource() instanceof FixedBiomeSource fixed) {
             var fixedBiome = fixed.getNoiseBiome(0, 0, 0);

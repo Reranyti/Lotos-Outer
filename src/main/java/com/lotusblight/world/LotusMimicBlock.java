@@ -39,12 +39,9 @@ public class LotusMimicBlock extends Block {
 
         living.getPersistentData().putLong("LotusMimicCooldown", level.getGameTime() + 80L);
         living.addEffect(new MobEffectInstance(ModEffects.LOTONIRIYA.get(), 20 * 18, 0, false, true, true));
-        for (int i = 0; i < 24; i++) {
-            level.addParticle(MIMIC_DUST,
-                    pos.getX() + 0.15 + level.random.nextDouble() * 0.7,
-                    pos.getY() + 0.25 + level.random.nextDouble() * 0.45,
-                    pos.getZ() + 0.15 + level.random.nextDouble() * 0.7,
-                    0.0, 0.03, 0.0);
+        // Server side here - addParticle would do nothing, the burst has to be sent to clients.
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.sendParticles(MIMIC_DUST, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 24, 0.35, 0.22, 0.35, 0.03);
         }
         level.playSound(null, pos, SoundEvents.SLIME_ATTACK, SoundSource.BLOCKS, 0.65f, 0.75f);
         // Was a one-shot "trap": apply an effect, then turn into a harmless decorative

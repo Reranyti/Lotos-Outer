@@ -116,7 +116,10 @@ public class GlowBerryBushBlock extends BushBlock implements CaveVines {
         }
         level.setBlock(pos, state.setValue(BlockStateProperties.BERRIES, false), 3);
         level.playSound(null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0f, 0.9f);
-        level.addParticle(GLOW, pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 0, 0.02, 0);
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            // addParticle on the server side is a no-op - it has to go out as a packet.
+            serverLevel.sendParticles(GLOW, pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 1, 0, 0, 0, 0.02);
+        }
         return InteractionResult.CONSUME;
     }
 
