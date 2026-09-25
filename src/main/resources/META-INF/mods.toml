@@ -124,7 +124,7 @@ description='''${mod_description}'''
 # Hard dependency on Ex Meteor Shower, per explicit request - the mod will refuse to load at all
 # without it installed, not just lose the comet visuals during StarFall. modId/version verified
 # directly against the real downloaded jar's own META-INF/mods.toml (modId="meteor_shower",
-# version="0.0.4.2", no OctoLib dependency of its own after all). side=BOTH, not CLIENT: our own
+# version="0.0.4.2"). side=BOTH, not CLIENT: our own
 # code calls MeteorShowerEventManager.forceShower(ServerLevel, ...) server-side (see
 # com.lotusblight.escape.StarFallEvent and LotusCommands#starFallTrigger), so the dependency has to
 # be present on the server too, not just the client.
@@ -132,6 +132,33 @@ description='''${mod_description}'''
     modId="meteor_shower"
     mandatory=true
     versionRange="[0.0.4,1.0)"
+    ordering="AFTER"
+    side="BOTH"
+# Ex Meteor Shower's own mods.toml doesn't declare it, but its FallenStarEntity uses OctoLib's trail
+# API directly - without OctoLib the game crashes while constructing meteor_shower. Declared here so
+# a missing OctoLib is reported by the mod loader instead. OctoLib in turn needs Architectury
+# (OctoLib declares that itself, repeated here so the list a player sees is complete).
+[[dependencies.${mod_id}]]
+    modId="octolib"
+    mandatory=true
+    versionRange="[0.5.0,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.${mod_id}]]
+    modId="architectury"
+    mandatory=true
+    versionRange="[9.2.14,)"
+    ordering="NONE"
+    side="BOTH"
+
+# Soft dependency on Chat Overhaul: branch-colored nicknames (ChatOverhaulBranchColor, server side)
+# and the inner voice posted into its chat (InnerVoiceChatBridge). Everything works without it.
+[[dependencies.${mod_id}]]
+    modId="chatoverhaul"
+    mandatory=false
+    # Its version string is "1.0-1.20.1" - any range tighter than this risks the same Maven
+    # comparison trap the JourneyMap entry above describes.
+    versionRange="[0,)"
     ordering="AFTER"
     side="BOTH"
 

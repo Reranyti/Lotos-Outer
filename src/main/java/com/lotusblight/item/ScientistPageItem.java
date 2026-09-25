@@ -88,8 +88,7 @@ public class ScientistPageItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide) {
             int variant = variantOf(stack);
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new com.lotusblight.client.ScientistPageScreen(variant)));
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> com.lotusblight.client.LotusClientHooks.openScientistPage(variant));
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }

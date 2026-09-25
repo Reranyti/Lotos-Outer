@@ -23,8 +23,9 @@ public class LotusWikiItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
-                    net.minecraft.client.Minecraft.getInstance().setScreen(new com.lotusblight.client.LotusWikiScreen()));
+            // Via LotusClientHooks, not inline: building the Screen here made the server verify this
+            // item class against client-only Screen and refuse to register it.
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> com.lotusblight.client.LotusClientHooks::openWiki);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }

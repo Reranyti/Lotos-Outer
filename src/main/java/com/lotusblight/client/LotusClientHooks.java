@@ -22,6 +22,14 @@ public final class LotusClientHooks {
         return event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type();
     }
 
+    public static void openWiki() {
+        Minecraft.getInstance().setScreen(new LotusWikiScreen());
+    }
+
+    public static void openScientistPage(int variant) {
+        Minecraft.getInstance().setScreen(new ScientistPageScreen(variant));
+    }
+
     public static void openDialogue(BlockHitResult hit) {
         Minecraft.getInstance().setScreen(new LotusDialogueScreen(nearestKnownPhase(hit.getBlockPos()), hit));
     }

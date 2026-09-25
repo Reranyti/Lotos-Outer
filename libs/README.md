@@ -19,3 +19,9 @@ Manually-placed compile-time-only jars consumed via Gradle's `flatDir` repositor
   `ChatOverhaulBranchColor` to tint a player's chat name to match their
   locked-in dialogue branch. No public Maven artifact found; placed here as
   the distributed jar itself.
+
+- Runtime-only jars for `runClient`/`runServer` (the mod's mandatory dependencies), copied from a
+  normal game install's `mods/` folder: `worldedit-mod-7.2.15.jar` (Modrinth),
+  `meteor_shower-0.0.4.2-1.20.1.jar`, `OctoLib-FORGE-0.5.0.1+1.20.1.jar` and
+  `architectury-9.2.14-forge.jar` (Ex Meteor Shower needs OctoLib at runtime without declaring it,
+  OctoLib needs Architectury), plus the `TerraBlender-forge-1.20.1-3.0.1.10.jar` above.
