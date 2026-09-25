@@ -1,5 +1,5 @@
 {
-  "parent": "lotusblight:follow_the_current",
+  "parent": "lotusblight:field_research",
   "display": {
     "icon": {"item": "minecraft:bone"},
     "title": {"translate": "advancements.lotusblight.alliance_guardian_slaughter.title"},
