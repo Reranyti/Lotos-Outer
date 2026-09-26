@@ -34,5 +34,14 @@
         "stream": true
       }
     ]
+  },
+  "star_fall_theme": {
+    "category": "music",
+    "sounds": [
+      {
+        "name": "lotusblight:star_fall_theme",
+        "stream": true
+      }
+    ]
   }
 }

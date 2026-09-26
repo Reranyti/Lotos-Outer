@@ -16,6 +16,24 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.1050.2
+Мелкие правки — в счёт 50 версий не идут, войдут в полный лог 1.1100.
+Small changes — not counted toward the 50 versions, they go into the 1.1100 full log.
+
+### Русский
+- У сцены StarFall со Звёздным Светом появилась своя музыка — «DOORS: The Stairwell UST» (PAWDER); она
+  затихает, когда Звёздный Свет договорит.
+- Лекция Мирового Лотоса звучит под «Mischievous Light» (Hotel++ Soundtrack, chronocopes) вместо
+  «Crimson Red Light», на который у нас не было разрешения автора.
+- `ASSETS.md`: авторы и ссылки на все треки.
+
+### English
+- The StarFall scene with Star Light has music of its own — "DOORS: The Stairwell UST" (PAWDER); it
+  fades once Star Light is done speaking.
+- The World Lotus lecture now plays "Mischievous Light" (Hotel++ Soundtrack, chronocopes) instead of
+  "Crimson Red Light", which we had no permission from its author for.
+- `ASSETS.md`: authors and links for every track.
+
 ## 1.1050.1
 Мелкие правки после релиза — в счёт 50 версий не идут, войдут в полный лог 1.1100.
 Small post-release changes — not counted toward the 50 versions, they go into the 1.1100 full log.

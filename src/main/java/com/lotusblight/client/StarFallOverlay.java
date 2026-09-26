@@ -50,6 +50,7 @@ public final class StarFallOverlay {
     private static boolean locking;
     private static boolean warBranch;
     private static int lineIndex;
+    private static net.minecraft.client.resources.sounds.SimpleSoundInstance musicInstance;
 
     private StarFallOverlay() {}
 
@@ -58,7 +59,17 @@ public final class StarFallOverlay {
         queue.clear();
         queue.addAll(allianceBranch ? StarFallLibrary.allianceLines() : StarFallLibrary.warLines());
         lineIndex = -1;
+        stopMusic();
+        musicInstance = net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(com.lotusblight.registry.ModSounds.STAR_FALL_THEME.get(), 1.0f, 0.8f);
+        Minecraft.getInstance().getSoundManager().play(musicInstance);
         advance();
+    }
+
+    private static void stopMusic() {
+        if (musicInstance != null) {
+            Minecraft.getInstance().getSoundManager().stop(musicInstance);
+            musicInstance = null;
+        }
     }
 
     /** "Ты не сможешь вечно прятаться от меня." - the war script's own note: "(при попытке застроится или зайти в дом)". Only shows (and only deals its damage) if the player is actually sheltering when the scene reaches it; otherwise it's skipped entirely, straight to the next line. */
@@ -67,6 +78,7 @@ public final class StarFallOverlay {
     private static void advance() {
         activeLine = queue.poll();
         lineIndex++;
+        if (activeLine == null) stopMusic();
         Minecraft mc = Minecraft.getInstance();
 
         if (activeLine != null && warBranch && lineIndex == WAR_SHELTER_LINE_INDEX && !isSheltering(mc)) {
@@ -189,6 +201,7 @@ public final class StarFallOverlay {
     }
 
     public static void reset() {
+        stopMusic();
         queue.clear();
         activeLine = null;
         cachedLines = null;

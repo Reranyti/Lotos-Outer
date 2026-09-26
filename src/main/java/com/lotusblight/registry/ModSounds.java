@@ -25,5 +25,9 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> LOTUS_CHASE_THEME = SOUNDS.register("lotus_chase_theme",
             () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "lotus_chase_theme")));
 
+    /** StarFall - plays under Star Light's scene (see StarFallOverlay), stops once he's done speaking. */
+    public static final RegistryObject<SoundEvent> STAR_FALL_THEME = SOUNDS.register("star_fall_theme",
+            () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(LotusBlight.MODID, "star_fall_theme")));
+
     private ModSounds() {}
 }

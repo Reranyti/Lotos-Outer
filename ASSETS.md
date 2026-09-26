@@ -42,8 +42,9 @@ rights belong to LSPLASH, the skin's to its author Gdux.
 | Файл / File | Где звучит / Where it plays | Источник / Source |
 |---|---|---|
 | `sounds/inner_voice_theme.ogg` | сцены внутреннего голоса / inner voice scenes | Mr.69c — [«Curious Light Extended — Epic Remix»](https://www.youtube.com/watch?v=B8CFhIu6vFU); расширенная версия трека Curious Light из оригинального саундтрека DOORS (LSPLASH) / an extended version of Curious Light from the original DOORS soundtrack (LSPLASH) |
-| `sounds/world_lotus_lecture.ogg` | лекция Мирового Лотоса / World Lotus lecture | InFiNiTyBeE — [«Crimson Red Light»](https://www.youtube.com/watch?v=yBpWy_dawHk), неофициальный саундтрек DOORS / an unofficial DOORS soundtrack ⚠️ разрешение автора ещё не получено: напишем автору, а если не выйдет — трек заменим / the author's permission isn't granted yet: we'll contact the author, or replace the track |
+| `sounds/world_lotus_lecture.ogg` | лекция Мирового Лотоса / World Lotus lecture | chronocopes — [«Mischievous Light» (Hotel++ Soundtrack)](https://www.youtube.com/watch?v=D98SJtQwoSo); заменил «Crimson Red Light» (InFiNiTyBeE), на который не было разрешения / replaced "Crimson Red Light" (InFiNiTyBeE), which we had no permission for |
 | `sounds/traitor_boss_theme.ogg` | бой с боссом-предателем / traitor boss fight | PAWDER — [«Ire's Domain»](https://www.youtube.com/watch?v=CwNOVdAq28w), неофициальный саундтрек Roblox GRACE / an unofficial Roblox GRACE soundtrack |
+| `sounds/star_fall_theme.ogg` | сцена StarFall со Звёздным Светом / the StarFall scene with Star Light | PAWDER — [«DOORS: The Stairwell UST»](https://www.youtube.com/watch?v=aEAX6nUlTfc), неофициальный саундтрек DOORS / an unofficial DOORS soundtrack |
 | `sounds/lotus_chase_theme.ogg` | Побег от лотоса / the Lotus Chase | Made For Evot — [«פרחים» (Flowers)](https://www.youtube.com/watch?v=1jeKYEiSyU4) |
 
 ## Модели и анимации GeckoLib / GeckoLib models and animations
