@@ -270,6 +270,13 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+// The desktop overlay on its own, without starting the game: ./gradlew runOverlay [-Pseconds=N]
+tasks.register('runOverlay', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.OverlayMain'
+    args '--seconds', project.findProperty('seconds') ?: '60'
+}
+
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.register('lotusLibJar', Jar) {
     archiveBaseName = 'lotuslib'
