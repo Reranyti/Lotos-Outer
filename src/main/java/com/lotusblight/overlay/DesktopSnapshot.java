@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * Finds the desktop icons so the overlay can pretend to pick them up. Nothing on the real desktop is
  * moved: a picture of the screen is taken once, kept only in memory, and compared with the wallpaper
- * Windows is showing - wherever they differ on the icon grid, there's an icon. The wallpaper also gives
+ * Windows is showing - wherever they differ there is an icon. The wallpaper also gives
  * the clean background to paint over the spot an icon was "taken" from. When anything doesn't add up
  * (a window covers the desktop, the wallpaper can't be read, not Windows) the list simply stays empty.
  */
@@ -42,17 +42,26 @@ final class DesktopSnapshot {
     private static final double MAX_STRAY = 0.12;
 
     final List<Icon> icons = new ArrayList<>();
+    /** What the search found or why it gave up - printed by --debug. */
+    String report = "not looked";
 
     static DesktopSnapshot capture(Rectangle screen, int floorY) {
         DesktopSnapshot snapshot = new DesktopSnapshot();
         try {
-            if (!System.getProperty("os.name", "").toLowerCase().contains("win")) return snapshot;
+            if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
+                snapshot.report = "not Windows";
+                return snapshot;
+            }
             BufferedImage shot = new Robot().createScreenCapture(screen);
             BufferedImage wallpaper = loadWallpaper(shot);
-            if (wallpaper == null) return snapshot;
+            if (wallpaper == null) {
+                snapshot.report = "wallpaper not readable";
+                return snapshot;
+            }
             snapshot.find(shot, wallpaper, Math.min(shot.getWidth(), wallpaper.getWidth()), Math.min(floorY, shot.getHeight()));
         } catch (Exception | LinkageError e) {
             snapshot.icons.clear();
+            snapshot.report = "failed: " + e;
         }
         return snapshot;
     }
@@ -76,41 +85,89 @@ final class DesktopSnapshot {
                 }
             }
         }
-        if (diffCount == 0) return;
+        if (diffCount == 0) {
+            report = "screen matches the wallpaper exactly - no icons";
+            return;
+        }
 
-        int stepX = period(projection(diff, w, h, true), 56, 160, 76);
-        int stepY = period(projection(diff, w, h, false), 56, 180, 84);
-        int offX = phase(projection(diff, w, h, true), stepX);
-        int offY = phase(projection(diff, w, h, false), stepY);
-
+        // Each icon is one blob: the picture with its caption right under it. Smearing the mask a few
+        // pixels up and down joins the two, and a couple of pixels sideways joins the caption's
+        // letters and words, while the columns stay apart - Windows keeps captions narrower than
+        // their cell.
+        int[] label = new int[w * h];
+        boolean[] joined = smear(smear(diff, w, h, 2, true), w, h, 7, false);
         int covered = 0;
-        for (int cy = offY - stepY; cy < h; cy += stepY) {
-            for (int cx = offX - stepX; cx < w; cx += stepX) {
-                Rectangle cell = new Rectangle(cx, cy, stepX, stepY).intersection(new Rectangle(0, 0, w, h));
-                if (cell.isEmpty()) continue;
-                int count = 0;
-                int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = -1, maxY = -1;
-                for (int y = cell.y; y < cell.y + cell.height; y++) {
-                    for (int x = cell.x; x < cell.x + cell.width; x++) {
-                        if (!diff[y * w + x]) continue;
-                        count++;
-                        minX = Math.min(minX, x);
-                        minY = Math.min(minY, y);
-                        maxX = Math.max(maxX, x);
-                        maxY = Math.max(maxY, y);
-                    }
+        int next = 0;
+        int[] queue = new int[w * h];
+        for (int start = 0; start < w * h; start++) {
+            if (!joined[start] || label[start] != 0) continue;
+            next++;
+            int head = 0, tail = 0;
+            queue[tail++] = start;
+            label[start] = next;
+            int count = 0;
+            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = -1, maxY = -1;
+            while (head < tail) {
+                int i = queue[head++];
+                int x = i % w, y = i / w;
+                if (diff[i]) {
+                    count++;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
                 }
-                // An icon is a decent blob that leaves the cell's edges clear; a window fills them.
-                if (count < 200 || maxY - minY < 20 || !edgesMostlyClear(diff, w, cell)) continue;
-                Rectangle box = new Rectangle(minX - 2, minY - 2, maxX - minX + 5, maxY - minY + 5).intersection(cell);
-                // Desktop icons carry a white caption; a patch of stray noise doesn't.
-                if (!hasCaption(shot, diff, w, box)) continue;
-                icons.add(cut(shot, wallpaper, diff, w, box));
-                covered += count;
+                if (x > 0) tail = visit(joined, label, queue, tail, i - 1, next);
+                if (x < w - 1) tail = visit(joined, label, queue, tail, i + 1, next);
+                if (y > 0) tail = visit(joined, label, queue, tail, i - w, next);
+                if (y < h - 1) tail = visit(joined, label, queue, tail, i + w, next);
             }
+            if (count == 0) continue;
+            int bw = maxX - minX + 1, bh = maxY - minY + 1;
+            // Icon-sized, not a sliver of noise and not a whole window.
+            if (count < 200 || bh < 20 || bw > 160 || bh > 200) continue;
+            Rectangle box = new Rectangle(minX - 2, minY - 2, bw + 4, bh + 4).intersection(new Rectangle(0, 0, w, h));
+            // Desktop icons carry a white caption; a patch of stray noise doesn't.
+            if (!hasCaption(shot, diff, w, box)) continue;
+            icons.add(cut(shot, wallpaper, diff, w, box));
+            covered += count;
         }
         // Too much of the screen disagrees with the wallpaper - something is in the way. Don't guess.
-        if (diffCount - covered > (long) w * h * MAX_STRAY) icons.clear();
+        double stray = (diffCount - covered) / (double) ((long) w * h);
+        report = String.format("%d icons; %.1f%% of the screen off-wallpaper outside them", icons.size(), stray * 100);
+        if (stray > MAX_STRAY) {
+            icons.clear();
+            report += " - too much, gave up";
+        }
+    }
+
+    private static int visit(boolean[] joined, int[] label, int[] queue, int tail, int i, int id) {
+        if (joined[i] && label[i] == 0) {
+            label[i] = id;
+            queue[tail++] = i;
+        }
+        return tail;
+    }
+
+    /** Marks every pixel within reach of a marked one, along rows or along columns. */
+    private static boolean[] smear(boolean[] mask, int w, int h, int reach, boolean alongRows) {
+        boolean[] out = new boolean[mask.length];
+        int lines = alongRows ? h : w, len = alongRows ? w : h;
+        for (int line = 0; line < lines; line++) {
+            int last = -reach - 1;
+            for (int k = 0; k < len; k++) {
+                int i = alongRows ? line * w + k : k * w + line;
+                if (mask[i]) last = k;
+                if (k - last <= reach) out[i] = true;
+            }
+            last = len + reach + 1;
+            for (int k = len - 1; k >= 0; k--) {
+                int i = alongRows ? line * w + k : k * w + line;
+                if (mask[i]) last = k;
+                if (last - k <= reach) out[i] = true;
+            }
+        }
+        return out;
     }
 
     private static Icon cut(BufferedImage shot, BufferedImage wallpaper, boolean[] diff, int w, Rectangle box) {
@@ -150,83 +207,10 @@ final class DesktopSnapshot {
         return false;
     }
 
-    private static boolean edgesMostlyClear(boolean[] diff, int w, Rectangle cell) {
-        int ring = 0, hits = 0;
-        for (int x = cell.x; x < cell.x + cell.width; x++) {
-            for (int y : new int[]{cell.y, cell.y + cell.height - 1}) {
-                ring++;
-                if (diff[y * w + x]) hits++;
-            }
-        }
-        for (int y = cell.y; y < cell.y + cell.height; y++) {
-            for (int x : new int[]{cell.x, cell.x + cell.width - 1}) {
-                ring++;
-                if (diff[y * w + x]) hits++;
-            }
-        }
-        return hits <= ring * 0.25;
-    }
-
     private static boolean differs(int a, int b) {
         return Math.abs(((a >> 16) & 0xFF) - ((b >> 16) & 0xFF)) > DIFF
                 || Math.abs(((a >> 8) & 0xFF) - ((b >> 8) & 0xFF)) > DIFF
                 || Math.abs((a & 0xFF) - (b & 0xFF)) > DIFF;
-    }
-
-    private static double[] projection(boolean[] diff, int w, int h, boolean ontoX) {
-        double[] p = new double[ontoX ? w : h];
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                if (diff[y * w + x]) p[ontoX ? x : y]++;
-            }
-        }
-        return p;
-    }
-
-    /**
-     * The icon grid's spacing along one axis: the lag at which the diff profile best matches itself.
-     * With a single row or column there's nothing to match, so Windows' usual spacing is used.
-     */
-    private static int period(double[] p, int min, int max, int fallback) {
-        double mean = 0;
-        for (double v : p) mean += v;
-        mean /= p.length;
-        double[] c = new double[p.length];
-        for (int i = 0; i < p.length; i++) c[i] = p[i] - mean;
-        double zero = 0;
-        for (double v : c) zero += v * v;
-        if (zero == 0) return fallback;
-
-        int lo = min, hi = Math.min(max, p.length / 2);
-        double[] score = new double[hi + 2];
-        double top = 0;
-        for (int lag = lo; lag <= hi; lag++) {
-            double s = 0;
-            for (int i = 0; i + lag < c.length; i++) s += c[i] * c[i + lag];
-            score[lag] = s / zero;
-            top = Math.max(top, score[lag]);
-        }
-        if (top < 0.2) return fallback;
-        // The shortest lag that peaks close to the best one - longer peaks are just its multiples.
-        for (int lag = lo + 1; lag < hi; lag++) {
-            if (score[lag] >= top * 0.7 && score[lag] >= score[lag - 1] && score[lag] >= score[lag + 1]) return lag;
-        }
-        return fallback;
-    }
-
-    /** Where the grid lines fall: the offset whose lines cross the fewest icon pixels. */
-    private static int phase(double[] p, int step) {
-        int best = 0;
-        double bestSum = Double.MAX_VALUE;
-        for (int off = 0; off < step; off++) {
-            double sum = 0;
-            for (int i = off; i < p.length; i += step) sum += p[i];
-            if (sum < bestSum) {
-                bestSum = sum;
-                best = off;
-            }
-        }
-        return best;
     }
 
     /**

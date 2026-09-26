@@ -98,6 +98,7 @@ final class OverlayWindow {
         this.floorY = screen.height - insets.bottom;
         // Looked at before the window exists, so the picture is of the desktop and not of us.
         this.desktop = icons ? DesktopSnapshot.capture(screen, floorY) : new DesktopSnapshot();
+        if (Boolean.getBoolean("lotusblight.overlay.debug")) System.out.println("icons: " + desktop.report);
 
         // About a third of the screen tall; the canvas leaves room for arms and a full turn.
         this.scale = screen.height * 0.34 / 32.0;
@@ -244,7 +245,8 @@ final class OverlayWindow {
 
     private void pickNext() {
         int roll = random.nextInt(10);
-        DesktopSnapshot.Icon icon = roll < 4 ? nextIcon() : null;
+        // The first thing it does is go for an icon, then about every other time.
+        DesktopSnapshot.Icon icon = roll < 5 || thrown.isEmpty() ? nextIcon() : null;
         if (icon != null) {
             fetching = icon;
             targetX = clamp(icon.bounds.getCenterX(), screen.width * 0.06, screen.width * 0.94);

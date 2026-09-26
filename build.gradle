@@ -275,6 +275,7 @@ tasks.register('runOverlay', JavaExec) {
     classpath = sourceSets.main.output
     mainClass = 'com.lotusblight.overlay.OverlayMain'
     args '--seconds', project.findProperty('seconds') ?: '60'
+    systemProperty 'lotusblight.overlay.debug', 'true'
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
