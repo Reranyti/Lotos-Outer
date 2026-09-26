@@ -79,7 +79,7 @@ final class SoftRenderer {
         }
     }
 
-    private static double[] transform(double[] c, int part, Pose pose) {
+    static double[] transform(double[] c, int part, Pose pose) {
         double[] pivot = SkinModel.PIVOTS[part];
         double x = c[0] - pivot[0], y = c[1] - pivot[1], z = c[2] - pivot[2];
         // The part's own rotation around its joint: pitch (x), yaw (y), roll (z).
