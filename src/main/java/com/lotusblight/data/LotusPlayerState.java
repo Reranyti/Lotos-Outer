@@ -59,14 +59,47 @@ public final class LotusPlayerState {
             return false;
         }
         root.putInt(DIALOGUE_BRANCH_KEY, branch);
+        root.putLong(BRANCH_CHOSEN_AT_KEY, player.level().getGameTime());
         player.getPersistentData().put(ROOT_TAG, root);
         return true;
+    }
+
+    private static final String BRANCH_CHOSEN_AT_KEY = "BranchChosenAt";
+
+    /**
+     * Game time the branch was locked in (check hasBranchChosenAt first - undecided, or chosen before
+     * this was tracked, has none; LotusEvents' login hook fills it in for the latter). Lets the Chase and StarFall
+     * come from the player's own progress, not only from how far the whole world is infected.
+     */
+    public static boolean hasBranchChosenAt(Player player) {
+        return root(player, false).contains(BRANCH_CHOSEN_AT_KEY);
+    }
+
+    public static long getBranchChosenAt(Player player) {
+        return root(player, false).getLong(BRANCH_CHOSEN_AT_KEY);
+    }
+
+    public static void setBranchChosenAt(Player player, long gameTime) {
+        CompoundTag root = root(player, true);
+        root.putLong(BRANCH_CHOSEN_AT_KEY, gameTime);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Game ticks since the branch was chosen, or -1 if undecided / unknown. */
+    public static long ticksSinceBranchChosen(Player player) {
+        if (!hasBranchChosenAt(player) || getDialogueBranch(player) == BRANCH_UNDECIDED) return -1L;
+        return Math.max(0L, player.level().getGameTime() - getBranchChosenAt(player));
     }
 
     /** Admin-only override for testing (see com.lotusblight.command.LotusCommands) — bypasses the one-way lock that {@link #setDialogueBranch} enforces for real dialogue choices. */
     public static void forceDialogueBranch(Player player, int branch) {
         CompoundTag root = root(player, true);
         root.putInt(DIALOGUE_BRANCH_KEY, branch);
+        if (branch == BRANCH_UNDECIDED) {
+            root.remove(BRANCH_CHOSEN_AT_KEY);
+        } else {
+            root.putLong(BRANCH_CHOSEN_AT_KEY, player.level().getGameTime());
+        }
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
@@ -510,6 +543,24 @@ public final class LotusPlayerState {
     public static void markHonchoCloser(Player player) {
         CompoundTag root = root(player, true);
         root.putBoolean(HONCHO_CLOSER_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** /lotus honcho meeting - lets the trip scene play again for this player. */
+    public static void resetHonchoMeeting(Player player) {
+        CompoundTag root = root(player, true);
+        root.remove(HONCHO_MET_KEY);
+        root.remove(HONCHO_MEETING_PENDING_KEY);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** /lotus honcho reset player - forgets everything this player has been through with Honcho. */
+    public static void resetHonchoProgress(Player player) {
+        CompoundTag root = root(player, true);
+        for (String key : new String[]{HONCHO_QUEST_KEY, HONCHO_DEPENDENCY_KEY, HONCHO_MET_KEY, HONCHO_MEETING_PENDING_KEY,
+                HONCHO_ASSISTANT_ASKED_KEY, HONCHO_ASSISTANT_PENDING_KEY, HONCHO_CLOSER_KEY}) {
+            root.remove(key);
+        }
         player.getPersistentData().put(ROOT_TAG, root);
     }
 }

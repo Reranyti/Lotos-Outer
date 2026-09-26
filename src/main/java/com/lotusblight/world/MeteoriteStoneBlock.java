@@ -13,12 +13,17 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * "метеоритный камень убивает при прикосновении любом на войне, на нейтрале не даёт добыть" - left
- * behind at the exact center of a StarFall meteor impact. Branch-gated: kills a RESISTANCE player
- * on contact, refuses to be mined at all on UNDECIDED, and only actually behaves like an ordinary
- * minable block on ALLIANCE.
+ * behind at the exact center of a StarFall meteor impact, and spread further by
+ * MeteoriteSpreadEngine. "На войне" there meant war with Star Light, i.e. the ALLIANCE branch (same
+ * inversion as StarFall's scripts and the black hearts): it kills an ALLIANCE player on contact,
+ * can't be mined at all on UNDECIDED, and is an ordinary minable block for the war-branch
+ * (RESISTANCE) player, who's on Star Light's side. It used to kill RESISTANCE instead.
  */
 public class MeteoriteStoneBlock extends Block {
     private static final float LETHAL_DAMAGE = 1000.0f;
+    /** The impact drops this block right under the player it hit - a moment to step off before it kills. */
+    public static final int IMPACT_GRACE_TICKS = 100;
+    private static final java.util.Map<java.util.UUID, Long> GRACE_UNTIL = new java.util.HashMap<>();
 
     public MeteoriteStoneBlock(BlockBehaviour.Properties properties) {
         super(properties);
@@ -32,20 +37,30 @@ public class MeteoriteStoneBlock extends Block {
     @Override
     public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
         if (entity instanceof Player player) {
-            killIfResistance(level, player);
+            killIfAlliance(level, player);
         }
         super.stepOn(level, pos, state, entity);
     }
 
     @Override
     public void attack(BlockState state, Level level, BlockPos pos, Player player) {
-        killIfResistance(level, player);
+        killIfAlliance(level, player);
         super.attack(state, level, pos, player);
     }
 
-    private static void killIfResistance(Level level, Player player) {
+    /** Called by the StarFall impact that placed the stone under this player. */
+    public static void grantImpactGrace(ServerLevel level, Player player) {
+        GRACE_UNTIL.put(player.getUUID(), level.getGameTime() + IMPACT_GRACE_TICKS);
+    }
+
+    private static void killIfAlliance(Level level, Player player) {
         if (!(level instanceof ServerLevel serverLevel)) return;
-        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_RESISTANCE) return;
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_ALLIANCE) return;
+        Long graceUntil = GRACE_UNTIL.get(player.getUUID());
+        if (graceUntil != null) {
+            if (serverLevel.getGameTime() < graceUntil) return;
+            GRACE_UNTIL.remove(player.getUUID());
+        }
         player.hurt(serverLevel.damageSources().magic(), LETHAL_DAMAGE);
     }
 

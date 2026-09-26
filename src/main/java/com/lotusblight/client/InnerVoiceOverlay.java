@@ -112,7 +112,10 @@ public final class InnerVoiceOverlay {
         // of that was the same line showing twice on screen at once, stacked on top of each other
         // (and colliding with the phase-up actionbar too). With Chat Overhaul installed, the chat
         // is the one and only presentation; without it, this box is still the only one there is.
-        if (InnerVoiceChatBridge.LOADED) return;
+        if (ChatDialogue.active()) {
+            ChatDialogue.drawAdvanceHint(event.getGuiGraphics());
+            return;
+        }
 
         GuiGraphics g = event.getGuiGraphics();
         drawVignette(g);

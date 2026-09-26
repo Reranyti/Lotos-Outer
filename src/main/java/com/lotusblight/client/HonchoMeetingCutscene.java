@@ -22,26 +22,36 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * Client side of the trip-meeting (see HonchoMeetingManager). The whole HUD goes away, the camera
  * drops to the ground with both hands pushing off it, then rises to Honcho standing over the player
- * with his hand out, and the "Принять руку?" window opens. After the last answer the camera stays on
- * him for his reaction and then hands control back.
+ * with his hand out, and the "Принять руку?" window opens. The player stays down on the ground - the
+ * camera at crawling height - until he pulls them up. After a yes he tells his story in the same
+ * cutscene (HonchoStoryScreen); after a final no the camera stays on him as he leaves.
  */
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class HonchoMeetingCutscene {
     private static final int FALL_TICKS = 35;
     private static final int LOOK_UP_TICKS = 30;
-    private static final int AFTER_ACCEPT_TICKS = 68;
+    /** Fallback only - the server either starts the story or sends a stop well before this. */
+    private static final int AFTER_ACCEPT_TICKS = 200;
     private static final int AFTER_LEAVE_TICKS = 55;
     private static final float GROUND_PITCH = 72.0f;
 
-    private enum Phase { FALL, LOOK_UP, CHOICE, AFTER }
+    private enum Phase { FALL, REVEAL, LOOK_UP, CHOICE, AFTER, STORY }
+
+    /** Optional Cinematic mod - a real camera shot of Honcho instead of just tilting the view up (see CinematicShots). */
+    private static final boolean CINEMATIC_LOADED = net.minecraftforge.fml.ModList.get().isLoaded("cinematic");
+    /** Gives up waiting on the shot if it never reports finishing, so the scene can't hang. */
+    private static final int REVEAL_TIMEOUT_TICKS = 400;
 
     private static boolean active;
     private static Phase phase;
     private static int phaseTicks;
     private static int afterTicks;
     private static int honchoEntityId;
+    private static boolean accepted;
     private static float startYaw;
     private static CameraType previousCamera;
+    /** The window the player answers in right now - reopened as is if anything else closes it. */
+    private static net.minecraft.client.gui.screens.Screen sceneScreen;
 
     private HonchoMeetingCutscene() {}
 
@@ -61,17 +71,48 @@ public final class HonchoMeetingCutscene {
     /** Called by HonchoMeetingScreen once the final answer is in. */
     static void finish(boolean accepted) {
         if (!active) return;
+        HonchoMeetingCutscene.accepted = accepted;
         afterTicks = accepted ? AFTER_ACCEPT_TICKS : AFTER_LEAVE_TICKS;
         setPhase(Phase.AFTER);
+    }
+
+    /** The server started his story (ShowHonchoAssistantPacket arriving mid-cutscene, see HonchoAssistantOverlay#show). */
+    static void startStory() {
+        if (!active) return;
+        setPhase(Phase.STORY);
+        openSceneScreen(new HonchoStoryScreen());
+    }
+
+    /** Called by the scene's own windows as they open (HonchoMeetingScreen swaps itself for its "Точно?" twin). */
+    static void openSceneScreen(net.minecraft.client.gui.screens.Screen screen) {
+        sceneScreen = screen;
+        Minecraft.getInstance().setScreen(screen);
+    }
+
+    /** Down on the ground from the trip until Honcho pulls the player up - or for good if they turned him away. */
+    private static boolean lyingDown() {
+        return phase == Phase.FALL || phase == Phase.REVEAL || phase == Phase.LOOK_UP || phase == Phase.CHOICE
+                || (phase == Phase.AFTER && !accepted);
+    }
+
+    /**
+     * Crawling pose on this client only: the camera follows the eye height of the pose and eases
+     * into it (Camera#tick), so dropping into it and standing back up both glide. Player#tick puts
+     * the real pose back every tick, which is also how it's undone once the scene is over.
+     */
+    private static void applyLyingPose(Minecraft mc) {
+        if (mc.player != null && lyingDown()) mc.player.setPose(net.minecraft.world.entity.Pose.SWIMMING);
     }
 
     public static void reset() {
         if (!active) return;
         active = false;
+        accepted = false;
+        sceneScreen = null;
         Minecraft mc = Minecraft.getInstance();
         if (previousCamera != null) mc.options.setCameraType(previousCamera);
         previousCamera = null;
-        if (mc.screen instanceof HonchoMeetingScreen) mc.setScreen(null);
+        if (mc.screen instanceof HonchoMeetingScreen || mc.screen instanceof HonchoStoryScreen) mc.setScreen(null);
     }
 
     public static boolean isActive() {
@@ -98,15 +139,32 @@ public final class HonchoMeetingCutscene {
         mc.options.keyJump.setDown(false);
         mc.options.keySprint.setDown(false);
         mc.options.keyShift.setDown(false);
+        applyLyingPose(mc);
 
         phaseTicks++;
         if (phase == Phase.FALL && phaseTicks >= FALL_TICKS) {
-            setPhase(Phase.LOOK_UP);
+            Entity honcho = mc.level.getEntity(honchoEntityId);
+            if (CINEMATIC_LOADED && honcho != null) {
+                com.lotusblight.client.compat.CinematicShots.playHonchoReveal(mc.player, honcho);
+                setPhase(Phase.REVEAL);
+            } else {
+                setPhase(Phase.LOOK_UP);
+            }
+        } else if (phase == Phase.REVEAL && ((phaseTicks > 5 && !com.lotusblight.client.compat.CinematicShots.isRunning())
+                || phaseTicks >= REVEAL_TIMEOUT_TICKS)) {
+            // Out of the fade the player is still down on the ground, already looking up at him.
+            setPhase(Phase.CHOICE);
+            openSceneScreen(new HonchoMeetingScreen(false));
         } else if (phase == Phase.LOOK_UP && phaseTicks >= LOOK_UP_TICKS) {
             setPhase(Phase.CHOICE);
-            mc.setScreen(new HonchoMeetingScreen(false));
+            openSceneScreen(new HonchoMeetingScreen(false));
         } else if (phase == Phase.AFTER && phaseTicks >= afterTicks) {
             reset();
+        } else if ((phase == Phase.CHOICE || phase == Phase.STORY) && mc.screen == null && sceneScreen != null) {
+            // The player can't move and the only way on is answering - if chat, another mod's window
+            // or Cinematic's screen block took the window away, bring the same one back (same
+            // question, same line of the story), never leave them stuck without it.
+            mc.setScreen(sceneScreen);
         }
     }
 
@@ -116,6 +174,10 @@ public final class HonchoMeetingCutscene {
         if (event.phase != TickEvent.Phase.START || !active) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
+        applyLyingPose(mc);
+
+        // Cinematic drives the camera during its shot and puts the player's view back afterwards.
+        if (phase == Phase.REVEAL) return;
 
         float groundYaw = startYaw;
         float[] target = lookAtHoncho(mc);
@@ -161,7 +223,9 @@ public final class HonchoMeetingCutscene {
     /** "всё скрывается" - the entire HUD, including the minimap and other mods' overlays. */
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Pre event) {
-        if (active) event.setCanceled(true);
+        // Not during the Cinematic shot: its letterbox and fades draw in RenderGuiEvent.Post, which
+        // never fires once Pre is cancelled - and it hides the HUD layers itself meanwhile.
+        if (active && phase != Phase.REVEAL) event.setCanceled(true);
     }
 
     /** Both hands on the ground pushing up while the player tries to get up. */

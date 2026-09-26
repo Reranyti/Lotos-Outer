@@ -72,6 +72,13 @@ public final class WorldLotusLectureOverlay {
         activeLine = queue.poll();
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
+        Minecraft mc = Minecraft.getInstance();
+        if (activeLine != null && mc.player != null) {
+            // The player's own replies go under their real name - Chat Overhaul finds their skin.
+            String speaker = activeLine.speaker() == LotusDialogueLibrary.LectureSpeaker.LOTUS
+                    ? ChatDialogue.WORLD_LOTUS : mc.player.getName().getString();
+            ChatDialogue.postLine(speaker, activeLine.text());
+        }
         if (activeLine == null && musicInstance != null) {
             Minecraft.getInstance().getSoundManager().stop(musicInstance);
             musicInstance = null;
@@ -123,6 +130,10 @@ public final class WorldLotusLectureOverlay {
         if (mc.player == null || mc.options.hideGui) return;
 
         GuiGraphics g = event.getGuiGraphics();
+        if (ChatDialogue.active()) {
+            ChatDialogue.drawAdvanceHint(g);
+            return;
+        }
         boolean isLotus = activeLine.speaker() == LotusDialogueLibrary.LectureSpeaker.LOTUS;
         String text = activeLine.text();
 

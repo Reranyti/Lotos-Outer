@@ -20,7 +20,9 @@ public record OutbreakRecord(
         long createdGameTime,
         int infectedBlockCount,
         int maxPhaseCap,
-        int peakPhase
+        int peakPhase,
+        long suppressedUntil,
+        boolean biomeConverted
 ) {
     public static final int MIN_PHASE = 1;
     /** Kept in sync with InfectionPhases.MAX_PHASE by hand - was hardcoded 4, which silently
@@ -36,24 +38,24 @@ public record OutbreakRecord(
      * field here does.
      */
     public OutbreakRecord withPhase(int newPhase) {
-        return new OutbreakRecord(id, pos, Math.max(MIN_PHASE, Math.min(maxPhaseCap, newPhase)), progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
+        return new OutbreakRecord(id, pos, Math.max(MIN_PHASE, Math.min(maxPhaseCap, newPhase)), progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase, suppressedUntil, biomeConverted);
     }
 
     public OutbreakRecord withProgress(float newProgress) {
-        return new OutbreakRecord(id, pos, phase, Math.max(0f, Math.min(1f, newProgress)), hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
+        return new OutbreakRecord(id, pos, phase, Math.max(0f, Math.min(1f, newProgress)), hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase, suppressedUntil, biomeConverted);
     }
 
     public OutbreakRecord withHidden(boolean newHidden) {
-        return new OutbreakRecord(id, pos, phase, progress, newHidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase);
+        return new OutbreakRecord(id, pos, phase, progress, newHidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase, suppressedUntil, biomeConverted);
     }
 
     public OutbreakRecord withInfectedBlockCount(int newCount) {
-        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, Math.max(0, newCount), maxPhaseCap, peakPhase);
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, Math.max(0, newCount), maxPhaseCap, peakPhase, suppressedUntil, biomeConverted);
     }
 
     public OutbreakRecord withMaxPhaseCap(int newCap) {
         int clampedCap = Math.max(MIN_PHASE, Math.min(MAX_PHASE, newCap));
-        return new OutbreakRecord(id, pos, Math.min(phase, clampedCap), progress, hidden, createdGameTime, infectedBlockCount, clampedCap, peakPhase);
+        return new OutbreakRecord(id, pos, Math.min(phase, clampedCap), progress, hidden, createdGameTime, infectedBlockCount, clampedCap, peakPhase, suppressedUntil, biomeConverted);
     }
 
     /**
@@ -63,7 +65,24 @@ public record OutbreakRecord(
      * under a threshold and climbing back doesn't replay them.
      */
     public OutbreakRecord withPeakPhase(int newPeak) {
-        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, Math.max(peakPhase, newPeak));
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, Math.max(peakPhase, newPeak), suppressedUntil, biomeConverted);
+    }
+
+    /**
+     * "остаются но замедляют развитие" - cleansing powder leaves lotus shoots standing, but dusting
+     * one slows its outbreak down until this game time (see InfectionSpreadEngine#tickOutbreak).
+     */
+    public OutbreakRecord withSuppressedUntil(long gameTime) {
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase, gameTime, biomeConverted);
+    }
+
+    /** The phase 4 lotus_marsh biome rewrite (LotusBiomeConverter) has been done for this outbreak. */
+    public OutbreakRecord withBiomeConverted(boolean converted) {
+        return new OutbreakRecord(id, pos, phase, progress, hidden, createdGameTime, infectedBlockCount, maxPhaseCap, peakPhase, suppressedUntil, converted);
+    }
+
+    public boolean isSuppressed(long gameTime) {
+        return gameTime < suppressedUntil;
     }
 
     public CompoundTag save(CompoundTag tag) {
@@ -78,6 +97,8 @@ public record OutbreakRecord(
         tag.putInt("InfectedBlockCount", infectedBlockCount);
         tag.putInt("MaxPhaseCap", maxPhaseCap);
         tag.putInt("PeakPhase", peakPhase);
+        tag.putLong("SuppressedUntil", suppressedUntil);
+        tag.putBoolean("BiomeConverted", biomeConverted);
         return tag;
     }
 
@@ -95,11 +116,15 @@ public record OutbreakRecord(
                 // outbreak down to nothing the moment its save data is next loaded).
                 tag.contains("MaxPhaseCap") ? tag.getInt("MaxPhaseCap") : MAX_PHASE,
                 // Older saves have no peak yet - the current phase is the best known lower bound.
-                tag.contains("PeakPhase") ? tag.getInt("PeakPhase") : tag.getInt("Phase")
+                tag.contains("PeakPhase") ? tag.getInt("PeakPhase") : tag.getInt("Phase"),
+                tag.getLong("SuppressedUntil"),
+                // Older saves: outbreaks that reached phase 4 before 1.1042 only had their Y=0 biome
+                // cells rewritten, so their surface never changed - left false, they get redone once.
+                tag.getBoolean("BiomeConverted")
         );
     }
 
     public static OutbreakRecord newAnchor(BlockPos pos, long gameTime, boolean hidden) {
-        return new OutbreakRecord(UUID.randomUUID(), pos, MIN_PHASE, 0f, hidden, gameTime, 0, MAX_PHASE, MIN_PHASE);
+        return new OutbreakRecord(UUID.randomUUID(), pos, MIN_PHASE, 0f, hidden, gameTime, 0, MAX_PHASE, MIN_PHASE, 0L, false);
     }
 }

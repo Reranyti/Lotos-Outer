@@ -196,6 +196,12 @@ public class LotusEvents {
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        // Branches chosen before the choice time was recorded start counting from now, so the
+        // personal Chase/StarFall fallback works for them too (see LotusPlayerState#getBranchChosenAt).
+        if (LotusPlayerState.getDialogueBranch(player) != LotusPlayerState.BRANCH_UNDECIDED
+                && !LotusPlayerState.hasBranchChosenAt(player)) {
+            LotusPlayerState.setBranchChosenAt(player, player.level().getGameTime());
+        }
         // Was player.getPersistentData() (per-entity NBT) - bug #14, the kit reappearing on
         // relog/version updates even on an existing world. A world-level SavedData (see its own
         // class doc) is guaranteed loaded before this event can fire; per-entity persistent data's
@@ -396,6 +402,7 @@ public class LotusEvents {
             BlockPos pos = event.getEntity().blockPosition();
             int cleansed = 0;
             int counted = 0;
+            int shoots = 0;
             // Redesigned per user request: a full head-to-toe 5x6x5 wipe per single powder made
             // the item a straight win button. Shrunk to a compact 4x4x4 patch around the player's
             // feet - deliberate, repeated use instead of one throw clearing a whole outbreak.
@@ -406,6 +413,12 @@ public class LotusEvents {
                 // back into water. Now every infected block type reverts to its real clean
                 // counterpart instead of one wrong catch-all.
                 net.minecraft.world.level.block.state.BlockState infectedState = level.getBlockState(target);
+                if (infectedState.is(ModBlocks.LOTUS_SHOOT.get())) {
+                    // Shoots can't be dusted away - they stay, but slow the outbreak (see below).
+                    shoots++;
+                    level.sendParticles(net.minecraft.core.particles.ParticleTypes.WHITE_ASH, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 12, 0.3, 0.3, 0.3, 0.01);
+                    continue;
+                }
                 net.minecraft.world.level.block.state.BlockState cleanState = cleanReplacementFor(infectedState);
                 if (cleanState != null) {
                     level.setBlock(target, cleanState, 3);
@@ -447,9 +460,28 @@ public class LotusEvents {
                     com.lotusblight.spread.GuardianManager.onAllianceCleanseUsesChanged(allyPlayer, uses);
                 }
             }
+            if ((cleansed > 0 || shoots > 0) && event.getEntity() instanceof ServerPlayer powderUser) {
+                // "Возвращение воды" - granted from here: the powder is used on air (RightClickItem),
+                // so no vanilla trigger ever sees it, and the old item_used_on_block criterion used a
+                // pre-1.20 format that kept the whole advancement from loading at all.
+                var advancement = level.getServer().getAdvancements().getAdvancement(
+                        new net.minecraft.resources.ResourceLocation(com.lotusblight.LotusBlight.MODID, "clean_the_river"));
+                if (advancement != null) powderUser.getAdvancements().award(advancement, "used_powder");
+            }
+            if (shoots > 0) {
+                OutbreakRecord nearest = data.nearestOutbreak(pos, 128.0, false);
+                if (nearest != null) {
+                    data.updateOutbreak(nearest.withSuppressedUntil(level.getGameTime() + SHOOT_SUPPRESS_TICKS));
+                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_RESONATE,
+                            net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 0.6f);
+                }
+            }
             if (!event.getEntity().getAbilities().instabuild) event.getItemStack().shrink(1);
         }
     }
+
+    /** How long a dusted lotus shoot slows its outbreak: 5 minutes, restarted by every dusting. */
+    private static final int SHOOT_SUPPRESS_TICKS = 20 * 60 * 5;
 
     /**
      * infectedBlockCount only ever grew - spread incremented it, and the ONLY way it ever went

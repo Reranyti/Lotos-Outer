@@ -52,7 +52,7 @@ public final class InfectionPhases {
      * trimmed back to a small recent window - not from one huge single-attempt
      * radius that mostly wastes its own attempts.
      */
-    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 16};
+    private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 12};
 
     /**
      * Spread attempts performed per active outbreak per engine pass (every SPREAD_INTERVAL_TICKS,

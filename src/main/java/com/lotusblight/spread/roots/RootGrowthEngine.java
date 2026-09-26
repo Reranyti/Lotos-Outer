@@ -197,7 +197,7 @@ public final class RootGrowthEngine {
         level.sendParticles(ROOT_GREEN, flowerPos.getX() + 0.5, flowerPos.getY() + 0.6, flowerPos.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
     }
 
-    private static final int SHOOT_SPACING = 2;
+    private static final int SHOOT_SPACING = 4;
 
     /** Same spacing protection InfectionSpreadEngine uses for ordinary spread — this code path spawns shoots independently and was missing it entirely. */
     private boolean hasNearbyShoot(ServerLevel level, BlockPos pos) {

@@ -149,6 +149,7 @@ public class LotusBlight {
         }
         TABS.register(modBus);
         modBus.addListener(this::addVanillaCreativeItems);
+        modBus.addListener(this::applyRecommendedConfigs);
         // Renderers, render layers and color handlers live in client.LotusClientSetup - referencing
         // client classes from this class made the whole mod fail to construct on a dedicated server.
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
@@ -209,6 +210,11 @@ public class LotusBlight {
 
     private void registerTerraBlenderRegions(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
         event.enqueueWork(com.lotusblight.worldgen.terrablender.LotusTerraBlender::registerRegions);
+    }
+
+    /** Other mods' COMMON configs are loaded by now - see compat.RecommendedConfigs. */
+    private void applyRecommendedConfigs(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> com.lotusblight.compat.RecommendedConfigs.apply(net.minecraftforge.fml.config.ModConfig.Type.COMMON));
     }
 
     private void addVanillaCreativeItems(BuildCreativeModeTabContentsEvent event) {

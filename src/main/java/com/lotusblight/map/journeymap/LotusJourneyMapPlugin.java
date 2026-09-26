@@ -78,6 +78,7 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
             syncWaypoints(event.dimension);
         } else {
             journeyMapClientApi.removeAll(MOD_ID);
+            lastSignature = 0;
         }
     }
 
@@ -87,8 +88,19 @@ public class LotusJourneyMapPlugin implements IClientPlugin {
         ResourceKey<Level> dimension = net.minecraft.client.Minecraft.getInstance().level != null
                 ? net.minecraft.client.Minecraft.getInstance().level.dimension() : null;
         if (dimension == null) return;
+        // The ticker asks every 2 seconds; rebuilding every waypoint and re-merging every infected
+        // chunk into polygons each time was work (and a JourneyMap redraw) for nothing when nothing
+        // had changed - only rebuild when what's shown actually differs.
+        int signature = java.util.Objects.hash(dimension, ClientMapCache.markers(), ClientMapCache.infectedChunkKeys(),
+                com.lotusblight.map.ClientGlandCache.positions(),
+                options == null || options.showOutbreakMarkers.get(), options == null || options.showInfectionArea.get());
+        if (signature == lastSignature) return;
+        lastSignature = signature;
         syncWaypoints(dimension);
     }
+
+    /** What was last pushed to JourneyMap (see syncWaypoints()); reset whenever JourneyMap clears it. */
+    private int lastSignature;
 
     private void syncWaypoints(ResourceKey<Level> dimension) {
         if (journeyMapClientApi == null) return;

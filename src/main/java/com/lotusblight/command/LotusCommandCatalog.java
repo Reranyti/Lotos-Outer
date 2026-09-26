@@ -48,7 +48,25 @@ public final class LotusCommandCatalog {
             new Entry("/lotus blackheart set @s 3", "Поставить 3 чёрных сердца (проверка эффекта)"),
             new Entry("/lotus blackheart set @s 0", "Снять чёрные сердца"),
 
-            new Entry("/lotus border status", "Статус карантинной мировой границы")
+            new Entry("/lotus border status", "Статус карантинной мировой границы"),
+
+            new Entry("/lotus reputation get @s", "Репутация у всех фракций"),
+
+            new Entry("/lotus compat", "Что мод правит и использует в других модах, и в каком состоянии"),
+
+            new Entry("/lotus honcho info", "Где Хончо и что игрок уже прошёл с ним"),
+            new Entry("/lotus honcho spawn", "Поставить Хончо рядом (одного на мир)"),
+            new Entry("/lotus honcho tp", "Телепорт к Хончо"),
+            new Entry("/lotus honcho meeting", "Сразу сыграть встречу-спотыкание (повторяемо)"),
+            new Entry("/lotus honcho cancel", "Прервать текущую встречу без последствий"),
+            new Entry("/lotus honcho assistant", "Показать сцену «Позволь мне стать помощником»"),
+            new Entry("/lotus honcho scene offer", "Анимация: протянутая рука"),
+            new Entry("/lotus honcho scene happy", "Анимация: радость"),
+            new Entry("/lotus honcho scene pat", "Анимация: гладит по голове"),
+            new Entry("/lotus honcho scene pray", "Анимация: молится"),
+            new Entry("/lotus honcho scene none", "Анимация: обычная стойка"),
+            new Entry("/lotus honcho reset player @s", "Сбросить весь прогресс игрока с Хончо"),
+            new Entry("/lotus honcho reset world", "Забыть Хончо в мире (вернуть ушедшего)")
     );
 
     private LotusCommandCatalog() {}

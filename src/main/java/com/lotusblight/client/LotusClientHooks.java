@@ -26,6 +26,15 @@ public final class LotusClientHooks {
         Minecraft.getInstance().setScreen(new LotusWikiScreen());
     }
 
+    /** A line from Honcho (HonchoLinePacket): his own chat message with Chat Overhaul, a plain chat line without it. */
+    public static void showHonchoLine(String text) {
+        if (ChatDialogue.active()) {
+            ChatDialogue.postLine(ChatDialogue.HONCHO, text);
+        } else {
+            Minecraft.getInstance().gui.getChat().addMessage(net.minecraft.network.chat.Component.literal(text));
+        }
+    }
+
     public static void openScientistPage(int variant) {
         Minecraft.getInstance().setScreen(new ScientistPageScreen(variant));
     }

@@ -47,7 +47,14 @@ import java.util.UUID;
  */
 public final class LotusChaseEvent {
     private static final int SWEEP_INTERVAL_TICKS = 100;
-    private static final float TRIGGER_FRACTION = 0.15f;
+    /**
+     * Was 0.15 - with the spread slowed down to take days, lore behind a world-wide 15% came far too
+     * late. Lowered to match, and CHASE_PERSONAL_TICKS opens it anyway for anyone who has lived with
+     * their branch long enough, however slowly the world itself is being taken.
+     */
+    public static final float TRIGGER_FRACTION = 0.05f;
+    /** 3 in-game days after the first branch choice among online players. */
+    public static final long CHASE_PERSONAL_TICKS = 3L * 24000L;
     // Timed against lotus_chase_theme.ogg's own structure: 0:11 the track settles into the escape
     // proper, 0:23 it escalates hard, 1:50 is the actual deadline, 2:14 is the track's full length
     // (the 1:50-2:14 tail only ever plays as a successful-escape outro, see ChaseStatePacket).
@@ -80,6 +87,10 @@ public final class LotusChaseEvent {
     /** For /lotus chase test commands (see com.lotusblight.command.LotusCommands) - null only if the mod's own registration in LotusBlight never ran, which should never happen. */
     public static LotusChaseEvent get() {
         return instance;
+    }
+
+    public boolean isRunner(UUID playerId) {
+        return playerId.equals(runnerUuid);
     }
 
     @SubscribeEvent
@@ -156,7 +167,14 @@ public final class LotusChaseEvent {
             }
         }
         long threshold = (long) (LotusConfig.WORLD_INFECTION_REFERENCE.get() * TRIGGER_FRACTION);
-        if (totalInfected < threshold) return;
+        boolean someoneReady = false;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (LotusPlayerState.ticksSinceBranchChosen(player) >= CHASE_PERSONAL_TICKS) {
+                someoneReady = true;
+                break;
+            }
+        }
+        if (totalInfected < threshold && !someoneReady) return;
 
         labData.setUnlocked(true);
         structure.unsealEntrance();
@@ -269,6 +287,8 @@ public final class LotusChaseEvent {
     private void resolveSurvived(ServerPlayer player) {
         endRun();
         player.displayClientMessage(Component.literal("— ...Ушёл. В этот раз."), false);
+        // A page of the diary for making it out - one more way to the lore besides guardians.
+        com.lotusblight.item.ScientistPageItem.giveMissingPage(player);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.SURVIVED, 0));
     }
 

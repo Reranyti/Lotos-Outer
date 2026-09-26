@@ -42,7 +42,7 @@ public final class HonchoMeetingScreen extends Screen {
         NetworkHandler.CHANNEL.sendToServer(new HonchoMeetingChoicePacket(accept));
         if (this.minecraft == null) return;
         if (!accept && !confirming) {
-            this.minecraft.setScreen(new HonchoMeetingScreen(true));
+            HonchoMeetingCutscene.openSceneScreen(new HonchoMeetingScreen(true));
             return;
         }
         this.minecraft.setScreen(null);

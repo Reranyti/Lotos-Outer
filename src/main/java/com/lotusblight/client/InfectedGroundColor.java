@@ -37,7 +37,12 @@ public final class InfectedGroundColor implements BlockColor {
         // 4+, heart-anchored) is conceptually a patch of the real lotus_marsh biome, so it forces
         // that biome's own palette here instead of whatever ambient biome the block happens to
         // physically sit in (see LotusTerritory - a "world property" check, not a real biome swap).
-        net.minecraft.resources.ResourceLocation biomeId = LotusTerritory.isLotusTerritory(pos)
+        // Lotus wood and leaves are the lotus's own growth, not recolored local plants - they keep
+        // lotus_marsh's palette wherever they stand. They used to take the local biome's colors,
+        // so in a desert (one pale gold for everything, lightened further by the white blend)
+        // whole lotus trees read as near-white.
+        boolean lotusTree = material == InfectedMaterial.LOG || material == InfectedMaterial.LEAVES;
+        net.minecraft.resources.ResourceLocation biomeId = lotusTree || LotusTerritory.isLotusTerritory(pos)
                 ? LotusTerritory.LOTUS_MARSH
                 : reader.getBiome(pos).unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
         if (biomeId == null) return BiomeInfectionColors.NO_TINT;

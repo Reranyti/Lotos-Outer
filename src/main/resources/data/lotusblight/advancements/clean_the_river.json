@@ -10,6 +10,6 @@
     "hidden": false
   },
   "criteria": {
-    "used_powder": {"trigger": "minecraft:item_used_on_block", "conditions": {"item": {"items": ["lotusblight:cleansing_powder"]}}}
+    "used_powder": {"trigger": "minecraft:impossible"}
   }
 }

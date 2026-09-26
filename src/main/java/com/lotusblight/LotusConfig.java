@@ -12,6 +12,8 @@ public final class LotusConfig {
     public static final ForgeConfigSpec.IntValue ACTIVE_CHUNK_RADIUS;
     public static final ForgeConfigSpec.IntValue MAX_PENDING_WORLDGEN_TASKS;
     public static final ForgeConfigSpec.IntValue WORLD_INFECTION_REFERENCE;
+    public static final ForgeConfigSpec.BooleanValue APPLY_RECOMMENDED_SETTINGS;
+    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> APPLIED_RECOMMENDATIONS;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -30,8 +32,15 @@ public final class LotusConfig {
                 .defineInRange("activeChunkRadius", 32, 4, 32);
         MAX_PENDING_WORLDGEN_TASKS = builder.comment("Maximum queued natural lotus worldgen tasks.")
                 .defineInRange("maxPendingWorldgenTasks", 64, 8, 256);
-        WORLD_INFECTION_REFERENCE = builder.comment("Sum of infectedBlockCount across every outbreak on the server treated as \"100% of the world captured\" - the Lotus Chase event's 15% trigger is this times 0.15.")
+        WORLD_INFECTION_REFERENCE = builder.comment("Sum of infectedBlockCount across every outbreak on the server treated as \"100% of the world captured\" - the Chase and StarFall thresholds are fractions of it.")
                 .defineInRange("worldInfectionReference", 100000, 1000, 10_000_000);
+        builder.pop();
+        builder.push("compatibility");
+        APPLY_RECOMMENDED_SETTINGS = builder.comment("Set the recommended values in other installed mods' configs once (see /lotus compat).",
+                        "A value you have changed yourself is never overwritten. false = leave other mods' configs alone.")
+                .define("applyRecommendedSettings", true);
+        APPLIED_RECOMMENDATIONS = builder.comment("Recommendations already applied - each one is only ever set once. Clear an entry to have it offered again.")
+                .defineListAllowEmpty(java.util.List.of("appliedRecommendations"), java.util.List::of, o -> o instanceof String);
         builder.pop();
         SPEC = builder.build();
     }

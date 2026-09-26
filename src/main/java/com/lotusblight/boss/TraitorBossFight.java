@@ -87,6 +87,11 @@ public final class TraitorBossFight {
     private static final Map<UUID, Long> pendingStarts = new HashMap<>();
     private static final Map<UUID, FightState> ACTIVE = new HashMap<>();
 
+    /** Scheduled or running for this player - other scenes (see HonchoMeetingManager) wait until it's over. */
+    public static boolean isInFight(UUID playerId) {
+        return pendingStarts.containsKey(playerId) || ACTIVE.containsKey(playerId);
+    }
+
     /** Called by GuardianManager.triggerBetrayal right after the incineration effects are applied. */
     public static void scheduleStart(ServerPlayer player, int delayTicks) {
         UUID id = player.getUUID();

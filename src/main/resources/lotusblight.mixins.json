@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.lotusblight.mixin",
+  "plugin": "com.lotusblight.mixin.LotusMixinPlugin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "worldedit.ForgeWorldBiomeFixMixin",
+    "minecraft.AdvancementIconFormatMixin"
+  ],
+  "client": [
+    "chatoverhaul.CustomChatComponentSpeakerIconMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

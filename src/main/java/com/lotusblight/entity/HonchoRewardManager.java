@@ -33,6 +33,11 @@ public final class HonchoRewardManager {
         return count;
     }
 
+    /** Puts the health bonus back in line with the stored count - used after /lotus honcho reset. */
+    public static void refresh(ServerPlayer player) {
+        applyModifier(player, LotusPlayerState.getHonchoDependencyCount(player));
+    }
+
     private static void applyModifier(ServerPlayer player, int dependencyCount) {
         AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
         if (attr == null) return;

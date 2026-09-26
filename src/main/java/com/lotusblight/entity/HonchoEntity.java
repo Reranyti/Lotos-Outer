@@ -21,7 +21,8 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
-import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -36,12 +37,11 @@ import java.util.UUID;
 
 /**
  * "Хончо... поклоняется звёздному свету... появляется ПОСЛЕ [StarFall]" - a friendly quest NPC,
- * spawned once per world after a player lives through StarFall (see StarFallEvent). Still a Zombie
- * subclass for its AI/attribute plumbing - every hostile goal is stripped and replaced with plain
- * wander/look-at-player behaviour, and it never targets or attacks anything - but the RENDERED
- * model is no longer vanilla zombie geometry ("КАКОЙ НАХУЙ ЗОМБИ" - user's explicit objection to
- * that): see HonchoModel/HonchoGeoRenderer for his own GeckoLib geometry, matched to honcho.png's
- * existing UV layout. Original character design - "referencing" a DOORS entity by name/role in the
+ * spawned once per world after a player lives through StarFall (see StarFallEvent). His own
+ * entity ("ВЫРЕЖИ ЗОМБИ... ОН НЕЗАВИСИМЫЙ ЭНТИТИ") - a plain PathfinderMob that wanders, looks at
+ * players and never targets anything. He used to be a Zombie subclass with the hostile parts
+ * switched off one by one, which kept leaking zombie behaviour (sun, drowning, reinforcements,
+ * babies, chicken jockeys, golems). His geometry is his own too, see HonchoModel/HonchoGeoRenderer. Original character design - "referencing" a DOORS entity by name/role in the
  * story is fine, but no borrowed artwork.
  *
  * "передача Хончо делает Хончо зависимее от вас... зависимость от игрока в прямом смысле" - once he's
@@ -49,8 +49,9 @@ import java.util.UUID;
  * long passes without another vial, visibly weakens (see #checkStarvation) - a real, felt
  * dependency, not just a stacking stat.
  */
-public class HonchoEntity extends Zombie implements GeoEntity {
+public class HonchoEntity extends PathfinderMob implements GeoEntity {
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("walk");
     private static final RawAnimation MEETING = RawAnimation.begin().thenPlayAndHold("meeting");
     private static final RawAnimation HAPPY = RawAnimation.begin().thenPlayAndHold("happy");
     private static final RawAnimation PAT = RawAnimation.begin().thenLoop("pat");
@@ -84,7 +85,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
     private float followStopDistance = DEFAULT_FOLLOW_STOP_DISTANCE;
     private float followStartDistance = DEFAULT_FOLLOW_START_DISTANCE;
 
-    public HonchoEntity(EntityType<? extends Zombie> type, Level level) {
+    public HonchoEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
         this.setPersistenceRequired();
         this.setCanPickUpLoot(false);
@@ -119,23 +120,31 @@ public class HonchoEntity extends Zombie implements GeoEntity {
         return meetingPlayerId;
     }
 
+    public boolean isInMeeting() {
+        return meetingPlayerId != null;
+    }
+
     /** "выживать теперь вы будете с хончо" - accepting his hand makes him follow that player, the same way feeding him a vial does. */
     public void followPlayer(ServerPlayer player) {
         feederUuid = player.getUUID();
         lastFedGameTime = this.level().getGameTime();
+        // The meeting may hand over a fresh copy when the real one sits in an unloaded chunk - the
+        // "closer" milestone lives on the player too, so the copy picks it back up here.
+        if (LotusPlayerState.isHonchoCloser(player)) markCloser();
     }
 
+    /** 25 hearts. */
+    private static final double MAX_HEALTH = 50.0;
+
     public static AttributeSupplier.Builder createAttributes() {
-        return Zombie.createAttributes()
-                .add(Attributes.MAX_HEALTH, 20.0)
+        return Mob.createMobAttributes()
+                .add(Attributes.MAX_HEALTH, MAX_HEALTH)
                 .add(Attributes.MOVEMENT_SPEED, 0.22)
-                .add(Attributes.ATTACK_DAMAGE, 0.0)
                 .add(Attributes.FOLLOW_RANGE, 24.0);
     }
 
     @Override
     protected void registerGoals() {
-        // Deliberately none of Zombie's own hostile goals (attack/break-door/target-nearest-player).
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(0, new HoldForMeetingGoal(this));
         this.goalSelector.addGoal(1, new FollowFeederGoal(this, 1.0));
@@ -143,38 +152,6 @@ public class HonchoEntity extends Zombie implements GeoEntity {
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.7));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
         // No targetSelector goals at all - Honcho never picks a target, never attacks.
-    }
-
-    // Zombie defaults that make no sense for a one-per-world quest NPC: burning at dawn, turning into
-    // a Drowned after a swim, and calling vanilla zombies in as reinforcements when hit.
-    @Override
-    protected boolean isSunSensitive() {
-        return false;
-    }
-
-    @Override
-    protected boolean convertsInWater() {
-        return false;
-    }
-
-    @Override
-    protected void randomizeReinforcementsChance() {
-    }
-
-    /** Zombie is an Enemy, so golems (and anything else hunting monsters) would go after him - nothing should pick Honcho as a target. */
-    @Override
-    public boolean canBeSeenAsEnemy() {
-        return false;
-    }
-
-    @Override
-    public boolean isAggressive() {
-        return false;
-    }
-
-    @Override
-    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
-        return false;
     }
 
     /** Rare ambient line for whoever's currently feeding him - an original nod to "он потерял прежний ориентир и нашёл новый в игроке", not a lyric quote from anything. */
@@ -193,7 +170,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
                 && this.level().getServer() != null) {
             var feeder = this.level().getServer().getPlayerList().getPlayer(feederUuid);
             if (feeder != null) {
-                feeder.displayClientMessage(Component.literal(AMBIENT_LINES[this.random.nextInt(AMBIENT_LINES.length)]), false);
+                HonchoSpeech.say(feeder, AMBIENT_LINES[this.random.nextInt(AMBIENT_LINES.length)]);
             }
         }
         if (this.tickCount % STARVATION_CHECK_INTERVAL != 0) return;
@@ -241,7 +218,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
             String line = LotusPlayerState.hasCompletedHonchoQuest(serverPlayer)
                     ? "— Ещё немного света... Пожалуйста. Без него я снова гасну."
                     : "— Принеси мне флакон Звёздного Света. Я знаю, ты можешь его найти.";
-            serverPlayer.displayClientMessage(Component.literal(line), false);
+            HonchoSpeech.say(serverPlayer, line);
             return InteractionResult.CONSUME;
         }
 
@@ -256,16 +233,15 @@ public class HonchoEntity extends Zombie implements GeoEntity {
             this.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
         }
         this.level().playSound(null, this.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 1.0f, 1.0f);
-        serverPlayer.displayClientMessage(Component.literal(firstTime
+        HonchoSpeech.say(serverPlayer, firstTime
                 ? "— ...Это он. Настоящий свет. Спасибо тебе — теперь я снова его чувствую."
-                : "— Снова свет... Я всё больше завишу от тебя, и мне это не мешает."), false);
+                : "— Снова свет... Я всё больше завишу от тебя, и мне это не мешает.");
         int dependencyCount = HonchoRewardManager.grantBlessing(serverPlayer);
         LotusPlayerState.addReputation(serverPlayer, com.lotusblight.data.Faction.SCIENTISTS, 2);
         if (dependencyCount == LotusPlayerState.HONCHO_CLOSER_THRESHOLD && !LotusPlayerState.isHonchoCloser(serverPlayer)) {
             LotusPlayerState.markHonchoCloser(serverPlayer);
             markCloser();
-            serverPlayer.displayClientMessage(Component.literal(
-                    "— Знаешь... мне больше не нужно, чтобы ты был так далеко. Я буду рядом."), false);
+            HonchoSpeech.say(serverPlayer, "— Знаешь... мне больше не нужно, чтобы ты был так далеко. Я буду рядом.");
         }
         return InteractionResult.CONSUME;
     }
@@ -295,6 +271,14 @@ public class HonchoEntity extends Zombie implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        // Saved attributes override the defaults on load, so a Honcho from before the health change
+        // would keep his old 10 hearts - lift him to the current max, keeping how hurt he was.
+        var maxHealth = this.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealth != null && maxHealth.getBaseValue() < MAX_HEALTH) {
+            float fraction = this.getHealth() / (float) maxHealth.getBaseValue();
+            maxHealth.setBaseValue(MAX_HEALTH);
+            this.setHealth(fraction * this.getMaxHealth());
+        }
         if (tag.hasUUID("FeederUuid")) feederUuid = tag.getUUID("FeederUuid");
         lastFedGameTime = tag.getLong("LastFedGameTime");
         if (tag.getBoolean("Closer")) markCloser();
@@ -311,7 +295,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
             case SCENE_HAPPY -> HAPPY;
             case SCENE_PAT -> PAT;
             case SCENE_PRAY -> PRAY;
-            default -> IDLE;
+            default -> state.isMoving() ? WALK : IDLE;
         })));
     }
 

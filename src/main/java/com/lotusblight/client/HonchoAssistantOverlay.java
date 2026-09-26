@@ -40,6 +40,12 @@ public final class HonchoAssistantOverlay {
     private HonchoAssistantOverlay() {}
 
     public static void show() {
+        // After the trip-meeting the story is told inside the cutscene itself (HonchoStoryScreen) -
+        // one continuous scene, not a second one popping up once the first has ended.
+        if (HonchoMeetingCutscene.isActive()) {
+            HonchoMeetingCutscene.startStory();
+            return;
+        }
         queue.clear();
         queue.addAll(HonchoLibrary.assistantLines());
         onQuestion = false;
@@ -55,6 +61,7 @@ public final class HonchoAssistantOverlay {
         }
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
+        if (activeLine != null) ChatDialogue.postLine(ChatDialogue.HONCHO, activeLine);
     }
 
     private static boolean active() {
@@ -102,6 +109,22 @@ public final class HonchoAssistantOverlay {
         if (mc.player == null || mc.options.hideGui) return;
 
         GuiGraphics g = event.getGuiGraphics();
+        if (ChatDialogue.active()) {
+            // The plea itself is in chat; the choice stays ours.
+            if (onQuestion) {
+                String choice = "[Y] Да    [N] Нет";
+                int w = mc.font.width(choice) + 24;
+                int left = (g.guiWidth() - w) / 2;
+                int top = g.guiHeight() - 92;
+                g.fill(left, top, left + w, top + 20, BOX_COLOR);
+                g.fill(left, top, left + w, top + 1, BOX_BORDER);
+                g.fill(left, top + 19, left + w, top + 20, BOX_BORDER);
+                g.drawString(mc.font, choice, left + 12, top + 6, TEXT_COLOR, true);
+            } else {
+                ChatDialogue.drawAdvanceHint(g);
+            }
+            return;
+        }
         String text = activeLine;
         int width = Math.min(380, g.guiWidth() - 24);
         int wrapWidth = width - 16;

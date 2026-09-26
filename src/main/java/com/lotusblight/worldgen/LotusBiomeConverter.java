@@ -35,6 +35,8 @@ public final class LotusBiomeConverter {
         // it only writes the single 4x4x4 cell at Y=0, so the surface never changed. Biomes are stored
         // per 4x4x4 cell now, so one write per cell covers the whole volume. Columns in unloaded
         // chunks are skipped - WorldEdit would load (or generate) them synchronously otherwise.
+        // WorldEdit 7.2.15 itself wrote these into the wrong cell (~1/64 of the area changed) - see
+        // com.lotusblight.mixin.worldedit.ForgeWorldBiomeFixMixin, which fixes that in WorldEdit.
         int minX = (center.getX() - CONVERSION_RADIUS) & ~3;
         int minZ = (center.getZ() - CONVERSION_RADIUS) & ~3;
         int maxX = center.getX() + CONVERSION_RADIUS;

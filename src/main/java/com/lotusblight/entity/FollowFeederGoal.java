@@ -8,8 +8,8 @@ import java.util.EnumSet;
 /**
  * "зависимость от игрока в прямом смысле" - Honcho walks toward whoever last fed him a vial once
  * he's too far away, same shape as a tamed animal following its owner, but keyed off feederUuid
- * (set in HonchoEntity#mobInteract) instead of a real TamableAnimal owner relationship, since Zombie
- * has no such thing built in.
+ * (set in HonchoEntity#mobInteract) instead of a real TamableAnimal owner relationship - he isn't
+ * owned or tamed, he chose who to follow.
  */
 final class FollowFeederGoal extends Goal {
     private final HonchoEntity honcho;

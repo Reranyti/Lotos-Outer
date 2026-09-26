@@ -66,6 +66,8 @@ minecraft {
             // SpyglassMixin, for one) - without remapping them the dev runs crash before our mod loads.
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // Our own mixins (the WorldEdit biome fix) - the release jar lists them in its manifest.
+            args '--mixin.config', "${mod_id}.mixins.json"
 
             // Recommended logging data for a userdev environment
             // The markers can be added/remove as needed separated by commas.
@@ -187,6 +189,15 @@ dependencies {
     // dialogue branch (see DialogueChoicePacket). Coordinate reconstructs to libs/chatoverhaul-1.0-1.20.1.jar.
     compileOnly fg.deobf("blank:chatoverhaul:1.0-1.20.1")
 
+    // Cinematic: soft dependency - letterboxed camera shots in the Honcho meeting cutscene
+    // (see client/compat/CinematicShots). Coordinate reconstructs to libs/cinematic-1.1.1.jar.
+    compileOnly fg.deobf("blank:cinematic:1.1.1")
+
+    // Streams Reflowing: soft dependency - the river-flow spread already reads it through vanilla's
+    // getFlow; its public RiverEngine API is compiled against for the spawn-area river prebuild
+    // (see worldgen/compat/StreamsRiverPrebuild). libs/StreamsReflowing-1.20.1-forge-2.13.1.jar.
+    compileOnly fg.deobf("blank:StreamsReflowing-1.20.1-forge:2.13.1")
+
     // Curios API integration attempted and reverted — see LotusSeerLensItem's javadoc and
     // IDEAS_AND_MODS.md for why `implements ICurioItem` directly isn't safe as a soft dependency.
 
@@ -280,6 +291,9 @@ tasks.register('lotusLibJar', Jar) {
 
 tasks.named('jar', Jar).configure {
     dependsOn tasks.named('lotusLibJar')
+    // GameTests and their arena only run through runGameTestServer - players don't need them.
+    exclude 'com/lotusblight/gametest/**'
+    exclude 'data/lotusblight/structures/honcho_arena.nbt'
     // Keep LotusLib classes bundled for reliable standalone Forge loading.
     manifest {
         attributes([
@@ -289,7 +303,8 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.jar.archiveVersion,
                 'Implementation-Vendor'   : mod_authors,
-                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                'MixinConfigs'            : "${mod_id}.mixins.json"
         ])
     }
 

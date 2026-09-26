@@ -16,6 +16,226 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.1050 — Release: everything from 1.100 to 1.1050
+The first full release of the 1.1000s: 1.100.0 and 1.101.0, the switch to the flat 1.NNNN counter at
+1.1010, and every version after it up to this one — grouped by what changed rather than by the order
+it landed in. Every 50 versions gets a log like this; the per-version detail for 1.1017–1.1042 stays
+in its own section below.
+
+### Русский
+
+**Хончо**
+- У Хончо своя модель вместо позаимствованной у зомби, с локтями, коленями и поясницей; стойка,
+  поза встречи и молитва на коленях взяты прямо из проекта Blockbench. Позы сперва проигрывались
+  зеркально — руки уходили за спину, — теперь стоят ровно так, как задуманы.
+- Он больше не зомби даже внутри: отдельное существо, без солнечных ожогов, превращения в
+  утопленника, подкреплений, маленьких копий и курочек-наездников. Големы его не трогают.
+- 25 сердец, анимация ходьбы, один Хончо на весь мир.
+- После третьего флакона держится к игроку ближе, а тому, кто его кормит, иногда говорит, что свет
+  больше не ведёт его — теперь его ведёт игрок.
+- Встреча на ветке войны стала полноценной катсценой: игрок спотыкается и лежит на земле, камера
+  внизу, Хончо протягивает руку. «Да» — он поднимает, радуется, гладит по голове и тут же, в той
+  же сцене, рассказывает свою историю и на коленях просит взять его в помощники. «Нет» — молится и
+  переспрашивает; второй отказ — уходит из мира навсегда. Во время сцены игрока нельзя ранить, она
+  не начинается посреди Побега или боя с боссом и не может «потерять» окно ответа.
+- С модом Cinematic встреча получает настоящий кадр с камерой и затемнением.
+- Команды `/lotus honcho` для проверки всего перечисленного.
+
+> **От Reranyti:** Окееееей, теперь Хончо… У нас из фиксоооов:
+> 25 сердечек — он больше не сдохнет от первого удара. Порадуйтесь, ваш виртуальный муж не сдохнет.
+> И у нас появилась поддержка нового мода! Cinematic для катсцен — с ним камера работает намного лучше.
+> Теперь исправлен «КАТЯЩИЙСЯ ХОНЧОООО».
+> Также добавлены команды для тестов, а я откланиваюсь.
+
+**Заражение**
+- Заражение наконец видно: оно растёт по поверхности, а не прячется в камне. Под землю начинает
+  уходить с третьей фазы, а на пятой пробивается глубоко — там же появляется лотосовая руда.
+- Темп спокойнее — примерно в 3–4 раза медленнее, чем в бете; полмира за пару игровых дней больше
+  не заражается.
+- Туман в заражённой зоне действительно сгущается, и пятая фаза теперь самая тяжёлая, а не слабее
+  второй.
+- Созревший очаг (фаза 4) правда становится болотом лотоса — биом меняется на всю высоту, заодно
+  догоняют и старые очаги. Для этого пришлось исправить ошибку в самом WorldEdit.
+- В родном болоте и на своей территории лотос растёт быстрее — это настоящий бонус, а не
+  перекраска.
+- Корни больше не превращают воду в твёрдый пол, на суше они редкие; над водой заражается дно.
+- Ростки лотоса стоят на воде вместе со своей кувшинкой и не ломаются; очищающий порошок их не
+  убирает, но замедляет очаг.
+- Лотосовые деревья всегда в цветах лотоса.
+- Заражённая вода больше не отдельная жидкость — вода остаётся водой, а заражение живёт в биоме и
+  тумане. Вместе с ней ушли устаревшие блоки: лотосовая земля, спутанные корни, сухая древесина
+  Блеска.
+- У болота лотоса и тундры Блеска появились свои цвета тумана — раньше они брали чужие.
+- Мшистые железы больше не пропадают на всю сессию из-за одной неудачной попытки найти им место.
+- Корни растут через очередь и не застревают, кувшинки дочерних очагов не ставятся на сушу, а
+  Сердце лотоса в мире снова одно.
+- Убраны повторяющиеся залпы деревьев, лианы, стиравшие постройки, подвисания из-за загрузки чанков
+  и заплатки Блеска прямо во время генерации.
+
+> **От Reranyti:** Ой, бля, моё нелюбимое.
+> Ну, теперь короче вся поверхность хорошая! Заражается до… эм… Раньше оно жрало как не в себя, если что, но там был коммит исправлений, и мы понизили его скорость.
+> Там наконец-то есть вкусный, сладкий туман — теперь вы будете как ёбек в тумани. Ну и, конечно, логично было исправить то, что лотос такой: «ну билин, это моя территория, а я не расту быстрее» — теперь исправлено.
+> Заражённая вода сосёт. Откланиваюсь.
+
+**Сюжет и события**
+- Побег и StarFall приходят раньше — либо по заражению мира, либо просто спустя время после выбора
+  ветки.
+- Страницы дневника Объекта Ноль находятся не только у стражей: и возле созревающих очагов, и за
+  пройденный Побег, и без дублей.
+- Метеоритный камень опасен Альянсу, а не Войне: ветка войны на стороне Звёздного Света. Добыть его
+  теперь можно — раньше не получалось ни у кого, как и нормально копать остальные блоки мода нужными
+  инструментами.
+- Место падения метеорита стало огромным пятном, сразу считается территорией Блеска (стражи там не
+  появляются, лотос растёт медленнее) и отмечается на карте.
+- Лаборатория Побега строится без дыр; выйти из игры посреди забега — значит быть пойманным, и
+  наказание теперь действительно доходит.
+- Чёрные сердца — только на ветке Альянса.
+- StarFall больше не обрушивает FPS и не даёт повторять сцену ради выгоды.
+- Стражи не превращаются в мирных волков после перезагрузки, арена босса-предателя и ветка его
+  достижений работают, споры и холодная порча реально наносят урон.
+
+**Системы**
+- Репутация с фракциями — Лотос, Учёные, Звёздный Свет.
+- Собственный игровой календарь с виджетом.
+- Всё, что игрок прошёл, переживает смерть и возвращение из Края; стартовый набор не выдаётся
+  повторно.
+- Ответы на сцены проверяются сервером: подделанный клиент больше не выдаст себе концовки и не
+  повторит сцены.
+
+**Диалоги**
+- С Chat Overhaul реплики Звёздного Света, Мирового Лотоса, Хончо и внутреннего голоса звучат в
+  его чате — у каждого свой цвет и своя иконка (раньше Звёздный Свет был с лицом Стива). Наши окна
+  диалогов тогда не мешают, а окна выбора остаются нашими.
+
+**Совместимость и производительность**
+- Все связи с другими модами собраны в один реестр — `/lotus compat` показывает, что включено.
+  Правки чужих модов проверяют, что нужный код есть в установленной версии, и поэтому не ломаются
+  ни на старых, ни на новых версиях.
+- Исправлены ошибки в зависимостях: WorldEdit (смена биома), Ex Meteor Shower (три его достижения
+  не загружались).
+- Streams Reflowing: реки вокруг точки появления строятся заранее, при первом открытии мира, и мод
+  один раз предлагает ему более лёгкое качество — это главная причина подвисаний на слабых ПК при
+  прогрузке новых мест. Своё значение игрока не трогаем, всё выключается в конфиге.
+- JourneyMap: метки и зона заражения не пересобираются впустую.
+- Мод запускается на выделенном сервере и без TerraBlender; все нужные зависимости объявлены.
+- 15 автоматических проверок (GameTest) прогоняют Хончо, распространение, порошок, метеоритный камень,
+  лоровые пороги и смену биома; в релизный jar они не входят.
+
+**Мелочи**
+- Экранные оверлеи больше не рисуются по двадцать раз за кадр, а таймер Побега идёт по настоящему
+  времени.
+- Английский перевод (`en_us.json`) — у игроков не на русском больше нет сырых ключей.
+- Модель «Витаминки», достижение за очищающий порошок, текстура Хончо в jar, клавиша N при ответе
+  Хончо, сброс клиентских состояний при выходе из мира, страница дневника засчитывается при подборе,
+  а не при выпадении, пасхалка мира с одним биомом, рассинхрон ягод и жезла, частицы, которые не
+  появлялись.
+
+### English
+
+**Honcho**
+- Honcho has a model of his own instead of a borrowed zombie body, with elbows, knees and a waist;
+  his idle, meeting and kneeling prayer poses come straight from the Blockbench project. They first
+  played mirrored — arms swinging toward his back — and now sit exactly as designed.
+- He's no longer a zombie underneath either: a creature of his own with no sunburn, no Drowned
+  conversion, no reinforcements, no baby copies or chicken jockeys. Golems leave him alone.
+- 25 hearts, a walking animation, one Honcho per world.
+- After the third vial he stays closer to the player, and now and then tells whoever feeds him that
+  the light doesn't guide him anymore — the player does.
+- The war-branch meeting is a real cutscene now: the player trips and lies on the ground, the camera
+  low, and Honcho offers a hand. Yes — he pulls them up, is glad, pats their head and, still in the
+  same scene, tells his story and kneels to ask to be their assistant. No — he prays and asks again;
+  a second no and he leaves the world for good. The player can't be hurt during it, it never starts
+  mid-Chase or mid-boss-fight, and it can't lose its answer window.
+- With the Cinematic mod the meeting gets a proper camera shot and fade.
+- `/lotus honcho` commands to test all of the above.
+
+> **From Reranyti:** Okaaaay, now Honcho… Our fixeeees:
+> 25 hearts — he won't drop dead from the first hit anymore. Rejoice, your virtual husband won't die.
+> And we now support a new mod! Cinematic for cutscenes — the camera works much better with it.
+> The "ROLLING HONCHOOOO" is fixed now.
+> Test commands were added too, and I'm taking my leave.
+
+**Infection**
+- The infection is finally visible: it grows across the surface instead of hiding in the rock. It
+  starts reaching underground from phase 3 and at phase 5 pushes deep — that's where lotus ore forms.
+- A calmer pace — roughly 3-4 times slower than in the beta; half the world no longer falls in a
+  couple of in-game days.
+- The fog in infected land really thickens, and phase 5 is now the heaviest instead of weaker than
+  phase 2.
+- A mature outbreak (phase 4) truly becomes lotus marsh — the biome changes over the full height, and
+  older outbreaks catch up. That took fixing a bug in WorldEdit itself.
+- In its home marsh and its own territory the lotus grows faster — a real bonus, not a recolor.
+- Roots no longer turn water into a solid floor and are rare on land; over water the bottom gets
+  infected.
+- Lotus shoots sit on the water with their own lily pad and can't be broken; cleansing powder leaves
+  them but slows their outbreak.
+- Lotus trees always wear the lotus palette.
+- Infected water is no longer a separate fluid — water stays water, the infection lives in the biome
+  and the fog. Outdated blocks went with it: lotus soil, tangled roots, dry Blessing wood.
+- Lotus marsh and Blessing tundra have fog colors of their own — they used to borrow others'.
+- Mossy glands no longer vanish for the whole session after one failed attempt to place them.
+- Roots grow through a queue and don't get stuck, child outbreaks don't put lily pads on dry land,
+  and there's only ever one Lotus Heart in the world again.
+- Gone: repeating tree bursts, vines wiping out builds, hitches from chunk loading, and Blessing
+  patches placed mid-generation.
+
+> **From Reranyti:** Oh damn, my least favorite.
+> So now, basically, the whole surface is good! It infects up to… uh… It used to eat everything like crazy, just so you know, but there was a fix commit and we slowed it down.
+> There's finally a tasty, sweet fog — now you'll be like a hedgehog in the fog. And of course it made sense to fix the lotus going "ugh, this is my territory and I don't grow any faster" — fixed now.
+> Infected water sucks. I'm taking my leave.
+
+**Story and events**
+- The Chase and StarFall arrive sooner — by world infection, or simply some time after choosing a
+  branch.
+- Object Zero diary pages don't only come from guardians anymore: also near maturing outbreaks and
+  for surviving the Chase, never as duplicates.
+- Meteorite stone is deadly to the Alliance, not the war branch: the war branch is on Star Light's
+  side. It can actually be mined now — nobody could before, and the mod's other blocks didn't take
+  the right tools either.
+- A meteor impact leaves a huge patch, counts as Blessing territory right away (no guardians, slower
+  lotus) and shows on the map.
+- The Chase lab is built without holes; logging out mid-run means being caught, and the penalty
+  actually lands now.
+- Black hearts belong to the Alliance branch only.
+- StarFall no longer tanks the frame rate or lets its scene be replayed for gain.
+- Guardians don't turn into passive wolves after a restart, the traitor boss arena and its
+  advancement branch work, spores and the cold blight really deal damage.
+
+**Systems**
+- Reputation with factions — the Lotus, the Scientists, Star Light.
+- A game calendar of its own with a HUD widget.
+- Everything a player has been through survives death and leaving the End; the starter kit isn't
+  handed out twice.
+- Scene answers are checked by the server: a modified client can't hand itself endings or replay
+  scenes anymore.
+
+**Dialogue**
+- With Chat Overhaul the lines of Star Light, the World Lotus, Honcho and the inner voice are spoken
+  in its chat — each with a name color and an icon of their own (Star Light used to wear Steve's
+  face). Our dialogue boxes step aside then; the choice windows stay ours.
+
+**Compatibility and performance**
+- Every link to another mod is gathered in one registry — `/lotus compat` shows what's active.
+  Patches to other mods check that the code they need exists in the installed version, so they hold
+  up on older and newer versions alike.
+- Bugs fixed inside dependencies: WorldEdit (biome changes), Ex Meteor Shower (three of its
+  advancements never loaded).
+- Streams Reflowing: the rivers around spawn are built up front the first time a world opens, and the
+  mod suggests a lighter river quality once — the main cause of hitches on weaker PCs while new land
+  loaded. A value the player chose is left alone, and it can all be turned off in the config.
+- JourneyMap: markers and the infection area aren't rebuilt for nothing.
+- The mod runs on dedicated servers and without TerraBlender; every required dependency is declared.
+- 15 automated checks (GameTest) run through Honcho, spread, the powder, meteorite stone, the lore
+  thresholds and the biome change; they're left out of the release jar.
+
+**Small things**
+- HUD overlays are no longer drawn twenty times a frame, and the Chase timer runs on real time.
+- An English translation (`en_us.json`) — players not on Russian no longer see raw keys.
+- A model for the vitamin item, the cleansing powder advancement, Honcho's texture in the jar, the N
+  key while answering Honcho, client state reset when leaving a world, diary pages counted on pickup
+  rather than on drop, the single-biome world easter egg, berry and rod desync, particles that never
+  showed.
+
 ## 1.1042 — Beta: full audit release (1.1017 – 1.1042)
 A full read-through of the whole mod (175 classes, resources, design docs) with every confirmed
 bug fixed, then checked by building the jar and starting a dedicated server until `Done`. One

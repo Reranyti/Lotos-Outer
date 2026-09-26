@@ -162,6 +162,16 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# Optional: Cinematic (letterbox bars, free camera paths, fades). When it's installed the Honcho
+# meeting cutscene gets a proper camera shot between the fall and the "Принять руку?" window
+# (client/compat/CinematicShots); without it the camera just lifts toward him as before.
+[[dependencies.${mod_id}]]
+    modId="cinematic"
+    mandatory=false
+    versionRange="[1.1,)"
+    ordering="NONE"
+    side="CLIENT"
+
 # Hard dependency on WorldEdit, per explicit request - used to actually rewrite a chunk's biome
 # storage once an outbreak becomes a real "lotus_marsh" mini-biome (see LotusTerritory), which
 # neither vanilla nor Forge expose a clean API for otherwise. side=BOTH since the biome rewrite has

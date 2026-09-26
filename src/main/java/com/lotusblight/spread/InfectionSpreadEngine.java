@@ -86,6 +86,12 @@ public class InfectionSpreadEngine {
     private static final int[] UNDERGROUND_MAX_DEPTH = {0, 0, 0, 16, 16, 48};
     /** Phase 5: lotus stone this deep or deeper may come out as lotus ore instead. */
     private static final int ORE_MIN_DEPTH = 6;
+    /** Over water, one surface attempt in this many stays on top (a shoot); the rest go to the seabed. */
+    private static final int WATER_SURFACE_ONE_IN = 3;
+    /** Land roots are solid and unbreakable - rare enough not to wall the ground off. */
+    private static final int LAND_ROOT_ONE_IN = 24;
+    /** Seabed roots, one waterlogged root on top of freshly infected bottom now and then. */
+    private static final int SEABED_ROOT_ONE_IN = 8;
     private static final int ORE_ONE_IN = 30;
     private static final double SPORE_RADIUS = 3.5;
 
@@ -119,6 +125,7 @@ public class InfectionSpreadEngine {
     public static void forceTicks(ServerLevel level, int passes) {
         if (instance == null) return;
         for (int i = 0; i < passes; i++) {
+            instance.biomeCatchUpUsed = false;
             instance.tickLevel(level);
         }
     }
@@ -137,6 +144,7 @@ public class InfectionSpreadEngine {
         }
 
         if (server.getTickCount() % LotusConfig.SPREAD_INTERVAL_TICKS.get() != 0) return;
+        biomeCatchUpUsed = false;
         for (ServerLevel level : server.getAllLevels()) {
             tickLevel(level);
         }
@@ -153,6 +161,9 @@ public class InfectionSpreadEngine {
      * where it's actually being watched/fed by a nearby presence, and fades - but never vanishes -
      * the further from any observer it is.
      */
+    /** One old-outbreak biome catch-up per engine pass across all levels (see tickOutbreak). */
+    private boolean biomeCatchUpUsed;
+
     private void tickLevel(ServerLevel level) {
         OutbreakSavedData data = OutbreakSavedData.get(level);
         List<OutbreakRecord> outbreaks = new ArrayList<>(data.allOutbreaks());
@@ -239,11 +250,17 @@ public class InfectionSpreadEngine {
             attempts += OCEAN_ATTEMPTS_BONUS;
             radius += OCEAN_RADIUS_BONUS;
         }
+        if (outbreak.isSuppressed(level.getGameTime())) {
+            // A dusted lotus shoot nearby (see LotusEvents' cleansing powder) - half the growth.
+            attempts /= SUPPRESSED_ATTEMPTS_DIVISOR;
+        }
         if (attempts == 0) return;
-        // Distance-from-nearest-player falloff (see distanceSpeedMultiplier) - floored at 1 so an
-        // outbreak with any nonzero attempts always keeps crawling forward, just far slower the
-        // further it is from anyone.
-        attempts = Math.max(1, (int) Math.round(attempts * speedMultiplier));
+        // Distance-from-nearest-player falloff (see distanceSpeedMultiplier) and the global pace.
+        // The fraction is rolled rather than rounded, so a slow or distant outbreak still keeps
+        // crawling forward on average instead of being floored up to a full attempt every pass.
+        double scaled = attempts * GLOBAL_SPEED * speedMultiplier;
+        attempts = (int) scaled + (level.random.nextDouble() < scaled - (int) scaled ? 1 : 0);
+        if (attempts == 0) return;
         int converted = 0;
 
         for (int i = 0; i < attempts; i++) {
@@ -282,6 +299,13 @@ public class InfectionSpreadEngine {
 
         OutbreakRecord updated = outbreak.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress)
                 .withPeakPhase(newPhase);
+        if (!biomeCatchUpUsed && outbreak.peakPhase() >= 4 && !outbreak.biomeConverted()) {
+            // Reached phase 4 back when the rewrite only touched Y=0 (or before it existed) - redo it
+            // once. At most one per pass, so a save full of old outbreaks doesn't do them all at once.
+            biomeCatchUpUsed = true;
+            com.lotusblight.worldgen.LotusBiomeConverter.convertToLotusMarsh(level, outbreak.pos());
+            updated = updated.withBiomeConverted(true);
+        }
         // Compared against the peak, not the current phase: the count can drop (mining, cleansing)
         // and climb back over the same threshold, which used to replay the announcement, the tree
         // burst and the biome rewrite every time.
@@ -289,6 +313,7 @@ public class InfectionSpreadEngine {
             level.sendParticles(GREEN, outbreak.pos().getX() + 0.5, outbreak.pos().getY() + 1.0, outbreak.pos().getZ() + 0.5, 32, 1.4, 0.7, 1.4, 0.04);
             level.playSound(null, outbreak.pos(), SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 0.55f, 0.45f);
             announcePhaseUp(level, outbreak.pos(), newPhase);
+            dropPagesForWitnesses(level, outbreak.pos(), newPhase);
             // Was ">= 4" - fired a SECOND full burst (up to 30 trees + 70 grass patches) when an
             // outbreak advanced from phase 4 to phase 5, on top of the one it already got reaching
             // phase 4 - looked like trees spawning themselves out of nowhere (bug #6). Only the
@@ -296,6 +321,7 @@ public class InfectionSpreadEngine {
             if (newPhase >= 4 && outbreak.peakPhase() < 4) {
                 guaranteeMiniBiomeGrowth(level, outbreak.pos());
                 com.lotusblight.worldgen.LotusBiomeConverter.convertToLotusMarsh(level, outbreak.pos());
+                updated = updated.withBiomeConverted(true);
             }
             maybeSpawnHeart(level, data, outbreak, newPhase);
         }
@@ -305,6 +331,14 @@ public class InfectionSpreadEngine {
     private static final double BRANCH_INFLUENCE_RADIUS = 48.0;
     private static final int BRANCH_INFLUENCE_STRENGTH = 2;
 
+    /**
+     * Once most attempts started landing on the surface (instead of drifting into the rock and
+     * failing), the same numbers covered half a test world in two in-game days. Scales every
+     * outbreak's final attempt count - phase table, territory/branch/ocean bonuses and all - so
+     * their proportions stay intact; aimed at roughly 6-8 days for the same spread.
+     */
+    private static final double GLOBAL_SPEED = 0.3;
+    private static final int SUPPRESSED_ATTEMPTS_DIVISOR = 2;
     private static final int BLESSING_ATTEMPTS_PENALTY = 1;
     private static final int BLESSING_RADIUS_PENALTY = 1;
     private static final int LOTUS_ATTEMPTS_BONUS = 2;
@@ -411,7 +445,7 @@ public class InfectionSpreadEngine {
         return anchor;
     }
 
-    private static final int SHOOT_SPACING = 2;
+    private static final int SHOOT_SPACING = 4;
 
     /**
      * Without this, both shoot-placement sites above kept refilling the exact same tiny patch of
@@ -476,6 +510,12 @@ public class InfectionSpreadEngine {
                 if (Math.abs(surfaceY - sourceSurfaceY) > SURFACE_SNAP_RANGE) return null;
                 target = new BlockPos(target.getX(), surfaceY, target.getZ());
                 onSurface = true;
+                if (level.getFluidState(target).is(Fluids.WATER) && level.random.nextInt(WATER_SURFACE_ONE_IN) != 0) {
+                    // Over water most attempts go to the bottom instead: the seabed gets infected
+                    // and the surface itself only ever gets the occasional shoot.
+                    int floorY = level.getHeight(Heightmap.Types.OCEAN_FLOOR, target.getX(), target.getZ()) - 1;
+                    target = new BlockPos(target.getX(), floorY, target.getZ());
+                }
             } else if (sourceSurfaceY - source.getY() < 2) {
                 // A surface source seeds a new pocket somewhere below; an underground one keeps
                 // growing its own vein through the plain 3D neighbour picked above.
@@ -500,7 +540,12 @@ public class InfectionSpreadEngine {
         // water source directly, in one tick, without ever touching the fluid itself.
         if (level.getFluidState(target).is(Fluids.WATER) && level.getFluidState(target).isSource()
                 && !targetState.is(ModBlocks.LOTUS_ROOTS.get())) {
-            if (level.random.nextInt(3) != 0) {
+            // Roots are solid and can't be mined - on the top layer they turned whole lakes and the
+            // sea into a floor nobody could swim or sail through. They only grow under the surface.
+            // "No water above", not "air above" - the layer right under a shoot is still the surface.
+            boolean topLayer = level.getFluidState(target.above()).isEmpty();
+            if (!topLayer) {
+                if (level.random.nextInt(3) != 0) return null;
                 level.setBlock(target, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
                         .setValue(BlockStateProperties.WATERLOGGED, true), 3);
                 bloom(level, target, GREEN);
@@ -558,13 +603,18 @@ public class InfectionSpreadEngine {
             if (SpreadTables.isCleanGrass(level.getBlockState(above))) {
                 level.setBlock(above, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
             }
+            if (level.getFluidState(above).is(Fluids.WATER) && level.getFluidState(above).isSource()
+                    && !level.getFluidState(above.above()).isEmpty() && level.random.nextInt(SEABED_ROOT_ONE_IN) == 0) {
+                level.setBlock(above, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
+                        .setValue(BlockStateProperties.WATERLOGGED, true), 3);
+            }
             if (level.getBlockState(above).isAir()) {
                 // Before this, the mini-biome (phase 4) never grew anything of its own — logs and
                 // leaves only ever came from converting a vanilla tree that happened to already be
                 // standing there. An outbreak that spread across open stone or sand had no way to
                 // ever grow a single tree. growOwnVegetation gives it real, self-seeding flora.
                 if (!growOwnVegetation(level, phase, above)) {
-                    if (level.random.nextInt(4) == 0) {
+                    if (level.random.nextInt(LAND_ROOT_ONE_IN) == 0) {
                         level.setBlock(above, ModBlocks.LOTUS_ROOTS.get().defaultBlockState(), 3);
                     }
                 }
@@ -773,6 +823,21 @@ public class InfectionSpreadEngine {
     }
 
     private static final double PHASE_UP_ANNOUNCE_RADIUS = 64.0;
+    private static final int FIRST_PAGE_PHASE = 3;
+
+    /**
+     * Another way to the Object Zero diary besides guardian kills: whoever is close when an outbreak
+     * reaches phase 3, 4 or 5 for the first time finds a page they're still missing.
+     */
+    private void dropPagesForWitnesses(ServerLevel level, BlockPos pos, int newPhase) {
+        if (newPhase < FIRST_PAGE_PHASE) return;
+        double rangeSq = PHASE_UP_ANNOUNCE_RADIUS * PHASE_UP_ANNOUNCE_RADIUS;
+        for (ServerPlayer player : level.players()) {
+            if (player.blockPosition().distSqr(pos) <= rangeSq) {
+                com.lotusblight.item.ScientistPageItem.giveMissingPage(player);
+            }
+        }
+    }
 
     /**
      * A phase-up already got particles + a sound at the anchor, but nothing actually told the

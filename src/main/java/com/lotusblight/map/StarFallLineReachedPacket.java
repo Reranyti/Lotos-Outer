@@ -60,6 +60,7 @@ public class StarFallLineReachedPacket {
                     BlockPos impact = player.blockPosition();
                     placePurpleBlessingPatch(level, impact);
                     level.setBlock(impact.below(), ModBlocks.METEORITE_STONE.get().defaultBlockState(), 3);
+                    com.lotusblight.world.MeteoriteStoneBlock.grantImpactGrace(level, player);
                     // "метеориты распространяют биом абсолютно на любой блок" - the immediate patch
                     // above is just the initial footprint; this keeps it growing on its own afterward.
                     com.lotusblight.spread.MeteoriteSpreadEngine.seed(level, impact);
@@ -106,12 +107,14 @@ public class StarFallLineReachedPacket {
                 // loaded - an unguarded getBlockState/setBlock here risks the same synchronous
                 // chunk-load deadlock already fixed in LotusChaseStructure.
                 if (!level.hasChunkAt(top)) continue;
+                // Flag 2 (send to clients, no neighbour updates): ~3600 recolored blocks in one tick
+                // with full neighbour updates was a hitch of its own right as the meteor landed.
                 if (canRecolor(level, top)) {
-                    level.setBlock(top, sand, 3);
+                    level.setBlock(top, sand, 2);
                 }
                 BlockPos below = top.below();
                 if (canRecolor(level, below)) {
-                    level.setBlock(below, soil, 3);
+                    level.setBlock(below, soil, 2);
                 }
             }
         }

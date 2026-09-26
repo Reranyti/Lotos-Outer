@@ -34,12 +34,13 @@ public class HonchoAssistantChoicePacket {
             // hand itself both endings' advancements whenever it liked.
             if (player == null || !LotusPlayerState.isHonchoAssistantPending(player)) return;
             LotusPlayerState.setHonchoAssistantPending(player, false);
+            com.lotusblight.entity.HonchoMeetingManager.onAssistantAnswered(player);
             if (packet.accepted) {
                 HonchoBestBossTrigger.INSTANCE.trigger(player);
-                player.displayClientMessage(Component.literal("— Спасибо... Я буду стараться."), false);
+                com.lotusblight.entity.HonchoSpeech.say(player, "— Спасибо... Я буду стараться.");
             } else {
                 HonchoCruelTrigger.INSTANCE.trigger(player);
-                player.displayClientMessage(Component.literal("— ...Понимаю. Прости, что спросил."), false);
+                com.lotusblight.entity.HonchoSpeech.say(player, "— ...Понимаю. Прости, что спросил.");
             }
         });
         ctx.setPacketHandled(true);

@@ -66,6 +66,19 @@ public class ScientistPageItem extends Item {
         return stack;
     }
 
+    /**
+     * Drops one page this player hasn't found yet at their feet (counted once picked up, like the
+     * guardian drop). Does nothing once they have them all. Returns whether a page was dropped.
+     */
+    public static boolean giveMissingPage(Player player) {
+        ItemStack page = createStackForFinder(player.getRandom(), player);
+        if (page == null) return false;
+        var entity = new net.minecraft.world.entity.item.ItemEntity(player.level(), player.getX(), player.getY() + 0.5, player.getZ(), page);
+        entity.setPickUpDelay(10);
+        player.level().addFreshEntity(entity);
+        return true;
+    }
+
     public static int variantOf(ItemStack stack) {
         if (!stack.hasTag()) return 0;
         int variant = stack.getTag().getInt(VARIANT_TAG);

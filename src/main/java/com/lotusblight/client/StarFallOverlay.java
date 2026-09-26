@@ -76,6 +76,7 @@ public final class StarFallOverlay {
 
         cachedLines = null;
         lineExpireAtMs = System.currentTimeMillis() + LINE_TIMEOUT_MS;
+        if (activeLine != null) ChatDialogue.postLine(ChatDialogue.STAR_LIGHT, activeLine.text());
         if (activeLine != null && activeLine.important() && mc.player != null) {
             lockedYaw = mc.player.getYRot();
             lockedPitch = mc.player.getXRot();
@@ -146,6 +147,11 @@ public final class StarFallOverlay {
         if (mc.player == null || mc.options.hideGui) return;
 
         GuiGraphics g = event.getGuiGraphics();
+        // With Chat Overhaul the lines are told in its chat - our window stays out of it entirely.
+        if (ChatDialogue.active()) {
+            ChatDialogue.drawAdvanceHint(g);
+            return;
+        }
         g.fill(0, 0, g.guiWidth(), g.guiHeight(), SKY_DIM);
 
         int starSize = 96;

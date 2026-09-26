@@ -70,4 +70,12 @@ public class HonchoSavedData extends SavedData {
         spawned = true;
         setDirty();
     }
+
+    /** /lotus honcho reset world - as if he had never appeared: StarFall may spawn him again and a vanished one may come back. */
+    public void reset() {
+        spawned = false;
+        gone = false;
+        honchoId = null;
+        setDirty();
+    }
 }
