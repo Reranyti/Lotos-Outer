@@ -4,7 +4,23 @@
     "idle": {
       "loop": true,
       "animation_length": 1.0,
-      "bones": {}
+      "bones": {
+        "body": {
+          "rotation": [0, 2.5, 0]
+        },
+        "right_arm": {
+          "rotation": [5.02564, 15.77762, 8.86445]
+        },
+        "left_arm": {
+          "rotation": [0.67577, -25.22834, -12.45764]
+        },
+        "right_leg": {
+          "rotation": [-4.48359, 6.16064, 5.77497]
+        },
+        "left_leg": {
+          "rotation": [0.07597, -5.55537, -2.44336]
+        }
+      }
     },
     "meeting": {
       "loop": "hold_on_last_frame",
