@@ -37,14 +37,14 @@ rights belong to LSPLASH, the skin's to its author Gdux.
 
 ## Музыка / Music
 
-Все четыре трека добавлены в проект командой; авторы будут дописаны. / All four tracks were added by the team; their authors will be filled in.
+Все четыре трека принадлежат их авторам. / All four tracks belong to their authors.
 
 | Файл / File | Где звучит / Where it plays | Источник / Source |
 |---|---|---|
-| `sounds/inner_voice_theme.ogg` | сцены внутреннего голоса / inner voice scenes |  |
-| `sounds/world_lotus_lecture.ogg` | лекция Мирового Лотоса / World Lotus lecture |  |
-| `sounds/traitor_boss_theme.ogg` | бой с боссом-предателем / traitor boss fight |  |
-| `sounds/lotus_chase_theme.ogg` | Побег от лотоса / the Lotus Chase |  |
+| `sounds/inner_voice_theme.ogg` | сцены внутреннего голоса / inner voice scenes | Mr.69c — «Curious Light (Extended)»; расширенная версия трека Curious Light из оригинального саундтрека DOORS (LSPLASH) / an extended version of Curious Light from the original DOORS soundtrack (LSPLASH) |
+| `sounds/world_lotus_lecture.ogg` | лекция Мирового Лотоса / World Lotus lecture | InFiNiTyBeE — «Crimson Red Light» ⚠️ разрешение автора ещё не получено: напишем автору, а если не выйдет — трек заменим / the author's permission isn't granted yet: we'll contact the author, or replace the track |
+| `sounds/traitor_boss_theme.ogg` | бой с боссом-предателем / traitor boss fight | PAWDER — «Ire's Domain» |
+| `sounds/lotus_chase_theme.ogg` | Побег от лотоса / the Lotus Chase | Made For Evot — «פרחים» (Flowers) |
 
 ## Модели и анимации GeckoLib / GeckoLib models and animations
 
