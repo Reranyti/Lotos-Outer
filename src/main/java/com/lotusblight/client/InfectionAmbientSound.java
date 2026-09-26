@@ -31,6 +31,7 @@ public final class InfectionAmbientSound {
 
     private static double rangeForPhase(int phase) {
         return switch (phase) {
+            case 5 -> 44.0;
             case 4 -> 32.0;
             case 3 -> 22.0;
             default -> 0.0; // no ambient stinger below phase 3 - the haze alone carries phase 2

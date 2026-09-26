@@ -7,6 +7,7 @@ import com.lotusblight.world.InfectedGroundBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.material.FogType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.event.TickEvent;
@@ -34,6 +35,7 @@ public final class InfectionFogRenderer {
     /** How far out (blocks) each phase's fog starts fading in, and how strong it gets at zero distance. */
     private static double rangeForPhase(int phase) {
         return switch (phase) {
+            case 5 -> 72.0;
             case 4 -> 56.0;
             case 3 -> 40.0;
             default -> 24.0; // phase 2
@@ -42,7 +44,7 @@ public final class InfectionFogRenderer {
 
     private static float intensityCapForPhase(int phase) {
         return switch (phase) {
-            case 4 -> 1.0f;
+            case 4, 5 -> 1.0f;
             case 3 -> 0.6f;
             default -> 0.35f;
         };
@@ -95,14 +97,18 @@ public final class InfectionFogRenderer {
         int infected = 0;
         int sampled = 0;
         for (BlockPos pos : BlockPos.betweenClosed(center.offset(-4, -2, -4), center.offset(4, 1, 4))) {
+            var state = player.level().getBlockState(pos);
+            // Only solid ground counts toward the fraction - the air the player stands in used to be
+            // half of the sampled volume, so even fully infected ground topped out near the threshold.
+            if (state.getCollisionShape(player.level(), pos).isEmpty()) continue;
             sampled++;
-            if (player.level().getBlockState(pos).getBlock() instanceof InfectedGroundBlock) {
+            if (state.getBlock() instanceof InfectedGroundBlock) {
                 infected++;
             }
         }
         // Requires a real patch underfoot (not just one stray infected block at the sample's edge)
-        // before it counts as "standing in it" - a third of the sampled volume is enough to read as
-        // genuinely infected ground rather than the outbreak's thin leading edge.
+        // before it counts as "standing in it" - a third of the sampled ground is enough to read as
+        // genuinely infected rather than the outbreak's thin leading edge.
         float fraction = sampled == 0 ? 0f : (float) infected / sampled;
         localGroundDensity = Math.min(1f, fraction / 0.33f);
     }
@@ -146,13 +152,20 @@ public final class InfectionFogRenderer {
 
     @SubscribeEvent
     public static void onRenderFog(ViewportEvent.RenderFog event) {
+        // Underwater/lava/powder snow already have their own short fog - leave those alone.
+        if (event.getType() != FogType.NONE) return;
         float density = currentDensity();
         if (density <= 0f) return;
         // At full density, the far plane closes down to roughly a third of what it would otherwise
         // be - close enough to feel oppressive without dropping to a disorienting wall of green.
+        // The near plane is pulled in harder so the haze starts right in front of the player
+        // instead of only swallowing the horizon.
         float farMultiplier = 1.0f - 0.65f * density;
-        event.setNearPlaneDistance(event.getNearPlaneDistance() * farMultiplier);
+        float nearMultiplier = 1.0f - 0.9f * density;
+        event.setNearPlaneDistance(event.getNearPlaneDistance() * nearMultiplier);
         event.setFarPlaneDistance(event.getFarPlaneDistance() * farMultiplier);
+        // Forge only applies the new distances when the event is canceled (ForgeHooksClient#onFogRender).
+        event.setCanceled(true);
     }
 
     private static float lerp(float from, float to, float t) {

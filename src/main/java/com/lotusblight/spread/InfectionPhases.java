@@ -47,9 +47,9 @@ public final class InfectionPhases {
      * across the full radius, so a 500-block radius meant almost every attempt landed in an
      * unloaded chunk and silently failed (hasChunkAt check) - phase 5 looked like it did
      * literally nothing ("даже на 5 стадии изменений нет"). "No longer locally contained" instead
-     * comes from removing the frontier size cap at phase 5 (see FRONTIER_CAP's use in
-     * InfectionSpreadEngine#pushFrontier) so growth keeps accumulating outward indefinitely
-     * instead of being trimmed back to a small recent window - not from one huge single-attempt
+     * comes from a much wider frontier window at phase 5 (see FRONTIER_CAP_PHASE5 in
+     * InfectionSpreadEngine#pushFrontier) so growth keeps accumulating outward instead of being
+     * trimmed back to a small recent window - not from one huge single-attempt
      * radius that mostly wastes its own attempts.
      */
     private static final int[] SPREAD_RADIUS = {0, 3, 5, 7, 12, 16};
@@ -59,9 +59,11 @@ public final class InfectionPhases {
      * 10s by default - not literally per tick despite the name). Raised twice already for "прогресс
      * ощущается нищенски"; still not enough - even standing right next to a maxed-out outbreak
      * "ничего не даёт", no felt danger, no felt growth. Phase 4 in particular needs to be a real
-     * step up from phase 3, not a rounding error on the same curve.
+     * step up from phase 3, not a rounding error on the same curve. Phase 5 jumps harder still:
+     * its attempts are split between the surface and the rock below (see InfectionSpreadEngine),
+     * so each half still has to outpace phase 4.
      */
-    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 7, 11, 22, 35};
+    private static final int[] ATTEMPTS_PER_TICK = {0, 4, 7, 11, 22, 50};
 
     /** Chance (0..1) that a phase-4 attempt near land also tries to grow a vine barrier. */
     private static final double VINE_BARRIER_CHANCE = 0.015;

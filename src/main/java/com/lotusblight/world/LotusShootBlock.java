@@ -8,12 +8,27 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-/** A small surface shoot belonging to an existing main lotus anchor. */
+/**
+ * A small surface shoot belonging to an existing main lotus anchor. Floats on water with its own
+ * built-in pad (lotus_shoot_on_pad.json) - it used to be a separate block placed on top of a
+ * vanilla lily pad, which left the flower hanging almost a whole block above the pad (the model
+ * starts at the floor of its own cell) and let anyone knock the whole thing down by breaking the
+ * pad with one hit or a boat, even though the shoot itself is meant to be unbreakable.
+ */
 public final class LotusShootBlock extends LotusBloomBlock {
+    /** Pad and flower for picking; only the pad is solid to walk on, same as a lily pad. */
+    private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 8, 15);
+    private static final VoxelShape COLLISION = Block.box(1, 0, 1, 15, 1.5, 15);
+
     /** shootLines() was written for this block but never actually wired up anywhere - the pool of ambient lines sat completely unused. */
     private static final int AMBIENT_CHANCE = 30;
     private static final double AMBIENT_PLAYER_RADIUS = 12.0;
@@ -27,16 +42,29 @@ public final class LotusShootBlock extends LotusBloomBlock {
         return 0.0f;
     }
 
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return COLLISION;
+    }
+
     /**
-     * LotusBloomBlock (like plain Block) has no support check at all - this is meant to sit on
-     * top of the lily pad InfectionSpreadEngine places under it, but with nothing checking that,
-     * removing the pad (cleansing powder, a player breaking it, ice forming) left the shoot just
-     * floating in mid-air forever (bug #2).
+     * LotusBloomBlock (like plain Block) has no support check at all - without one, the water
+     * under it draining or freezing left the shoot floating in mid-air forever (bug #2). Water
+     * source below, like a lily pad, or solid ground for a hand-placed one. An old-style shoot
+     * still standing on a vanilla pad survives until randomTick moves it down.
      */
     @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        BlockState below = level.getBlockState(pos.below());
-        return below.is(Blocks.LILY_PAD) || below.isFaceSturdy(level, pos.below(), Direction.UP);
+        BlockPos belowPos = pos.below();
+        BlockState below = level.getBlockState(belowPos);
+        FluidState belowFluid = level.getFluidState(belowPos);
+        return (belowFluid.is(Fluids.WATER) && belowFluid.isSource() && level.getFluidState(pos).isEmpty())
+                || below.is(Blocks.LILY_PAD) || below.isFaceSturdy(level, belowPos, Direction.UP);
     }
 
     @Override
@@ -54,6 +82,13 @@ public final class LotusShootBlock extends LotusBloomBlock {
 
     @Override
     public void randomTick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, RandomSource random) {
+        BlockPos belowPos = pos.below();
+        if (level.getBlockState(belowPos).is(Blocks.LILY_PAD)) {
+            // A shoot from before the pad was built in: take the pad's place on the water.
+            level.setBlock(belowPos, state, 3);
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            return;
+        }
         if (random.nextInt(AMBIENT_CHANCE) != 0) return;
         Player nearest = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, AMBIENT_PLAYER_RADIUS, false);
         if (nearest == null) return;

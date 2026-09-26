@@ -184,18 +184,15 @@ public final class RootGrowthEngine {
     private void maybeSpawnChildOutbreak(ServerLevel level, OutbreakSavedData data, OutbreakRecord parent, RootChainState chain, BlockPos at) {
         if (chain.chainLength < CHILD_MIN_CHAIN_LENGTH) return;
         if (level.random.nextDouble() >= CHILD_OUTBREAK_CHANCE) return;
-        // The mini-lotus sits on a lily pad, which only survives on water - a root tip on dry ground
-        // got a pad that popped on the next neighbour update, taking the shoot with it.
+        // The mini-lotus floats on water like a lily pad - a root tip on dry ground can't hold one.
         if (!level.getFluidState(at).is(net.minecraft.world.level.material.Fluids.WATER)) return;
 
-        BlockPos padPos = at.above();
-        BlockPos flowerPos = padPos.above();
-        if (!level.getBlockState(padPos).isAir() || !level.getBlockState(flowerPos).isAir() || hasNearbyShoot(level, flowerPos)) return;
+        BlockPos flowerPos = at.above();
+        if (!level.getBlockState(flowerPos).isAir() || hasNearbyShoot(level, flowerPos)) return;
         if (data.nearestOutbreak(flowerPos, CHILD_MIN_DISTANCE_FROM_OUTBREAK, false) != null) return;
 
         OutbreakRecord child = data.registerOutbreak(flowerPos.immutable(), level.getGameTime(), true);
         data.updateOutbreak(child.withMaxPhaseCap(CHILD_MAX_PHASE));
-        level.setBlock(padPos, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
         level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
         level.sendParticles(ROOT_GREEN, flowerPos.getX() + 0.5, flowerPos.getY() + 0.6, flowerPos.getZ() + 0.5, 10, 0.4, 0.3, 0.4, 0.02);
     }

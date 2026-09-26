@@ -46,7 +46,13 @@ public final class LotusClientSetup {
                 com.lotusblight.registry.ModBlocks.INFECTED_SOIL.get(), com.lotusblight.registry.ModBlocks.LOTUS_STONE.get(), com.lotusblight.registry.ModBlocks.LOTUS_SAND.get(),
                 com.lotusblight.registry.ModBlocks.LOTUS_GRAVEL.get(), com.lotusblight.registry.ModBlocks.LOTUS_TERRACOTTA.get(),
                 com.lotusblight.registry.ModBlocks.LOTUS_LOG.get(), com.lotusblight.registry.ModBlocks.LOTUS_LEAVES.get());
+        // The shoot's built-in pad reuses the vanilla lily_pad sprite, which is grayscale and gets
+        // its green from the same fixed color vanilla uses for a placed lily pad.
+        event.register((state, level, pos, tintIndex) -> tintIndex == 0 ? LILY_PAD_WORLD_COLOR : 0xFFFFFF,
+                com.lotusblight.registry.ModBlocks.LOTUS_SHOOT.get());
     }
+
+    private static final int LILY_PAD_WORLD_COLOR = 0x208030;
 
     /**
      * A model face with a tintindex renders solid black in item/inventory form unless something

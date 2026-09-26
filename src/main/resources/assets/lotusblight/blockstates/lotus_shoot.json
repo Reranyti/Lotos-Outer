@@ -1,5 +1,5 @@
 {
   "variants": {
-    "": { "model": "lotusblight:block/infected_lotus_crown" }
+    "": { "model": "lotusblight:block/lotus_shoot_on_pad" }
   }
 }

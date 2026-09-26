@@ -33,6 +33,7 @@ public final class MiniBiomeAtmosphere {
 
     private static double rangeForPhase(int phase) {
         return switch (phase) {
+            case 5 -> 56.0;
             case 4 -> 40.0;
             case 3 -> 28.0;
             default -> 16.0; // phase 2
@@ -41,7 +42,7 @@ public final class MiniBiomeAtmosphere {
 
     /** Particle spawn attempts per tick at zero distance from the outbreak. */
     private static int maxAttemptsForPhase(int phase) {
-        return phase >= 4 ? 2 : 1;
+        return phase >= 5 ? 3 : (phase >= 4 ? 2 : 1);
     }
 
     @SubscribeEvent

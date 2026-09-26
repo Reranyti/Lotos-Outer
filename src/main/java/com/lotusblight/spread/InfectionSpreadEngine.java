@@ -23,6 +23,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.network.chat.Component;
@@ -63,6 +64,29 @@ public class InfectionSpreadEngine {
     // conversions, so new spread kept re-rolling neighbours of the same small recent cluster
     // instead of actually fanning out across the wider radius it was now allowed to reach.
     private static final int FRONTIER_CAP = 220;
+    /**
+     * Phase 5 used to have no cap at all - the frontier grew by one entry per conversion forever
+     * and pickFrontierSource copies it on every attempt, so a long-lived phase 5 outbreak slowly
+     * turned into a per-pass lag spike and a memory leak. A much wider window still lets it fan
+     * out far past the phase 4 footprint.
+     */
+    private static final int FRONTIER_CAP_PHASE5 = 1200;
+    /**
+     * randomNeighbour walks +/-1 in Y per hop, and above ground there is only air to convert, so the
+     * frontier used to drift down into the stone and most conversions happened where nobody sees
+     * them (a phase 5 save had ~4000 lotus stone underground and only a few dozen infected blocks on
+     * the actual surface). Phases 1-2 only grow across the top block of each column, phases 3-4
+     * send a small share of attempts into the rock, and phase 5 splits them evenly between the
+     * surface and the depths.
+     */
+    private static final int SURFACE_SNAP_RANGE = 8;
+    /** One attempt in this many goes underground instead of across the surface; 0 = never. Indexed by phase. */
+    private static final int[] UNDERGROUND_ONE_IN = {0, 0, 0, 6, 6, 2};
+    /** How far under the surface a fresh underground pocket may start. Indexed by phase. */
+    private static final int[] UNDERGROUND_MAX_DEPTH = {0, 0, 0, 16, 16, 48};
+    /** Phase 5: lotus stone this deep or deeper may come out as lotus ore instead. */
+    private static final int ORE_MIN_DEPTH = 6;
+    private static final int ORE_ONE_IN = 30;
     private static final double SPORE_RADIUS = 3.5;
 
     /**
@@ -407,11 +431,11 @@ public class InfectionSpreadEngine {
         return false;
     }
 
-    /** Phase 5 never trims - a capped frontier is exactly the "locally contained" behaviour phase 5 is meant to break out of. */
+    /** Phase 5 keeps a much wider window than the earlier phases, so it isn't "locally contained" the way they are. */
     private void pushFrontier(Deque<BlockPos> frontier, BlockPos pos, int phase) {
         frontier.addLast(pos.immutable());
-        if (phase >= 5) return;
-        while (frontier.size() > FRONTIER_CAP) {
+        int cap = phase >= 5 ? FRONTIER_CAP_PHASE5 : FRONTIER_CAP;
+        while (frontier.size() > cap) {
             frontier.pollFirst();
         }
     }
@@ -423,6 +447,8 @@ public class InfectionSpreadEngine {
         if (!level.hasChunkAt(source)) return null;
         BlockPos target = randomNeighbour(level, source, radius);
         if (!level.hasChunkAt(target)) return null;
+        boolean onSurface = false;
+        int depthBelowSurface = 0;
 
         // Water has priority: infection follows the actual water layout (soft Streams Reflowing compatibility).
         if (LotusConfig.STREAMS_COMPATIBILITY.get() && level.getFluidState(source).is(Fluids.WATER)) {
@@ -438,6 +464,31 @@ public class InfectionSpreadEngine {
                 if (next.equals(target) || !level.hasChunkAt(next)) break;
                 target = next;
             }
+        } else {
+            int surfaceY = surfaceY(level, target);
+            int sourceSurfaceY = surfaceY(level, source);
+            int phaseIndex = Mth.clamp(phase, 0, UNDERGROUND_ONE_IN.length - 1);
+            int undergroundOneIn = UNDERGROUND_ONE_IN[phaseIndex];
+            boolean underground = undergroundOneIn > 0 && level.random.nextInt(undergroundOneIn) == 0;
+            if (!underground) {
+                // Compared column to column, so a source deep in the rock can still feed the
+                // surface above it; the range keeps a step from jumping onto a cliff top.
+                if (Math.abs(surfaceY - sourceSurfaceY) > SURFACE_SNAP_RANGE) return null;
+                target = new BlockPos(target.getX(), surfaceY, target.getZ());
+                onSurface = true;
+            } else if (sourceSurfaceY - source.getY() < 2) {
+                // A surface source seeds a new pocket somewhere below; an underground one keeps
+                // growing its own vein through the plain 3D neighbour picked above.
+                int depth = 1 + level.random.nextInt(UNDERGROUND_MAX_DEPTH[phaseIndex]);
+                target = new BlockPos(target.getX(), Math.max(level.getMinBuildHeight(), surfaceY - depth), target.getZ());
+            } else if (surfaceY - target.getY() > UNDERGROUND_MAX_DEPTH[phaseIndex]) {
+                // A vein left over from a deeper phase (the count can drop) stops at this phase's depth.
+                return null;
+            }
+            depthBelowSurface = surfaceY(level, target) - target.getY();
+            if (!onSurface && depthBelowSurface < 1) return null;
+            // Aquifers and underground lakes aren't decorated - roots and pads belong on the surface.
+            if (!onSurface && !level.getFluidState(target).isEmpty()) return null;
         }
 
         BlockState targetState = level.getBlockState(target);
@@ -455,10 +506,9 @@ public class InfectionSpreadEngine {
                 bloom(level, target, GREEN);
                 return target;
             }
-            BlockPos padPos = target.above();
-            BlockPos flowerPos = padPos.above();
-            if (level.getBlockState(padPos).isAir() && level.getBlockState(flowerPos).isAir() && !hasNearbyShoot(level, flowerPos)) {
-                level.setBlock(padPos, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
+            // The shoot carries its own pad (see LotusShootBlock), so it sits right on the water.
+            BlockPos flowerPos = target.above();
+            if (level.getBlockState(flowerPos).isAir() && !hasNearbyShoot(level, flowerPos)) {
                 level.setBlock(flowerPos, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
                 bloom(level, flowerPos, PINK);
                 return flowerPos;
@@ -491,9 +541,23 @@ public class InfectionSpreadEngine {
 
         // Generic ground table (dirt/sand/gravel/stone/terracotta -> infected analogue).
         BlockState groundReplacement = SpreadTables.infectedGroundReplacement(targetState);
-        if (groundReplacement != null && Math.abs(target.getY() - source.getY()) <= 1) {
+        if (groundReplacement != null) {
+            if (phase >= 5 && !onSurface && depthBelowSurface >= ORE_MIN_DEPTH && groundReplacement.is(ModBlocks.LOTUS_STONE.get())
+                    && level.random.nextInt(ORE_ONE_IN) == 0) {
+                groundReplacement = ModBlocks.LOTUS_ORE.get().defaultBlockState();
+            }
             level.setBlock(target, groundReplacement, 3);
+            if (!onSurface) {
+                // Nothing grows in caves - roots and trees are for the surface.
+                bloom(level, target, GREEN);
+                return target;
+            }
             BlockPos above = target.above();
+            // Grass/ferns on top die off with the soil (same rule as the isCleanGrass branch above,
+            // which surface targets never reach since the heightmap sits under plants).
+            if (SpreadTables.isCleanGrass(level.getBlockState(above))) {
+                level.setBlock(above, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
             if (level.getBlockState(above).isAir()) {
                 // Before this, the mini-biome (phase 4) never grew anything of its own — logs and
                 // leaves only ever came from converting a vanilla tree that happened to already be
@@ -517,11 +581,10 @@ public class InfectionSpreadEngine {
         // an anchor, and already used for the equivalent case a few lines up (water source ->
         // shoot). Throttled so it doesn't outbid ground conversion at every single attempt.
         if (targetState.isAir() && level.getFluidState(target.below()).is(Fluids.WATER) && level.random.nextInt(3) == 0
-                && !hasNearbyShoot(level, target) && level.getBlockState(target.above()).isAir()) {
-            level.setBlock(target, net.minecraft.world.level.block.Blocks.LILY_PAD.defaultBlockState(), 3);
-            level.setBlock(target.above(), ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
-            bloom(level, target.above(), PINK);
-            return target.above();
+                && !hasNearbyShoot(level, target)) {
+            level.setBlock(target, ModBlocks.LOTUS_SHOOT.get().defaultBlockState(), 3);
+            bloom(level, target, PINK);
+            return target;
         }
 
         return null;
@@ -552,6 +615,11 @@ public class InfectionSpreadEngine {
             if (++checked >= 6) break;
         }
         return level.getFluidState(anchor).is(Fluids.WATER) || level.getFluidState(anchor.below()).is(Fluids.WATER);
+    }
+
+    /** Top non-leaf block of the column - the ground under trees, the water surface on a lake. */
+    private static int surfaceY(ServerLevel level, BlockPos pos) {
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos.getX(), pos.getZ()) - 1;
     }
 
     private BlockPos randomNeighbour(ServerLevel level, BlockPos source, int radius) {
