@@ -1,0 +1,88 @@
+Lotus Blight License
+Copyright (c) 2026 Reranyti и neiber573 / Reranyti and neiber573
+
+=====================================================================
+РУССКИЙ
+=====================================================================
+
+1. Что это за проект
+Lotus Blight — бесплатный некоммерческий фанатский мод для Minecraft. Он не продаётся, не
+монетизируется и всегда будет бесплатным. Часть персонажей и событий в нём — это альтернативная
+вселенная (AU) и хедканоны по мотивам игры DOORS.
+
+2. DOORS
+Мы не претендуем на авторство персонажей, истории и сюжета DOORS — они принадлежат LSPLASH.
+Проект не связан с LSPLASH и не одобрен ими. Всё, что мод рассказывает о персонажах DOORS, —
+наша интерпретация, а не их канон. Если правообладатель попросит что-то убрать, мы уберём.
+
+3. Чужие ассеты
+Ассеты других авторов принадлежат им; кто автор чего — в файле ASSETS.md (например, скин Хончо —
+Gdux). Эта лицензия распространяется только на то, что сделали мы сами.
+
+4. Что можно
+- Играть в мод и показывать его: видео, стримы, скриншоты.
+- Включать мод в сборки (модпаки) на любой площадке, если:
+  - jar мода не изменён;
+  - в описании сборки указан мод и ссылка на его страницу или репозиторий;
+  - сборка распространяется бесплатно.
+- Смотреть исходный код и предлагать исправления в этот репозиторий (issues, pull request'ы).
+
+5. Что нельзя
+- Выдавать мод или его части за свои.
+- Продавать мод, брать деньги за доступ к нему или прятать его за платной подпиской — ни целиком,
+  ни в составе сборки.
+- Выпускать изменённые версии мода или использовать его код, текстуры, музыку, лор и тексты в
+  других проектах без нашего разрешения.
+
+Всё, что не разрешено в пункте 4, требует нашего письменного разрешения.
+
+6. Без гарантий
+Мод предоставляется «как есть», без каких-либо гарантий. Мы не отвечаем за возможные потери,
+включая повреждение миров — делайте резервные копии.
+
+7. Прочее
+Minecraft — товарный знак Mojang Studios; проект с ними не связан. Файлы FORGE_LICENSE.txt и
+FORGE_MDK_LICENSE.txt относятся к инструментам Forge, а не к коду мода.
+
+=====================================================================
+ENGLISH
+=====================================================================
+
+1. What this project is
+Lotus Blight is a free, non-commercial fan mod for Minecraft. It isn't sold, isn't monetized and
+will always be free. Some of its characters and events are an alternate universe (AU) and
+headcanons inspired by the game DOORS.
+
+2. DOORS
+We claim no authorship of DOORS' characters, story or plot — they belong to LSPLASH. This project
+isn't affiliated with or endorsed by LSPLASH. Everything the mod says about DOORS characters is our
+interpretation, not their canon. If the rights holder asks us to remove something, we will.
+
+3. Other people's assets
+Assets by other authors belong to them; who made what is listed in ASSETS.md (for example, Honcho's
+skin is by Gdux). This license only covers what we made ourselves.
+
+4. You may
+- Play the mod and show it: videos, streams, screenshots.
+- Include the mod in modpacks on any platform, as long as:
+  - the mod's jar is unmodified;
+  - the pack's description names the mod and links to its page or repository;
+  - the pack is distributed for free.
+- Read the source code and suggest fixes to this repository (issues, pull requests).
+
+5. You may not
+- Present the mod or any part of it as your own.
+- Sell the mod, charge for access to it or put it behind a paid subscription — on its own or as
+  part of a modpack.
+- Release modified versions of the mod, or use its code, textures, music, lore or writing in other
+  projects, without our permission.
+
+Anything not allowed in section 4 needs our written permission.
+
+6. No warranty
+The mod is provided "as is", without warranty of any kind. We're not liable for any loss,
+including damaged worlds — keep backups.
+
+7. Other
+Minecraft is a trademark of Mojang Studios; this project isn't affiliated with them. The files
+FORGE_LICENSE.txt and FORGE_MDK_LICENSE.txt cover Forge's tooling, not the mod's code.

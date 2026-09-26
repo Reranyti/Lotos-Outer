@@ -16,6 +16,29 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.1050.1
+Мелкие правки после релиза — в счёт 50 версий не идут, войдут в полный лог 1.1100.
+Small post-release changes — not counted toward the 50 versions, they go into the 1.1100 full log.
+
+### Русский
+- Новая лицензия: мод можно включать в бесплатные сборки без изменений и со ссылкой; мы не
+  претендуем на персонажей, историю и сюжет DOORS — это AU и хедканоны; проект некоммерческий
+  (`LICENSE`).
+- README переписан под текущий мод, на русском и английском.
+- `ASSETS.md` — список ассетов и их авторов: DOORS (LSPLASH), скин Хончо (Gdux), музыка, текстуры.
+- Рекомендуемая сборка с установщиком: `install.bat` ставит моды, шейдеры и настройки в `.minecraft`
+  или выбранную папку, а моды, которые нельзя раздавать, скачивает с их официальных страниц.
+
+### English
+- A new license: the mod may be included unmodified in free modpacks with a link; we claim no
+  authorship of DOORS' characters, story or plot — this is AU and headcanons; the project is
+  non-commercial (`LICENSE`).
+- The README is rewritten for the current mod, in Russian and English.
+- `ASSETS.md` — the assets and their authors: DOORS (LSPLASH), Honcho's skin (Gdux), music, textures.
+- A recommended pack with an installer: `install.bat` puts the mods, shader pack and settings into
+  `.minecraft` or a chosen folder, and downloads the mods that can't be redistributed from their
+  official pages.
+
 ## 1.1050 — Release: everything from 1.100 to 1.1050
 The first full release of the 1.1000s: 1.100.0 and 1.101.0, the switch to the flat 1.NNNN counter at
 1.1010, and every version after it up to this one — grouped by what changed rather than by the order
