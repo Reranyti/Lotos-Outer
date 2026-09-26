@@ -177,7 +177,9 @@ def main():
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for inside, src in sorted(entries.items()):
             z.write(src, "files/" + inside)
-        z.write(os.path.join(HERE, "install.bat"), "install.bat")
+        # cmd.exe wants CRLF line endings in a .bat, whatever the checkout used.
+        bat = open(os.path.join(HERE, "install.bat"), encoding="utf-8").read().replace("\r\n", "\n")
+        z.writestr("install.bat", bat.replace("\n", "\r\n"))
         # Windows PowerShell 5.1 reads scripts without a BOM as ANSI - the Cyrillic messages need one.
         script = open(os.path.join(HERE, "install.ps1"), encoding="utf-8-sig").read()
         z.writestr("install.ps1", "﻿".encode("utf-8") + script.encode("utf-8"))
