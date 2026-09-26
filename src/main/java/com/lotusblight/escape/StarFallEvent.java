@@ -111,7 +111,7 @@ public final class StarFallEvent {
             entity.moveTo(player.getX(), player.getY(), player.getZ(), 0f, 0f);
         }
         if (level.addFreshEntity(entity)) {
-            honchoData.markSpawned();
+            honchoData.setHonchoId(entity.getUUID());
         }
     }
 }

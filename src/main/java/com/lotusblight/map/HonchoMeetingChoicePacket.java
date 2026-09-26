@@ -1,25 +1,22 @@
 package com.lotusblight.map;
 
-import com.lotusblight.advancement.HonchoTripPleasedTrigger;
-import com.lotusblight.advancement.HonchoTripRudeTrigger;
-import com.lotusblight.data.LotusPlayerState;
+import com.lotusblight.entity.HonchoMeetingManager;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-/** Client-to-server: the player answered the rare trip-meeting's choice (see HonchoMeetingScreen). */
+/** Client-to-server: an answer in the trip-meeting's "Принять руку?" / "Точно?" windows. HonchoMeetingManager decides what it means for the current stage. */
 public class HonchoMeetingChoicePacket {
-    private final boolean tookHand;
+    private final boolean accept;
 
-    public HonchoMeetingChoicePacket(boolean tookHand) {
-        this.tookHand = tookHand;
+    public HonchoMeetingChoicePacket(boolean accept) {
+        this.accept = accept;
     }
 
     public static void encode(HonchoMeetingChoicePacket packet, FriendlyByteBuf buf) {
-        buf.writeBoolean(packet.tookHand);
+        buf.writeBoolean(packet.accept);
     }
 
     public static HonchoMeetingChoicePacket decode(FriendlyByteBuf buf) {
@@ -30,15 +27,8 @@ public class HonchoMeetingChoicePacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null || LotusPlayerState.hasMetHoncho(player) || !LotusPlayerState.isHonchoMeetingPending(player)) return;
-            LotusPlayerState.markMetHoncho(player);
-            if (packet.tookHand) {
-                HonchoTripPleasedTrigger.INSTANCE.trigger(player);
-                player.displayClientMessage(Component.literal("— Вот так. Осторожнее под ногами."), false);
-            } else {
-                HonchoTripRudeTrigger.INSTANCE.trigger(player);
-                player.displayClientMessage(Component.literal("— ...Ладно. Сам, так сам."), false);
-            }
+            if (player == null) return;
+            HonchoMeetingManager.handleChoice(player, packet.accept ? HonchoMeetingManager.CHOICE_ACCEPT : HonchoMeetingManager.CHOICE_DECLINE);
         });
         ctx.setPacketHandled(true);
     }

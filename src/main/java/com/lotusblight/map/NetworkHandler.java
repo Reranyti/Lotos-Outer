@@ -24,7 +24,7 @@ import java.util.Optional;
 public final class NetworkHandler {
     // Bumped whenever a packet is added, removed or changes shape - a mismatched client is refused
     // at login instead of failing to decode mid-game.
-    private static final String PROTOCOL_VERSION = "2";
+    private static final String PROTOCOL_VERSION = "3";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(LotusBlight.MODID, "map_sync"),

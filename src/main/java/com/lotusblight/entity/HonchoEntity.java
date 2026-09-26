@@ -3,6 +3,9 @@ package com.lotusblight.entity;
 import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.registry.ModItems;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -48,6 +51,22 @@ import java.util.UUID;
  */
 public class HonchoEntity extends Zombie implements GeoEntity {
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation MEETING = RawAnimation.begin().thenPlayAndHold("meeting");
+    private static final RawAnimation HAPPY = RawAnimation.begin().thenPlayAndHold("happy");
+    private static final RawAnimation PAT = RawAnimation.begin().thenLoop("pat");
+    private static final RawAnimation PRAY = RawAnimation.begin().thenLoop("pray");
+
+    /** What the meeting scene (HonchoMeetingManager) has him doing - synced so the client plays the matching animation. */
+    public static final int SCENE_NONE = 0;
+    public static final int SCENE_OFFER_HAND = 1;
+    public static final int SCENE_HAPPY = 2;
+    public static final int SCENE_PAT = 3;
+    public static final int SCENE_PRAY = 4;
+    private static final EntityDataAccessor<Integer> DATA_SCENE =
+            SynchedEntityData.defineId(HonchoEntity.class, EntityDataSerializers.INT);
+
+    /** The player the meeting scene is being played for - in memory only, a restart simply drops the scene. */
+    private UUID meetingPlayerId;
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     /** How long (ticks) Honcho can go without a fresh vial before he starts to weaken. */
     private static final int STARVATION_TICKS = 20 * 60 * 20; // 20 minutes
@@ -71,6 +90,41 @@ public class HonchoEntity extends Zombie implements GeoEntity {
         this.setCanPickUpLoot(false);
     }
 
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(DATA_SCENE, SCENE_NONE);
+    }
+
+    public int getScene() {
+        return this.entityData.get(DATA_SCENE);
+    }
+
+    public void setScene(int scene) {
+        this.entityData.set(DATA_SCENE, scene);
+    }
+
+    /** Stands still facing this player (HoldForMeetingGoal) until endMeeting. */
+    public void beginMeeting(ServerPlayer player) {
+        meetingPlayerId = player.getUUID();
+        getNavigation().stop();
+    }
+
+    public void endMeeting() {
+        meetingPlayerId = null;
+        setScene(SCENE_NONE);
+    }
+
+    UUID getMeetingPlayerId() {
+        return meetingPlayerId;
+    }
+
+    /** "выживать теперь вы будете с хончо" - accepting his hand makes him follow that player, the same way feeding him a vial does. */
+    public void followPlayer(ServerPlayer player) {
+        feederUuid = player.getUUID();
+        lastFedGameTime = this.level().getGameTime();
+    }
+
     public static AttributeSupplier.Builder createAttributes() {
         return Zombie.createAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0)
@@ -83,6 +137,7 @@ public class HonchoEntity extends Zombie implements GeoEntity {
     protected void registerGoals() {
         // Deliberately none of Zombie's own hostile goals (attack/break-door/target-nearest-player).
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new HoldForMeetingGoal(this));
         this.goalSelector.addGoal(1, new FollowFeederGoal(this, 1.0));
         this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0f));
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.7));
@@ -164,6 +219,9 @@ public class HonchoEntity extends Zombie implements GeoEntity {
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (this.level().isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.SUCCESS;
+        }
+        if (meetingPlayerId != null) {
+            return InteractionResult.CONSUME;
         }
 
         // "Позволь мне стать твоим помощником... (только на ветке войны)" - a one-time scene shown
@@ -248,7 +306,13 @@ public class HonchoEntity extends Zombie implements GeoEntity {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, state -> state.setAndContinue(IDLE)));
+        controllers.add(new AnimationController<>(this, "main", 4, state -> state.setAndContinue(switch (getScene()) {
+            case SCENE_OFFER_HAND -> MEETING;
+            case SCENE_HAPPY -> HAPPY;
+            case SCENE_PAT -> PAT;
+            case SCENE_PRAY -> PRAY;
+            default -> IDLE;
+        })));
     }
 
     @Override

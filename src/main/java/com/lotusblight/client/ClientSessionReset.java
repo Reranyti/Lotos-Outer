@@ -29,6 +29,7 @@ public final class ClientSessionReset {
         WorldLotusLectureOverlay.reset();
         InnerVoiceOverlay.reset();
         HonchoAssistantOverlay.reset();
+        HonchoMeetingCutscene.reset();
         LotusChaseOverlay.stopAll();
         TraitorBossMusicOverlay.stop();
     }

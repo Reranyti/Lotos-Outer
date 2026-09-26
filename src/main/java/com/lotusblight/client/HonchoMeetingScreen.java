@@ -2,62 +2,61 @@ package com.lotusblight.client;
 
 import com.lotusblight.map.HonchoMeetingChoicePacket;
 import com.lotusblight.map.NetworkHandler;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * "весь худ резко пропадает игрок пытается встать, игрок видит чью то руку на его голове и
- * смотрит вверх" - the rare trip-meeting scene (see HonchoMeetingManager). A real Screen rather
- * than an overlay: opening it already stops movement/mouse-look input the same way the vanilla
- * inventory does, and its own opaque background is what makes the HUD disappear
- * underneath it - no separate hideGui hack needed. Pitch is forced upward once on open, and stays
- * there because a Screen intercepts further mouse look while it's up.
+ * The two-answer window of the trip-meeting (see HonchoMeetingCutscene). No backdrop - Honcho has
+ * to stay visible behind it. "Принять руку?" first; a "Нет" there turns it into "Точно?", where "Нет"
+ * again means he leaves and "Да" still takes his hand.
  */
 public final class HonchoMeetingScreen extends Screen {
-    private static final int WIDTH = 320;
+    private static final int PANEL_WIDTH = 220;
+    private static final int PANEL_HEIGHT = 58;
 
-    public HonchoMeetingScreen() {
+    private final boolean confirming;
+
+    public HonchoMeetingScreen(boolean confirming) {
         super(Component.literal("Хончо"));
+        this.confirming = confirming;
     }
 
-    public static void show() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            mc.player.setXRot(-75.0f);
-        }
-        mc.setScreen(new HonchoMeetingScreen());
+    private int panelTop() {
+        return this.height - PANEL_HEIGHT - 40;
     }
 
     @Override
     protected void init() {
-        int left = (this.width - WIDTH) / 2;
-        int top = this.height / 2 - 20;
-
-        addRenderableWidget(Button.builder(Component.literal("Встать самому"), b -> answer(false))
-                .bounds(left, top + 50, WIDTH / 2 - 5, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Взять руку Хончо"), b -> answer(true))
-                .bounds(left + WIDTH / 2 + 5, top + 50, WIDTH / 2 - 5, 20).build());
+        int left = (this.width - PANEL_WIDTH) / 2;
+        int top = panelTop() + 28;
+        int buttonWidth = PANEL_WIDTH / 2 - 15;
+        addRenderableWidget(Button.builder(Component.literal("Нет"), b -> answer(false))
+                .bounds(left + 10, top, buttonWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Да"), b -> answer(true))
+                .bounds(left + PANEL_WIDTH / 2 + 5, top, buttonWidth, 20).build());
     }
 
-    private void answer(boolean tookHand) {
-        NetworkHandler.CHANNEL.sendToServer(new HonchoMeetingChoicePacket(tookHand));
-        if (this.minecraft != null) this.minecraft.setScreen(null);
+    private void answer(boolean accept) {
+        NetworkHandler.CHANNEL.sendToServer(new HonchoMeetingChoicePacket(accept));
+        if (this.minecraft == null) return;
+        if (!accept && !confirming) {
+            this.minecraft.setScreen(new HonchoMeetingScreen(true));
+            return;
+        }
+        this.minecraft.setScreen(null);
+        HonchoMeetingCutscene.finish(accept);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, this.width, this.height, 0xF0000000);
-
-        int left = (this.width - WIDTH) / 2;
-        int top = this.height / 2 - 20;
-        String line1 = "Ты запинаешься о что-то в темноте и падаешь...";
-        String line2 = "Чья-то рука ложится тебе на голову. Ты смотришь вверх.";
-        g.drawCenteredString(this.font, line1, left + WIDTH / 2, top, 0xFFE4E7D8);
-        g.drawCenteredString(this.font, line2, left + WIDTH / 2, top + 14, 0xFFB388FF);
-
+        int left = (this.width - PANEL_WIDTH) / 2;
+        int top = panelTop();
+        g.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xB0100C18);
+        g.fill(left, top, left + PANEL_WIDTH, top + 1, 0xFFB388FF);
+        g.fill(left, top + PANEL_HEIGHT - 1, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xFFB388FF);
+        g.drawCenteredString(this.font, confirming ? "Точно?" : "Принять руку?", this.width / 2, top + 10, 0xFFEDEDED);
         super.render(g, mouseX, mouseY, partialTick);
     }
 

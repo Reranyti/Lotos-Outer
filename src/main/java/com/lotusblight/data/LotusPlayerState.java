@@ -140,6 +140,12 @@ public final class LotusPlayerState {
         return root(player, false).getBoolean(HONCHO_MEETING_PENDING_KEY);
     }
 
+    public static void clearHonchoMeetingPending(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HONCHO_MEETING_PENDING_KEY, false);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static void markHonchoMeetingPending(Player player) {
         CompoundTag root = root(player, true);
         root.putBoolean(HONCHO_MEETING_PENDING_KEY, true);
