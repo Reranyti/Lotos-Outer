@@ -9,10 +9,10 @@ import java.io.File;
 /**
  * Plays the finale animation as a frame sequence: ffmpeg turns the .mp4 into numbered JPEGs once, and
  * this draws the frame for the current time each paint (reading it from disk only when the index moves
- * on). In the mod the frames are cut from the video on the player's machine (FinaleFrames) while
- * the fight runs up to them, so frames that turn up later are picked up as they appear.
+ * on). Frames that turn up after it started are picked up as they appear. The mod itself plays the
+ * video directly instead (VideoStream); this is for a folder of frames made with ffmpeg.
  */
-final class VideoScene {
+final class VideoScene implements FinaleVideo {
     private final File dir;
     private final double fps;
     private int count;
@@ -30,9 +30,9 @@ final class VideoScene {
     double lengthSeconds() { return count / fps; }
     boolean done(double timeSec) { return timeSec >= lengthSeconds(); }
     /** Whether there is anything to show at all - if the frames never came, the fight carries on without. */
-    boolean ready() { return count > 0 || new File(dir, String.format("f_%04d.jpg", 1)).exists(); }
+    public boolean ready() { return count > 0 || new File(dir, String.format("f_%04d.jpg", 1)).exists(); }
 
-    void render(Graphics2D g, int w, int h, double timeSec) {
+    public void render(Graphics2D g, int w, int h, double timeSec) {
         int want = (int) Math.floor(timeSec * fps) + 1;
         // Frames still being written show up later; look for the new ones only when they're needed.
         while (count < want && new File(dir, String.format("f_%04d.jpg", count + 1)).exists()) count++;

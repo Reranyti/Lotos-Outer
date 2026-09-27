@@ -169,7 +169,7 @@ configurations {
 }
 
 dependencies {
-    // JCodec: cuts the finale video into frames on the player's machine (overlay FinaleFrames).
+    // JCodec: decodes the finale video on the player's machine, in memory (overlay VideoStream).
     // BSD 2-Clause - see CREDITS.txt. Keep the version in step with NormalBranchTracks.LIBS.
     overlayLib 'org.jcodec:jcodec:0.2.5'
     overlayLib 'org.jcodec:jcodec-javase:0.2.5'
@@ -353,13 +353,18 @@ tasks.register('runAnim', JavaExec) {
 
 // The whole boss encounter end to end (song1 -> animation -> song2 -> results): ./gradlew runGame
 tasks.register('runGame', JavaExec) {
-    classpath = sourceSets.main.output
+    classpath = sourceSets.main.output + configurations.overlayLib
     mainClass = 'com.lotusblight.overlay.GameMain'
     def a = []
     if (file('build/scene/promised.wav').exists()) a += ['--song1', file('build/scene/promised.wav').absolutePath]
     if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
-    if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
-            '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    // The animation straight from art/video/finale.mp4 like the mod plays it, else ffmpeg's frames.
+    if (file('art/video/finale.mp4').exists()) {
+        a += ['--video', file('art/video/finale.mp4').absolutePath]
+    } else if (file('build/scene/frames').exists()) {
+        a += ['--frames', file('build/scene/frames').absolutePath,
+              '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    }
     if (project.hasProperty('start2')) a += ['--start2', project.getProperty('start2')]   // preview song 2
     args a
 }

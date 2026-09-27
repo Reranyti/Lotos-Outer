@@ -69,6 +69,8 @@ public final class ExitMain {
             System.err.println("No screen to draw on.");
             System.exit(2);
         }
+        // Pictures are read straight from memory - no temporary cache files on disk.
+        ImageIO.setUseCache(false);
         int[] skin = loadSkin();
         String body = "Не найден файл Glitcher_.jar\n"
                 + "По пути: .minecraft\\mods\\" + jar + "\\character\\Glitcher_Architect.jar";
@@ -88,21 +90,18 @@ public final class ExitMain {
         // Looked at before our window exists, so the picture is of the desktop and not of us.
         DesktopSnapshot desktop = DesktopSnapshot.capture(screen, floorY);
 
-        // The finale animation: cut from the video into frames in the background, well before the fight
-        // gets to them.
-        FinaleFrames frames = video == null ? null : startFrames(new File(video));
-
         List<String> fightArgs = new ArrayList<>();
         if (song1 != null) fightArgs.addAll(List.of("--song1", song1));
         if (song2 != null) fightArgs.addAll(List.of("--song2", song2));
         fightArgs.addAll(animArgs);
+        // The finale animation is played straight from the video, in memory, by the fight itself.
+        if (video != null) fightArgs.addAll(List.of("--video", video));
 
         if (cleanup) {
             // Run from the mod: our own temporary files go once the process ends, whichever way.
             List<File> ours = new ArrayList<>();
             for (String path : new String[]{song1, song2, video}) if (path != null) ours.add(new File(path));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                if (frames != null) frames.clean();
                 for (File f : ours) f.delete();
             }));
         }
@@ -112,34 +111,10 @@ public final class ExitMain {
         if (start != null) scene.jumpTo(start);
         // The icons that fell in the scene stay gone through the fight.
         GameMain.keepIconsHidden(desktop);
-        SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null, frames));
+        SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null));
     }
 
-    /** Starts cutting the video into frames on a quiet background thread. */
-    private static FinaleFrames startFrames(File video) {
-        File dir = new File(System.getProperty("java.io.tmpdir"), "lotusblight" + File.separator + "frames");
-        FinaleFrames frames;
-        try {
-            frames = new FinaleFrames(video, dir);
-        } catch (LinkageError e) {
-            System.err.println("Finale frames: no video decoder on the classpath (" + e + ")");
-            return null;
-        }
-        Thread worker = new Thread(() -> {
-            try {
-                frames.run(60_000);
-            } catch (Throwable e) {
-                // No animation then - the fight plays on without it.
-                System.err.println("Finale frames: " + e);
-            }
-        }, "finale frames");
-        worker.setDaemon(true);
-        worker.setPriority(Thread.MIN_PRIORITY);
-        worker.start();
-        return frames;
-    }
-
-    private static void show(Rectangle screen, ExitScene scene, List<String> fightArgs, FinaleFrames frames) {
+    private static void show(Rectangle screen, ExitScene scene, List<String> fightArgs) {
         JFrame frame = new JFrame("Ошибка");
         frame.setUndecorated(true);
         frame.setBounds(screen);
@@ -193,10 +168,6 @@ public final class ExitMain {
                 ((Timer) e.getSource()).stop();
                 frame.dispose();
                 if (fightArgs == null) System.exit(0);
-                if (frames != null) {
-                    fightArgs.addAll(List.of("--frames", new File(System.getProperty("java.io.tmpdir"),
-                            "lotusblight" + File.separator + "frames").getPath(), "--animFps", String.valueOf(frames.fps())));
-                }
                 startFight(fightArgs);
                 return;
             }
@@ -210,7 +181,7 @@ public final class ExitMain {
             try {
                 long until = System.currentTimeMillis() + SONG_WAIT_MS;
                 for (int i = 0; i + 1 < fightArgs.size(); i += 2) {
-                    if (!fightArgs.get(i).startsWith("--song")) continue;
+                    if (!fightArgs.get(i).startsWith("--song") && !fightArgs.get(i).equals("--video")) continue;
                     File song = new File(fightArgs.get(i + 1));
                     while (!song.isFile() && System.currentTimeMillis() < until) Thread.sleep(100);
                 }

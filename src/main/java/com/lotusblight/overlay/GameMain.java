@@ -45,17 +45,20 @@ public final class GameMain {
     private static final double ANIM_START_MS = 135_000;
 
     public static void main(String[] args) throws Exception {
-        String song1Wav = null, song2Wav = null, framesDir = null, animWav = null;
+        String song1Wav = null, song2Wav = null, framesDir = null, animWav = null, video = null;
         double animFps = 30, startSong2 = -1;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
             if (args[i].equals("--frames")) framesDir = args[i + 1];
+            if (args[i].equals("--video")) video = args[i + 1];
             if (args[i].equals("--animAudio")) animWav = args[i + 1];
             if (args[i].equals("--animFps")) animFps = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--start2")) startSong2 = Double.parseDouble(args[i + 1]);
         }
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
+        // Pictures are read straight from memory - no temporary cache files on disk.
+        javax.imageio.ImageIO.setUseCache(false);
 
         int[] skin = loadSkin();
         Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment()
@@ -65,7 +68,9 @@ public final class GameMain {
         RhythmGame g1 = new RhythmGame(map1, 48);
         RhythmGame g2 = new RhythmGame(map2, 180);
         Hazards hazards = new Hazards(skin, screen.height);
-        VideoScene anim = framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
+        // The animation: straight from the video if there is one, else from a folder of frames.
+        FinaleVideo anim = video != null ? openVideo(new File(video))
+                : framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
         FakeWindows fakeWindows = new FakeWindows();
         Karaoke karaoke = new Karaoke();
 
@@ -111,7 +116,7 @@ public final class GameMain {
     /** Drives the phases and owns the music clock for each one. */
     private static final class Engine {
         private final RhythmGame g1, g2;
-        private final VideoScene anim;
+        private final FinaleVideo anim;
         private final FakeWindows fakeWindows;
         private final Karaoke karaoke;
         private final String song1Wav, song2Wav, animWav;
@@ -119,7 +124,7 @@ public final class GameMain {
         private Clip clip;
         private long phaseStartNano = System.nanoTime();
 
-        Engine(RhythmGame g1, RhythmGame g2, VideoScene anim, FakeWindows fw, Karaoke k, String s1, String s2, String aw) {
+        Engine(RhythmGame g1, RhythmGame g2, FinaleVideo anim, FakeWindows fw, Karaoke k, String s1, String s2, String aw) {
             this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
@@ -173,17 +178,17 @@ public final class GameMain {
                     else if (g1.finished(t)) { phase = Phase.SONG2; play(song2Wav); }
                 }
                 case SONG2 -> {
-                    // From 2:15 the finale animation plays as the backdrop (it covers the desktop),
-                    // synced to the track; the circles stay on top the whole song.
-                    // Song 2 has no HP bar. Before 2:15 the circles play over the desktop; from 2:15 the
-                    // finale animation plays clean - no circles, no bar - to the end.
                     g2.update(t);
+                    // From 2:15 the finale animation is the backdrop: it goes down first, the chorus
+                    // lyrics over it, and the circles with the HP bars on top of everything, so the fight
+                    // carries on over the video. Before that the circles play over the desktop, with the
+                    // Glitcher's fake error windows piling up on top of them.
                     if (anim != null && t >= ANIM_START_MS && anim.ready()) {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
-                        karaoke.render(g, w, h, t / 1000.0);   // chorus lyrics over the animation
+                        karaoke.render(g, w, h, t / 1000.0);
+                        g2.render(g, w, h, t);
                     } else {
-                        g2.render(g, w, h, t, false);
-                        // The Glitcher's phase-two attack: fake error windows on the vocal syllables.
+                        g2.render(g, w, h, t);
                         fakeWindows.render(g, w, h, t);
                     }
                     if (!g2.alive()) { phase = Phase.DEFEAT; stop(); }
@@ -232,6 +237,16 @@ public final class GameMain {
             g.setFont(g.getFont().deriveFont(Font.BOLD, (float) size));
             int sw = g.getFontMetrics().stringWidth(s);
             g.drawString(s, (w - sw) / 2, (int) y);
+        }
+    }
+
+    /** The video player, or none if the video can't be opened (or the decoder isn't there). */
+    private static FinaleVideo openVideo(File video) {
+        try {
+            return video.isFile() ? new VideoStream(video) : null;
+        } catch (Exception | LinkageError e) {
+            System.err.println("Finale video: " + e);
+            return null;
         }
     }
 
