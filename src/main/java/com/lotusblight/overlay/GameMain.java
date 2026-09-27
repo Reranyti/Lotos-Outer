@@ -141,7 +141,10 @@ public final class GameMain {
         void click(int x, int y, int w, int h) {
             double t = clockMs();
             if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
-            else if (phase == Phase.SONG2) g2.click(x, y, t, w, h);
+            else if (phase == Phase.SONG2) {
+                fakeWindows.close(x, y);        // a click also clears a fake window it lands on
+                g2.click(x, y, t, w, h);
+            }
         }
 
         void render(Graphics2D g, int w, int h, Hazards hazards) {

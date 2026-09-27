@@ -59,6 +59,8 @@ final class FakeWindows {
     private int spawned;
     private final List<Win> wins = new ArrayList<>();
     private final java.util.Random rnd = new java.util.Random(1);
+    private double lastSpawnMs = -1;
+    private double fade = 1;            // the whole pile fades out in the gaps between phrases
 
     FakeWindows() {
         this.times = loadTimes();
@@ -68,16 +70,39 @@ final class FakeWindows {
     void render(Graphics2D g, int w, int h, double timeMs) {
         while (spawned < times.length && times[spawned] * 1000 <= timeMs) {
             wins.add(makeWindow(spawned, w, h, times[spawned]));
+            lastSpawnMs = timeMs;
+            fade = 1;
             spawned++;
         }
         // Keep the pile bounded so it stays a wall, not a memory leak.
-        while (wins.size() > 120) wins.remove(0);
+        while (wins.size() > 160) wins.remove(0);
+        // In a gap between phrases (or after the last one), the whole wall fades away and clears.
+        if (lastSpawnMs >= 0 && timeMs - lastSpawnMs > 1200) {
+            fade -= 0.04;
+            if (fade <= 0) { wins.clear(); fade = 0; return; }
+        }
+        if (wins.isEmpty()) return;
 
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        for (Win win : wins) draw(g, win);
+        Graphics2D b = (Graphics2D) g.create();
+        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (fade < 1) b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) fade));
+        for (Win win : wins) draw(b, win);
+        b.dispose();
     }
 
-    void reset() { wins.clear(); spawned = 0; }
+    /** A left click at (mx,my): closes the topmost window there and returns true if one was closed. */
+    boolean close(double mx, double my) {
+        for (int i = wins.size() - 1; i >= 0; i--) {
+            Win win = wins.get(i);
+            if (mx >= win.x && mx <= win.x + win.w && my >= win.y && my <= win.y + win.h) {
+                wins.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void reset() { wins.clear(); spawned = 0; fade = 1; lastSpawnMs = -1; }
 
     /** Lay the dialogs along a slowly turning path so the pile winds into a spiral, meme-style. */
     private Win makeWindow(int i, int screenW, int screenH, double tSec) {
@@ -95,11 +120,13 @@ final class FakeWindows {
         win.btn = rnd.nextInt(BUTTONS.length);
         // A window either chants the phrase being sung right now, or shows an error. When a phrase is
         // sung, windows echo it; otherwise they fall back to the 有线/无信号 syllables.
+        // Most windows carry the text sung right now (the phrase, or the 有线/无信号 syllables); the rest
+        // are error dialogs for variety.
         String phrase = phraseAt(tSec);
         if (phrase != null) {
             win.chant = true;
             win.chantText = phrase;
-        } else if (i % 2 == 0) {
+        } else if (rnd.nextInt(10) < 7) {
             win.chant = true;
             win.chantText = CHANTS[rnd.nextInt(CHANTS.length)];
         }
