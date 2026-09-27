@@ -142,12 +142,14 @@ public final class GameMain {
                 case SONG2 -> {
                     // From 2:15 the finale animation plays as the backdrop (it covers the desktop),
                     // synced to the track; the circles stay on top the whole song.
+                    // Song 2 has no HP bar. Before 2:15 the circles play over the desktop; from 2:15 the
+                    // finale animation plays clean - no circles, no bar - to the end.
+                    g2.update(t);
                     if (anim != null && t >= ANIM_START_MS) {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
+                    } else {
+                        g2.render(g, w, h, t, false);
                     }
-                    g2.update(t);
-                    g2.render(g, w, h, t);
-                    hazards.render(g, w, h, t);
                     if (!g2.alive()) { phase = Phase.DEFEAT; stop(); }
                     else if (g2.finished(t)) { phase = Phase.RESULTS; stop(); }
                 }

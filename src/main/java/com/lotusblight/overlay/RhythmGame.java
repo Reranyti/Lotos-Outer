@@ -105,6 +105,11 @@ final class RhythmGame {
     }
 
     void render(Graphics2D g, int w, int h, double timeMs) {
+        render(g, w, h, timeMs, true);
+    }
+
+    /** hud false draws just the circles, no HP bars or combo (used where the bars are hidden). */
+    void render(Graphics2D g, int w, int h, double timeMs, boolean hud) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         double[] geo = geometry(w, h);
         double ox = geo[0], oy = geo[1], radius = geo[2], fw = geo[3], fh = geo[4];
@@ -135,7 +140,7 @@ final class RhythmGame {
             }
         }
 
-        drawHud(g, w, h, timeMs);
+        if (hud) drawHud(g, w, h, timeMs);
     }
 
     private void drawHud(Graphics2D g, int w, int h, double timeMs) {
