@@ -19,8 +19,12 @@ final class RhythmGame {
     private final OsuMap map;
     private final int maxHp;
     private double hp;
+    private final int bossMaxHp;
+    private double bossHp;
     private int combo;
+    private int maxCombo;
     private int hits;
+    private int misses;
     private int nextMiss;                                // first circle not yet hit or judged missed
     private final boolean[] hit;
     private double lastFlash;                            // time of the last hit, for a small flash
@@ -29,6 +33,8 @@ final class RhythmGame {
         this.map = map;
         this.maxHp = maxHp;
         this.hp = maxHp;
+        this.bossMaxHp = Math.max(1, map.circles.size());
+        this.bossHp = bossMaxHp;
         this.hit = new boolean[map.circles.size()];
     }
 
@@ -36,6 +42,7 @@ final class RhythmGame {
     void skipTo(double timeMs) {
         while (nextMiss < map.circles.size() && map.circles.get(nextMiss).timeMs() < timeMs - map.hitWindowMs) {
             hit[nextMiss] = true;
+            bossHp -= 1;
             nextMiss++;
         }
     }
@@ -43,7 +50,21 @@ final class RhythmGame {
     boolean alive() { return hp > 0; }
     boolean finished(double timeMs) { return nextMiss >= map.circles.size() && timeMs > lastTime() + 500; }
     double hpFraction() { return Math.max(0, hp) / maxHp; }
+    double bossFraction() { return Math.max(0, bossHp) / bossMaxHp; }
     int combo() { return combo; }
+    int hits() { return hits; }
+    int misses() { return misses; }
+    int total() { return map.circles.size(); }
+    int maxCombo() { return maxCombo; }
+
+    /** A rank for an accuracy 0..1, osu-style. */
+    static String grade(double accuracy) {
+        if (accuracy >= 0.97) return "S";
+        if (accuracy >= 0.90) return "A";
+        if (accuracy >= 0.80) return "B";
+        if (accuracy >= 0.70) return "C";
+        return "D";
+    }
 
     private double lastTime() {
         return map.circles.isEmpty() ? 0 : map.circles.get(map.circles.size() - 1).timeMs();
@@ -54,7 +75,7 @@ final class RhythmGame {
         while (nextMiss < map.circles.size()) {
             OsuMap.Circle c = map.circles.get(nextMiss);
             if (timeMs <= c.timeMs() + map.hitWindowMs) break;
-            if (!hit[nextMiss]) { hp -= 1; combo = 0; }
+            if (!hit[nextMiss]) { hp -= 1; misses++; combo = 0; }
             nextMiss++;
         }
     }
@@ -73,7 +94,9 @@ final class RhythmGame {
             if (Math.hypot(mx - cx, my - cy) <= radius * 1.9) {   // generous catch radius
                 hit[i] = true;
                 hits++;
+                bossHp -= 1;
                 combo++;
+                maxCombo = Math.max(maxCombo, combo);
                 lastFlash = timeMs;
                 return true;
             }
@@ -116,14 +139,23 @@ final class RhythmGame {
     }
 
     private void drawHud(Graphics2D g, int w, int h, double timeMs) {
-        // Player HP bar along the top.
-        int barW = (int) (w * 0.6), barX = (w - barW) / 2, barY = (int) (h * 0.03), barH = (int) (h * 0.02);
-        g.setColor(new Color(40, 20, 60));
-        g.fillRect(barX, barY, barW, barH);
-        g.setColor(hpFraction() > 0.3 ? new Color(0xB060FF) : new Color(0xFF4060));
-        g.fillRect(barX, barY, (int) (barW * hpFraction()), barH);
+        // The Glitcher (boss) HP along the very top, wide and red-purple.
+        int bw = (int) (w * 0.7), bx = (w - bw) / 2, by = (int) (h * 0.018), bh = (int) (h * 0.022);
+        g.setColor(new Color(30, 12, 40));
+        g.fillRect(bx, by, bw, bh);
+        g.setColor(new Color(0x8A2BE2));
+        g.fillRect(bx, by, (int) (bw * bossFraction()), bh);
         g.setColor(new Color(0xE0C0FF));
         g.setStroke(new BasicStroke(2));
+        g.drawRect(bx, by, bw, bh);
+
+        // Player HP just under it, narrower.
+        int barW = (int) (w * 0.5), barX = (w - barW) / 2, barY = by + bh + (int) (h * 0.012), barH = (int) (h * 0.016);
+        g.setColor(new Color(40, 20, 60));
+        g.fillRect(barX, barY, barW, barH);
+        g.setColor(hpFraction() > 0.3 ? new Color(0x60D0FF) : new Color(0xFF4060));
+        g.fillRect(barX, barY, (int) (barW * hpFraction()), barH);
+        g.setColor(new Color(0xC0E0FF));
         g.drawRect(barX, barY, barW, barH);
 
         if (combo > 1) {

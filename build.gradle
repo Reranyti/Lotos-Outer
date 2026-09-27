@@ -305,7 +305,19 @@ tasks.register('runAnim', JavaExec) {
     classpath = sourceSets.main.output
     mainClass = 'com.lotusblight.overlay.VideoMain'
     args '--frames', file('build/scene/frames').absolutePath,
-            '--audio', file('build/scene/frames/anim.wav').absolutePath, '--fps', '15'
+            '--audio', file('build/scene/frames/anim.wav').absolutePath, '--fps', '30'
+}
+
+// The whole boss encounter end to end (song1 -> animation -> song2 -> results): ./gradlew runGame
+tasks.register('runGame', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.GameMain'
+    def a = []
+    if (file('build/scene/promised.wav').exists()) a += ['--song1', file('build/scene/promised.wav').absolutePath]
+    if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
+    if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
+            '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    args a
 }
 
 // The first song's rhythm game (PROMISED FUTURE) over a backdrop: ./gradlew runRhythm
