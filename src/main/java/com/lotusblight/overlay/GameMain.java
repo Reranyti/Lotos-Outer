@@ -59,8 +59,9 @@ public final class GameMain {
         Hazards hazards = new Hazards(skin, screen.height);
         VideoScene anim = framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
         FakeWindows fakeWindows = new FakeWindows();
+        Karaoke karaoke = new Karaoke();
 
-        Engine engine = new Engine(g1, g2, anim, fakeWindows, song1Wav, song2Wav, animWav);
+        Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, song1Wav, song2Wav, animWav);
 
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
@@ -97,13 +98,14 @@ public final class GameMain {
         private final RhythmGame g1, g2;
         private final VideoScene anim;
         private final FakeWindows fakeWindows;
+        private final Karaoke karaoke;
         private final String song1Wav, song2Wav, animWav;
         private Phase phase = Phase.SONG1;
         private Clip clip;
         private long phaseStartNano = System.nanoTime();
 
-        Engine(RhythmGame g1, RhythmGame g2, VideoScene anim, FakeWindows fw, String s1, String s2, String aw) {
-            this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw;
+        Engine(RhythmGame g1, RhythmGame g2, VideoScene anim, FakeWindows fw, Karaoke k, String s1, String s2, String aw) {
+            this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
         }
@@ -150,6 +152,7 @@ public final class GameMain {
                     g2.update(t);
                     if (anim != null && t >= ANIM_START_MS) {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
+                        karaoke.render(g, w, h, t / 1000.0);   // chorus lyrics over the animation
                     } else {
                         g2.render(g, w, h, t, false);
                         // The Glitcher's phase-two attack: fake error windows on the vocal syllables.
