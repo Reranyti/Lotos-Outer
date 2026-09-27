@@ -122,6 +122,8 @@ public final class GameMain {
 
         private void play(String wav) {
             stop();
+            // Without a track the clock runs on its own, so each song still starts from zero.
+            phaseStartNano = System.nanoTime();
             if (wav == null) return;
             try (AudioInputStream in = AudioSystem.getAudioInputStream(new File(wav))) {
                 clip = AudioSystem.getClip();

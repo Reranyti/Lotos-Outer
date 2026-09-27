@@ -1,110 +1,129 @@
 package com.lotusblight.overlay;
 
+import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
-import java.awt.Point;
+import java.awt.Insets;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
- * The exit's first step: an error dialog over the desktop, drawn by us in the FakeWindows look - not a
- * real OS window, and it touches nothing. Only the dialog is painted; everywhere else the overlay is
- * fully transparent, so clicks there go straight through to whatever is underneath. OK, the close box,
- * Enter or Esc close it, and the process ends.
+ * The exit, from the error dialog to the fight. Windows are minimized first (and brought back however
+ * the process ends) so the desktop is in view, it is looked at once for the icons, and then ExitScene
+ * plays over it; when the scene is done the fight (GameMain) starts in this same process. Esc or
+ * Alt+F4 end it at any point.
  *
  * Usage: java -cp lotusblight.jar com.lotusblight.overlay.ExitMain [--jar lotusblight-VERSION.jar]
+ *        [--song1 a.wav] [--song2 b.wav] [--from STAGE] [--no-minimize] [--no-fight]
  */
 public final class ExitMain {
-    private static final String TITLE = "Ошибка";
-    private static final String[] BUTTONS = {"OK"};
-    /** Dialog height as a share of the screen height; fonts follow it. */
-    private static final double HEIGHT_SHARE = 0.15;
-    /** FakeWindows wraps the body at this share of the dialog width. */
-    private static final double TEXT_SHARE = 0.72;
-    /** Measured and drawn with the same face, so the width worked out is the width painted. */
-    private static final Font BASE_FONT = new Font(Font.DIALOG, Font.PLAIN, 12);
+    private static final String SKIN = "/assets/lotusblight/textures/overlay/glitcher.png";
+    /** How long the fight waits for its tracks if they are still being written. */
+    private static final long SONG_WAIT_MS = 15_000;
 
     private ExitMain() {}
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String jar = "lotusblight.jar";
+        String song1 = null, song2 = null, from = null;
         for (int i = 0; i < args.length - 1; i++) {
-            if (args[i].equals("--jar")) jar = args[i + 1];
+            switch (args[i]) {
+                case "--jar" -> jar = args[i + 1];
+                case "--song1" -> song1 = args[i + 1];
+                case "--song2" -> song2 = args[i + 1];
+                case "--from" -> from = args[i + 1];
+                default -> {}
+            }
         }
+        List<String> flags = List.of(args);
+        boolean minimize = !flags.contains("--no-minimize") && isWindows();
+        boolean fight = !flags.contains("--no-fight");
         if (GraphicsEnvironment.isHeadless()) {
             System.err.println("No screen to draw on.");
             System.exit(2);
         }
+        int[] skin = loadSkin();
         String body = "Не найден файл Glitcher_.jar\n"
                 + "По пути: .minecraft\\mods\\" + jar + "\\character\\Glitcher_Architect.jar";
-        SwingUtilities.invokeLater(() -> show(body));
+
+        if (minimize) {
+            shell("MinimizeAll()");
+            // Whatever way the process ends, the windows come back.
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shell("UndoMinimizeALL()")));
+            // Give the minimize animation time to finish before the desktop is looked at.
+            Thread.sleep(900);
+        }
+        GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getDefaultScreenDevice().getDefaultConfiguration();
+        Rectangle screen = gc.getBounds();
+        Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+        int floorY = screen.height - insets.bottom;
+        // Looked at before our window exists, so the picture is of the desktop and not of us.
+        DesktopSnapshot desktop = DesktopSnapshot.capture(screen, floorY);
+
+        List<String> fightArgs = new ArrayList<>();
+        if (song1 != null) fightArgs.addAll(List.of("--song1", song1));
+        if (song2 != null) fightArgs.addAll(List.of("--song2", song2));
+        ExitScene.Stage start = from == null ? null : ExitScene.Stage.valueOf(from.toUpperCase(Locale.ROOT));
+        ExitScene scene = new ExitScene(screen.width, screen.height, floorY, skin, desktop, body,
+                () -> Toolkit.getDefaultToolkit().beep());
+        if (start != null) scene.jumpTo(start);
+        SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null));
     }
 
-    private static void show(String body) {
-        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment()
-                .getDefaultScreenDevice().getDefaultConfiguration().getBounds();
-        Rectangle dialog = size(body, screen);
-
-        JFrame frame = new JFrame(TITLE);
+    private static void show(Rectangle screen, ExitScene scene, List<String> fightArgs) {
+        JFrame frame = new JFrame("Ошибка");
         frame.setUndecorated(true);
         frame.setBounds(screen);
         frame.setBackground(new Color(0, 0, 0, 0));
         frame.setAlwaysOnTop(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        FakeWindows.Hits[] hits = new FakeWindows.Hits[1];
         JComponent canvas = new JComponent() {
             @Override
             protected void paintComponent(Graphics graphics) {
-                Graphics2D g = (Graphics2D) graphics;
+                Graphics2D g = (Graphics2D) graphics.create();
                 g.setComposite(AlphaComposite.Clear);
                 g.fillRect(0, 0, getWidth(), getHeight());
-                g.setComposite(AlphaComposite.SrcOver);
-                g.setFont(BASE_FONT);
-                g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                hits[0] = FakeWindows.drawDialog(g, dialog.x, dialog.y, dialog.width, dialog.height, TITLE, body, BUTTONS);
+                scene.render(g);
+                g.dispose();
             }
         };
         MouseAdapter mouse = new MouseAdapter() {
-            private Point grab;
-
             @Override
             public void mousePressed(MouseEvent e) {
-                FakeWindows.Hits h = hits[0];
-                if (h == null) return;
-                if (h.close().contains(e.getPoint()) || h.buttons()[0].contains(e.getPoint())) {
-                    System.exit(0);
-                }
-                // The title bar drags the dialog, like a real one.
-                Rectangle bar = new Rectangle(dialog.x, dialog.y, dialog.width, (int) (dialog.height * 0.22));
-                grab = bar.contains(e.getPoint()) ? new Point(e.getX() - dialog.x, e.getY() - dialog.y) : null;
+                scene.press(e.getX(), e.getY());
             }
 
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (grab == null) return;
-                dialog.setLocation(e.getX() - grab.x, e.getY() - grab.y);
-                canvas.repaint();
+                scene.drag(e.getX(), e.getY());
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                grab = null;
+                scene.release();
             }
         };
         canvas.addMouseListener(mouse);
@@ -112,32 +131,67 @@ public final class ExitMain {
         frame.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE || e.getKeyCode() == KeyEvent.VK_ENTER) System.exit(0);
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) System.exit(0);
             }
         });
         frame.setContentPane(canvas);
         frame.setVisible(true);
         frame.toFront();
         frame.requestFocus();
-        Toolkit.getDefaultToolkit().beep();
+        if (scene.stage() == ExitScene.Stage.ERROR) Toolkit.getDefaultToolkit().beep();
+
+        new Timer(1000 / ExitScene.FPS, e -> {
+            scene.tick();
+            if (scene.done()) {
+                ((Timer) e.getSource()).stop();
+                frame.dispose();
+                if (fightArgs == null) System.exit(0);
+                startFight(fightArgs);
+                return;
+            }
+            canvas.repaint();
+        }).start();
     }
 
-    /** A dialog wide enough that the longest line never wraps, centred, shrunk to fit narrow screens. */
-    private static Rectangle size(String body, Rectangle screen) {
-        Graphics2D g = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics();
-        g.setFont(BASE_FONT);
-        int h = (int) (screen.height * HEIGHT_SHARE);
-        int w = h;
-        for (int attempt = 0; attempt < 8; attempt++) {
-            g.setFont(g.getFont().deriveFont(Font.PLAIN, h * 0.11f));
-            int longest = 0;
-            for (String line : body.split("\n")) longest = Math.max(longest, g.getFontMetrics().stringWidth(line));
-            w = Math.max(h * 3, (int) Math.ceil(longest / TEXT_SHARE) + 2);
-            if (w <= screen.width * 0.9) break;
-            h = (int) (h * screen.width * 0.9 / w);
+    /** Hands over to the fight, once its tracks are on disk. */
+    private static void startFight(List<String> fightArgs) {
+        Thread fight = new Thread(() -> {
+            try {
+                long until = System.currentTimeMillis() + SONG_WAIT_MS;
+                for (int i = 0; i + 1 < fightArgs.size(); i += 2) {
+                    File song = new File(fightArgs.get(i + 1));
+                    while (!song.isFile() && System.currentTimeMillis() < until) Thread.sleep(100);
+                }
+                GameMain.main(fightArgs.toArray(new String[0]));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                System.exit(1);
+            }
+        }, "fight");
+        fight.start();
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+    }
+
+    /** Calls one method of Explorer's Shell.Application object through PowerShell and waits for it. */
+    private static void shell(String call) {
+        try {
+            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+                    "(New-Object -ComObject Shell.Application)." + call)
+                    .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+            p.waitFor(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            // Not being able to minimize only means the windows stay where they are.
         }
-        g.dispose();
-        // In the overlay's own coordinates - the canvas starts at 0,0 whichever monitor it is on.
-        return new Rectangle((screen.width - w) / 2, (screen.height - h) / 2, w, h);
+    }
+
+    private static int[] loadSkin() throws IOException {
+        try (InputStream in = ExitMain.class.getResourceAsStream(SKIN)) {
+            if (in == null) throw new IOException("missing " + SKIN);
+            BufferedImage image = ImageIO.read(in);
+            return image.getRGB(0, 0, 64, 64, null, 0, 64);
+        }
     }
 }

@@ -199,7 +199,7 @@ final class FakeWindows {
     }
 
     /** The shared window chrome: title bar, close box, grey body and outline. Returns the title bar height. */
-    private static int drawFrame(Graphics2D g, int x, int y, int w, int h, String title) {
+    static int drawFrame(Graphics2D g, int x, int y, int w, int h, String title) {
         // Title bar - the old blue gradient.
         g.setPaint(new GradientPaint(x, y, new Color(0x2A5BD7), x, y + h * 0.22f, new Color(0x4E8BF5)));
         int barH = (int) (h * 0.22);
