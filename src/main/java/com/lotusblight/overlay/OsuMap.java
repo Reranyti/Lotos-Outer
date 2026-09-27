@@ -45,8 +45,11 @@ final class OsuMap {
                             Double.parseDouble(p[2]), (type & 4) != 0));
                 }
             }
-            map.approachMs = ar >= 5 ? 1200 - 750 * (ar - 5) / 5 : 1200 + 600 * (5 - ar) / 5;
-            map.hitWindowMs = Math.max(120, 200 - 10 * od);
+            // Far more forgiving than real osu - this is a story beat, not a ranked map. Circles appear
+            // early and the hit window is wide, so a normal player can actually clear it.
+            double raw = ar >= 5 ? 1200 - 750 * (ar - 5) / 5 : 1200 + 600 * (5 - ar) / 5;
+            map.approachMs = Math.max(1500, raw);
+            map.hitWindowMs = 320;
         } catch (Exception e) {
             throw new RuntimeException("bad map " + resource, e);
         }

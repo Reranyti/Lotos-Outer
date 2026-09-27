@@ -62,7 +62,7 @@ final class RhythmGame {
             if (Math.abs(timeMs - c.timeMs()) > map.hitWindowMs) continue;
             double cx = geo[0] + c.x() / PLAYFIELD_W * geo[3];
             double cy = geo[1] + c.y() / PLAYFIELD_H * geo[4];
-            if (Math.hypot(mx - cx, my - cy) <= radius * 1.15) {
+            if (Math.hypot(mx - cx, my - cy) <= radius * 1.9) {   // generous catch radius
                 hit[i] = true;
                 hits++;
                 combo++;
@@ -132,7 +132,7 @@ final class RhythmGame {
         double fw = fh * PLAYFIELD_W / PLAYFIELD_H;
         double ox = (w - fw) / 2, oy = (h - fh) / 2;
         double radiusOsu = 54.4 - 4.48 * CS;            // osu circle radius in playfield px
-        double radius = radiusOsu / PLAYFIELD_H * fh;
+        double radius = radiusOsu / PLAYFIELD_H * fh * 1.7;   // bigger than osu, easier to see and hit
         return new double[]{ox, oy, radius, fw, fh};
     }
 }
