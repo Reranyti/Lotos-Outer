@@ -45,13 +45,14 @@ public final class GameMain {
     private static final double ANIM_START_MS = 135_000;
 
     public static void main(String[] args) throws Exception {
-        String song1Wav = null, song2Wav = null, framesDir = null, animWav = null, video = null;
+        String song1Wav = null, song2Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
         double animFps = 30, startSong2 = -1;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
             if (args[i].equals("--frames")) framesDir = args[i + 1];
             if (args[i].equals("--video")) video = args[i + 1];
+            if (args[i].equals("--video-resource")) videoResource = args[i + 1];
             if (args[i].equals("--animAudio")) animWav = args[i + 1];
             if (args[i].equals("--animFps")) animFps = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--start2")) startSong2 = Double.parseDouble(args[i + 1]);
@@ -68,8 +69,8 @@ public final class GameMain {
         RhythmGame g1 = new RhythmGame(map1, 48);
         RhythmGame g2 = new RhythmGame(map2, 180);
         Hazards hazards = new Hazards(skin, screen.height);
-        // The animation: straight from the video if there is one, else from a folder of frames.
-        FinaleVideo anim = video != null ? openVideo(new File(video))
+        // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
+        FinaleVideo anim = video != null || videoResource != null ? openVideo(video, videoResource)
                 : framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
         FakeWindows fakeWindows = new FakeWindows();
         Karaoke karaoke = new Karaoke();
@@ -240,10 +241,22 @@ public final class GameMain {
         }
     }
 
-    /** The video player, or none if the video can't be opened (or the decoder isn't there). */
-    private static FinaleVideo openVideo(File video) {
+    /**
+     * The video player, or none if the video can't be opened (or the decoder isn't there). The video is
+     * read whole into memory - from a file, or from a resource in our own jar, so nothing is copied out.
+     */
+    private static FinaleVideo openVideo(String file, String resource) {
         try {
-            return video.isFile() ? new VideoStream(video) : null;
+            byte[] data;
+            if (file != null) {
+                data = java.nio.file.Files.readAllBytes(new File(file).toPath());
+            } else {
+                try (InputStream in = GameMain.class.getResourceAsStream(resource)) {
+                    if (in == null) return null;
+                    data = in.readAllBytes();
+                }
+            }
+            return new VideoStream(data);
         } catch (Exception | LinkageError e) {
             System.err.println("Finale video: " + e);
             return null;

@@ -36,7 +36,8 @@ import java.util.concurrent.TimeUnit;
  *
  * Usage: java -cp lotusblight.jar com.lotusblight.overlay.ExitMain [--jar lotusblight-VERSION.jar]
  *        [--song1 a.wav] [--song2 b.wav] [--frames DIR --animAudio a.wav --animFps N]
- *        [--video finale.mp4] [--from STAGE] [--no-minimize] [--no-fight] [--cleanup]
+ *        [--video finale.mp4 | --video-resource /path/in/jar] [--from STAGE] [--no-minimize] [--no-fight]
+ *        [--cleanup]
  */
 public final class ExitMain {
     private static final String SKIN = "/assets/lotusblight/textures/overlay/glitcher.png";
@@ -56,6 +57,7 @@ public final class ExitMain {
                 case "--song2" -> song2 = args[i + 1];
                 case "--from" -> from = args[i + 1];
                 case "--video" -> video = args[i + 1];
+                case "--video-resource" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 // The finale animation for the fight, passed through as is.
                 case "--frames", "--animAudio", "--animFps" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 default -> {}
@@ -100,7 +102,7 @@ public final class ExitMain {
         if (cleanup) {
             // Run from the mod: our own temporary files go once the process ends, whichever way.
             List<File> ours = new ArrayList<>();
-            for (String path : new String[]{song1, song2, video}) if (path != null) ours.add(new File(path));
+            for (String path : new String[]{song1, song2}) if (path != null) ours.add(new File(path));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 for (File f : ours) f.delete();
             }));

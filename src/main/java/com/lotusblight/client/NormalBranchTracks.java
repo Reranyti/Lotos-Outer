@@ -29,14 +29,14 @@ import java.util.Optional;
 /**
  * What the exit process needs from the jar, put where it can use it. The fight's two tracks ship as Ogg
  * Vorbis, which plain Java can't play, so they are decoded to WAV with the stb_vorbis the game already
- * carries; the finale video and the video decoder's libraries are copied out as they are. All of it goes
- * to our own folder under the system temp directory - nothing else is written anywhere - and each file
- * appears only once complete (written under a temporary name, then moved into place).
+ * carries; the video decoder's libraries are copied out as they are (the video itself is read straight
+ * from the jar by the exit process). All of it goes to our own folder under the system temp directory -
+ * nothing else is written anywhere - and each file appears only once complete (written under a temporary
+ * name, then moved into place).
  */
 final class NormalBranchTracks {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String[] SOURCES = {"overlay/map_1.ogg", "overlay/map_2.ogg"};
-    private static final String VIDEO = "overlay/finale.mp4";
     /** The exit process's libraries, shipped as plain files in the jar - keep in step with build.gradle. */
     private static final String[] LIBS = {"jcodec-0.2.5.jar", "jcodec-javase-0.2.5.jar"};
 
@@ -49,10 +49,6 @@ final class NormalBranchTracks {
 
     static Path song(int n) {
         return folder().resolve("song" + n + ".wav");
-    }
-
-    static Path video() {
-        return folder().resolve("finale.mp4");
     }
 
     /**
@@ -95,16 +91,7 @@ final class NormalBranchTracks {
                 LOG.warn("Нормальная_ветка: can't read {}: {}", SOURCES[i], e.toString());
             }
         }
-        Optional<Resource> video = mc.getResourceManager().getResource(new ResourceLocation(LotusBlight.MODID, VIDEO));
         Thread worker = new Thread(() -> {
-            // The video first: the exit starts cutting it into frames as soon as it's there.
-            if (video.isPresent()) {
-                try (InputStream in = video.get().open()) {
-                    copy(in, video());
-                } catch (IOException e) {
-                    LOG.warn("Нормальная_ветка: can't unpack {}: {}", VIDEO, e.toString());
-                }
-            }
             for (int i = 0; i < ogg.length; i++) {
                 if (ogg[i] == null) continue;
                 try {

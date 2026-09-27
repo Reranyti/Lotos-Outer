@@ -3,7 +3,7 @@ package com.lotusblight.overlay;
 import org.jcodec.api.FrameGrab;
 import org.jcodec.api.PictureWithMetadata;
 import org.jcodec.common.DemuxerTrackMeta;
-import org.jcodec.common.io.NIOUtils;
+import org.jcodec.common.io.ByteBufferSeekableByteChannel;
 import org.jcodec.common.io.SeekableByteChannel;
 import org.jcodec.common.model.Picture;
 
@@ -11,15 +11,15 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Plays the finale video straight from the .mp4, decoded in memory as it goes - nothing is written to
- * disk. One decoder alone can't keep up with 1080p at full rate, so several work side by side, each on
+ * Plays the finale video straight from the .mp4 bytes, decoded in memory as it goes - nothing is
+ * written to disk. One decoder alone can't keep up with 1080p at full rate, so several work side by side, each on
  * its own stretch between key frames, and only a few seconds of pictures are ever held ahead of the one
  * on screen, kept as the decoder gives them (YUV, half the size of RGB); only the picture actually shown
  * is turned into colour, and the ones already shown are let go at once. Decoding starts as soon as this
@@ -33,7 +33,8 @@ final class VideoStream implements FinaleVideo {
     /** A stretch never runs this many pictures past the next key frame looking for its own. */
     private static final int OVERRUN = 32;
 
-    private final File file;
+    /** The whole .mp4, held in memory - each decoder reads it through its own view. */
+    private final byte[] data;
     private final double fps;
     private final int total;
     /** Key frames, as sample numbers in decoding order - each starts a stretch one worker decodes. */
@@ -47,10 +48,10 @@ final class VideoStream implements FinaleVideo {
     private BufferedImage shown;
     private int shownIndex = -1;
 
-    VideoStream(File file) throws Exception {
-        this.file = file;
+    VideoStream(byte[] data) throws Exception {
+        this.data = data;
         int w, h;
-        try (SeekableByteChannel ch = NIOUtils.readableChannel(file)) {
+        try (SeekableByteChannel ch = channel()) {
             DemuxerTrackMeta meta = FrameGrab.createFrameGrab(ch).getVideoTrack().getMeta();
             total = meta.getTotalFrames();
             fps = total / meta.getTotalDuration();
@@ -112,9 +113,13 @@ final class VideoStream implements FinaleVideo {
         g.drawImage(shown, (w - dw) / 2, (h - dh) / 2, dw, dh, null);
     }
 
+    private SeekableByteChannel channel() {
+        return ByteBufferSeekableByteChannel.readFromByteBuffer(ByteBuffer.wrap(data));
+    }
+
     /** One decoder: takes the next stretch between key frames, decodes it, repeats. */
     private void work() {
-        try (SeekableByteChannel ch = NIOUtils.readableChannel(file)) {
+        try (SeekableByteChannel ch = channel()) {
             FrameGrab grab = FrameGrab.createFrameGrab(ch);
             int n;
             while ((n = nextStretch.getAndIncrement()) < keys.length) {

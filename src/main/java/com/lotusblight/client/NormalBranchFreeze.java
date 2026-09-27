@@ -121,8 +121,9 @@ public final class NormalBranchFreeze {
         command.add(NormalBranchTracks.song(1).toString());
         command.add("--song2");
         command.add(NormalBranchTracks.song(2).toString());
-        command.add("--video");
-        command.add(NormalBranchTracks.video().toString());
+        // The video is read straight out of the jar by the fight - no copy on disk.
+        command.add("--video-resource");
+        command.add("/assets/" + LotusBlight.MODID + "/overlay/finale.mp4");
         // Our temporary files go away with the process.
         command.add("--cleanup");
         Thread starter = new Thread(() -> {
