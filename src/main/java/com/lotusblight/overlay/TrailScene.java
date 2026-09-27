@@ -79,6 +79,19 @@ final class TrailScene {
         drawBars(g, w, h, baseBar, time - sceneStart);
     }
 
+    /**
+     * The panel part after the row (from 2:44): just the fixed purple band in the centre with one
+     * figure holding a single pose, no row of copies. pose picks which of the four is held.
+     */
+    void renderPanelPart(Graphics2D g, int w, int h, double time, int pose) {
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        drawBackdrop(g, w, h);
+        double baseBar = h * 0.055;
+        double floorY = h - baseBar - h * 0.02;
+        drawPanel(g, w, h, pose % POSES, floorY);
+        drawBars(g, w, h, baseBar, time);
+    }
+
     /** Purple letterbox bars that pulse thicker on each beat. */
     private void drawBars(Graphics2D g, int w, int h, double baseBar, double t) {
         // A quick swell right after each beat that decays before the next.

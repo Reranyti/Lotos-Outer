@@ -29,11 +29,13 @@ public final class SceneMain {
     private static final String SKIN = "/assets/lotusblight/textures/overlay/glitcher.png";
     private static final int FPS = 60;
 
-    // Track-time cues (seconds).
-    private static final double ROW_START = 135;     // 2:15
-    private static final double PIERCE = 143;         // 2:23
-    private static final double ARCH_START = 146;     // 2:26 - four screens after the piercing
-    private static final double ARCH_EACH = 2.4;
+    // Track-time cues (seconds), from the user's storyboard.
+    private static final double ARCH_START = 136;     // 2:16 - three architect screens (blue, gold, red)
+    private static final double PIERCE = 144;         // 2:24 - the piercing cutscene
+    private static final double ROW_START = 146;      // 2:26 - the pose-row cutscene, replayed 4x
+    private static final double[] ROW_REPLAYS = {146, 151, 156, 160};
+    private static final double PANEL_START = 164;    // 2:44 - the purple-panel part, one pose, no row
+    private static final double[] PANEL_REPLAYS = {164, 169, 174, 179};   // 4 replays to the end (3:04)
 
     private SceneMain() {}
 
@@ -84,18 +86,26 @@ public final class SceneMain {
                 double t = music != null ? music.getMicrosecondPosition() / 1_000_000.0
                         : base + (System.currentTimeMillis() - start) / 1000.0;
                 int w = getWidth(), h = getHeight();
-                if (t < PIERCE) {
-                    row.render(g, w, h, t, ROW_START);
-                } else if (t < ARCH_START) {
+                if (t < ARCH_START) {
+                    g.setColor(Color.BLACK);
+                    g.fillRect(0, 0, w, h);
+                } else if (t < PIERCE) {
+                    // Three architect screens (blue, gold, red), the 4th is cut.
+                    double each = (PIERCE - ARCH_START) / 3.0;
+                    int idx = Math.min(2, (int) ((t - ARCH_START) / each));
+                    double local = (t - ARCH_START) - idx * each;
+                    arch.render(g, w, h, arcs[idx], t, Math.min(1, local / 0.5));
+                } else if (t < ROW_START) {
                     pierce.render(g, w, h, t - PIERCE);
+                } else if (t < PANEL_START) {
+                    double startAtCue = ROW_REPLAYS[0];
+                    for (double c : ROW_REPLAYS) if (t >= c) startAtCue = c;
+                    row.render(g, w, h, t, startAtCue);
                 } else {
-                    int idx = (int) ((t - ARCH_START) / ARCH_EACH);
-                    if (idx < arcs.length) {
-                        double local = (t - ARCH_START) - idx * ARCH_EACH;
-                        arch.render(g, w, h, arcs[idx], t, Math.min(1, local / 0.5));
-                    } else {
-                        row.render(g, w, h, t, ARCH_START + arcs.length * ARCH_EACH);
-                    }
+                    double startAtCue = PANEL_REPLAYS[0];
+                    int idx = 0;
+                    for (int i = 0; i < PANEL_REPLAYS.length; i++) if (t >= PANEL_REPLAYS[i]) { startAtCue = PANEL_REPLAYS[i]; idx = i; }
+                    row.renderPanelPart(g, w, h, t - startAtCue, idx);
                 }
             }
         };
