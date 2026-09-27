@@ -1,0 +1,115 @@
+package com.lotusblight.client;
+
+import com.lotusblight.LotusBlight;
+import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import org.lwjgl.stb.STBVorbis;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.libc.LibCStdlib;
+import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.Optional;
+
+/**
+ * The fight's two tracks as WAV files. They ship in the jar as Ogg Vorbis, which plain Java can't play,
+ * so they are decoded here with the stb_vorbis the game already carries and written to our own folder
+ * under the system temp directory - nothing else is written anywhere. Each file appears only once it is
+ * complete (written under a temporary name, then moved into place).
+ */
+final class NormalBranchTracks {
+    private static final Logger LOG = LogUtils.getLogger();
+    private static final String[] SOURCES = {"overlay/map_1.ogg", "overlay/map_2.ogg"};
+
+    private NormalBranchTracks() {}
+
+    /** Where the tracks go: song1.wav and song2.wav in this folder. */
+    static Path folder() {
+        return Path.of(System.getProperty("java.io.tmpdir"), LotusBlight.MODID);
+    }
+
+    static Path song(int n) {
+        return folder().resolve("song" + n + ".wav");
+    }
+
+    /**
+     * Reads both tracks out of the mod's resources (on the calling thread - the game thread) and decodes
+     * them on a background thread. Returns right away.
+     */
+    static void prepare(Minecraft mc) {
+        byte[][] ogg = new byte[SOURCES.length][];
+        for (int i = 0; i < SOURCES.length; i++) {
+            Optional<Resource> res = mc.getResourceManager().getResource(new ResourceLocation(LotusBlight.MODID, SOURCES[i]));
+            if (res.isEmpty()) {
+                LOG.warn("Нормальная_ветка: {} is missing", SOURCES[i]);
+                continue;
+            }
+            try (InputStream in = res.get().open()) {
+                ogg[i] = in.readAllBytes();
+            } catch (IOException e) {
+                LOG.warn("Нормальная_ветка: can't read {}: {}", SOURCES[i], e.toString());
+            }
+        }
+        Thread worker = new Thread(() -> {
+            for (int i = 0; i < ogg.length; i++) {
+                if (ogg[i] == null) continue;
+                try {
+                    writeWav(ogg[i], song(i + 1));
+                } catch (Exception e) {
+                    LOG.warn("Нормальная_ветка: can't decode {}: {}", SOURCES[i], e.toString());
+                }
+            }
+        }, "LotusBlight tracks");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private static void writeWav(byte[] ogg, Path out) throws IOException {
+        Files.createDirectories(out.getParent());
+        Files.deleteIfExists(out);
+        Path part = out.resolveSibling(out.getFileName() + ".part");
+        ByteBuffer data = MemoryUtil.memAlloc(ogg.length);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            data.put(ogg).flip();
+            IntBuffer channels = stack.mallocInt(1), rate = stack.mallocInt(1);
+            ShortBuffer pcm = STBVorbis.stb_vorbis_decode_memory(data, channels, rate);
+            if (pcm == null) throw new IOException("not a readable Ogg Vorbis stream");
+            try {
+                ByteBuffer samples = MemoryUtil.memByteBuffer(pcm).order(ByteOrder.LITTLE_ENDIAN);
+                try (FileChannel file = FileChannel.open(part, StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
+                    file.write(header(channels.get(0), rate.get(0), samples.remaining()));
+                    while (samples.hasRemaining()) file.write(samples);
+                }
+            } finally {
+                LibCStdlib.free(pcm);
+            }
+        } finally {
+            MemoryUtil.memFree(data);
+        }
+        Files.move(part, out, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    /** A 44-byte header for 16-bit PCM. */
+    private static ByteBuffer header(int channels, int rate, int dataBytes) {
+        ByteBuffer h = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
+        h.put(new byte[]{'R', 'I', 'F', 'F'}).putInt(36 + dataBytes).put(new byte[]{'W', 'A', 'V', 'E'});
+        h.put(new byte[]{'f', 'm', 't', ' '}).putInt(16).putShort((short) 1).putShort((short) channels)
+                .putInt(rate).putInt(rate * channels * 2).putShort((short) (channels * 2)).putShort((short) 16);
+        h.put(new byte[]{'d', 'a', 't', 'a'}).putInt(dataBytes);
+        return h.flip();
+    }
+}

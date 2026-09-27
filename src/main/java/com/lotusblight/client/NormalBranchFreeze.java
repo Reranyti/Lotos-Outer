@@ -27,7 +27,8 @@ import java.util.List;
  * Client side of the Нормальная_ветка exit. A moment after the respawn the game "hangs": the last frame
  * is held on screen, every sound stops and input goes nowhere - all of it only looks broken, nothing is.
  * Meanwhile the exit runs as its own small Java process started from this mod's jar with the game's own
- * Java (com.lotusblight.overlay.ExitMain). When that process ends the game comes back.
+ * Java (com.lotusblight.overlay.ExitMain) - the scene over the desktop and then the fight. When that
+ * process ends the game comes back.
  */
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class NormalBranchFreeze {
@@ -111,6 +112,12 @@ public final class NormalBranchFreeze {
         command.add(EXIT_MAIN);
         command.add("--jar");
         command.add(LotusBlight.MODID + "-" + NormalBranchJar.version() + ".jar");
+        // The fight's tracks are decoded meanwhile; the exit waits for them when the fight starts.
+        NormalBranchTracks.prepare(mc);
+        command.add("--song1");
+        command.add(NormalBranchTracks.song(1).toString());
+        command.add("--song2");
+        command.add(NormalBranchTracks.song(2).toString());
         Thread starter = new Thread(() -> {
             try {
                 Process process = new ProcessBuilder(command)
