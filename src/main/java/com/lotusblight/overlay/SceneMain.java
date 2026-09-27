@@ -86,6 +86,14 @@ public final class SceneMain {
                 double t = music != null ? music.getMicrosecondPosition() / 1_000_000.0
                         : base + (System.currentTimeMillis() - start) / 1000.0;
                 int w = getWidth(), h = getHeight();
+
+                // Camera punch: a quick zoom-in on each beat that eases back before the next.
+                double beat = 0.60;
+                double phase = (t / beat) % 1.0;
+                double zoom = 1.0 + Math.exp(-phase * 6) * 0.05;
+                g.translate(w / 2.0, h / 2.0);
+                g.scale(zoom, zoom);
+                g.translate(-w / 2.0, -h / 2.0);
                 if (t < ARCH_START) {
                     g.setColor(Color.BLACK);
                     g.fillRect(0, 0, w, h);
