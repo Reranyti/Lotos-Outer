@@ -278,6 +278,13 @@ tasks.register('runOverlay', JavaExec) {
     systemProperty 'lotusblight.overlay.debug', 'true'
 }
 
+// The exit's error dialog on its own, over the desktop: ./gradlew runExit [-Pjar=lotusblight-VERSION.jar]
+tasks.register('runExit', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.ExitMain'
+    args '--jar', project.findProperty('jar') ?: "${mod_id}-${mod_version}.jar"
+}
+
 // The walking-loop scene on its own, black full-screen: ./gradlew runTrail [-Pseconds=N]
 tasks.register('runTrail', JavaExec) {
     classpath = sourceSets.main.output

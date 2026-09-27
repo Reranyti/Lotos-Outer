@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -134,28 +135,9 @@ final class FakeWindows {
     }
 
     private void draw(Graphics2D g, Win win) {
-        // Title bar - the old blue gradient.
-        g.setPaint(new GradientPaint(win.x, win.y, new Color(0x2A5BD7), win.x, win.y + win.h * 0.22f, new Color(0x4E8BF5)));
-        int barH = (int) (win.h * 0.22);
-        g.fillRect(win.x, win.y, win.w, barH);
-        g.setColor(Color.WHITE);
-        g.setFont(g.getFont().deriveFont(Font.BOLD, win.h * 0.13f));
-        g.drawString(TITLES[win.title], win.x + win.w / 40, win.y + (int) (barH * 0.7));
-        // Close/min/max buttons.
-        int b = (int) (barH * 0.6), by = win.y + (barH - b) / 2;
-        g.setColor(new Color(0xC0392B));
-        g.fillRect(win.x + win.w - b - 4, by, b, b);
-        g.setColor(Color.WHITE);
-        g.drawString("x", win.x + win.w - b - 4 + b / 4, by + (int) (b * 0.8));
-
-        // Body.
-        g.setColor(new Color(0xF0F0F0));
-        g.fillRect(win.x, win.y + barH, win.w, win.h - barH);
-        g.setColor(new Color(0x808080));
-        g.setStroke(new BasicStroke(1));
-        g.drawRect(win.x, win.y, win.w, win.h);
         if (win.chant) {
             // A window that shows the sung phrase, big and centred.
+            int barH = drawFrame(g, win.x, win.y, win.w, win.h, TITLES[win.title]);
             g.setColor(Color.BLACK);
             String s = win.chantText;
             float size = win.h * 0.34f;
@@ -168,8 +150,20 @@ final class FakeWindows {
             g.drawString(s, win.x + (win.w - sw) / 2, win.y + barH + (int) ((win.h - barH) * 0.62));
             return;
         }
+        drawDialog(g, win.x, win.y, win.w, win.h, TITLES[win.title], BODIES[win.body], BUTTONS[win.btn]);
+    }
+
+    /** Where a drawn dialog's close box and buttons are, for click testing. */
+    record Hits(Rectangle close, Rectangle[] buttons) {}
+
+    /**
+     * One error dialog in the old Windows look: title bar, red error icon, the body (a '\n' starts a new
+     * line, long lines wrap at spaces) and the buttons along the bottom right. Font sizes follow h.
+     */
+    static Hits drawDialog(Graphics2D g, int x, int y, int w, int h, String title, String body, String[] btns) {
+        int barH = drawFrame(g, x, y, w, h, title);
         // Red error icon.
-        int ix = win.x + win.w / 14, iy = win.y + barH + win.h / 8, is = (int) (win.h * 0.22);
+        int ix = x + w / 14, iy = y + barH + h / 8, is = (int) (h * 0.22);
         g.setColor(new Color(0xD0021B));
         g.fillOval(ix, iy, is, is);
         g.setColor(Color.WHITE);
@@ -177,14 +171,19 @@ final class FakeWindows {
         g.drawString("x", ix + is / 4, iy + (int) (is * 0.78));
         // Body text, wrapped short.
         g.setColor(Color.BLACK);
-        g.setFont(g.getFont().deriveFont(Font.PLAIN, win.h * 0.11f));
-        wrap(g, BODIES[win.body], ix + is + 6, win.y + barH + win.h / 6, (int) (win.w * 0.72), (int) (win.h * 0.16));
+        g.setFont(g.getFont().deriveFont(Font.PLAIN, h * 0.11f));
+        int cy = y + barH + h / 6, lineH = (int) (h * 0.16);
+        for (String paragraph : body.split("\n")) {
+            cy = wrap(g, paragraph, ix + is + 6, cy, (int) (w * 0.72), lineH);
+        }
         // Buttons.
-        String[] btns = BUTTONS[win.btn];
-        int bw = win.w / 4, bh = (int) (win.h * 0.16), gap = win.w / 30;
-        int bx = win.x + win.w - (bw + gap) * btns.length;
-        int byy = win.y + win.h - bh - gap;
-        for (String s : btns) {
+        Rectangle[] rects = new Rectangle[btns.length];
+        // Sized off the width, but never wider than a wide dialog's height allows (the cascade never hits this).
+        int bw = Math.min(w / 4, (int) (h * 0.75)), bh = (int) (h * 0.16), gap = Math.min(w / 30, h / 10);
+        int bx = x + w - (bw + gap) * btns.length;
+        int byy = y + h - bh - gap;
+        for (int i = 0; i < btns.length; i++) {
+            String s = btns[i];
             g.setColor(new Color(0xE0E0E0));
             g.fillRect(bx, byy, bw, bh);
             g.setColor(new Color(0x707070));
@@ -192,8 +191,36 @@ final class FakeWindows {
             g.setColor(Color.BLACK);
             g.setFont(g.getFont().deriveFont(Font.PLAIN, bh * 0.55f));
             g.drawString(s, bx + bw / 5, byy + (int) (bh * 0.68));
+            rects[i] = new Rectangle(bx, byy, bw, bh);
             bx += bw + gap;
         }
+        int b = (int) (barH * 0.6);
+        return new Hits(new Rectangle(x + w - b - 4, y + (barH - b) / 2, b, b), rects);
+    }
+
+    /** The shared window chrome: title bar, close box, grey body and outline. Returns the title bar height. */
+    private static int drawFrame(Graphics2D g, int x, int y, int w, int h, String title) {
+        // Title bar - the old blue gradient.
+        g.setPaint(new GradientPaint(x, y, new Color(0x2A5BD7), x, y + h * 0.22f, new Color(0x4E8BF5)));
+        int barH = (int) (h * 0.22);
+        g.fillRect(x, y, w, barH);
+        g.setColor(Color.WHITE);
+        g.setFont(g.getFont().deriveFont(Font.BOLD, h * 0.13f));
+        g.drawString(title, x + w / 40, y + (int) (barH * 0.7));
+        // Close/min/max buttons.
+        int b = (int) (barH * 0.6), by = y + (barH - b) / 2;
+        g.setColor(new Color(0xC0392B));
+        g.fillRect(x + w - b - 4, by, b, b);
+        g.setColor(Color.WHITE);
+        g.drawString("x", x + w - b - 4 + b / 4, by + (int) (b * 0.8));
+
+        // Body.
+        g.setColor(new Color(0xF0F0F0));
+        g.fillRect(x, y + barH, w, h - barH);
+        g.setColor(new Color(0x808080));
+        g.setStroke(new BasicStroke(1));
+        g.drawRect(x, y, w, h);
+        return barH;
     }
 
     /** Folds a growing value back and forth within [0, span] - a triangle wave, for the bounce. */
@@ -204,7 +231,8 @@ final class FakeWindows {
         return m <= span ? m : 2 * span - m;
     }
 
-    private static void wrap(Graphics2D g, String text, int x, int y, int maxW, int lineH) {
+    /** Draws text wrapped at spaces within maxW; returns the baseline for the next line after it. */
+    private static int wrap(Graphics2D g, String text, int x, int y, int maxW, int lineH) {
         StringBuilder line = new StringBuilder();
         int cy = y;
         for (String word : text.split(" ")) {
@@ -217,7 +245,11 @@ final class FakeWindows {
                 line = new StringBuilder(test);
             }
         }
-        if (line.length() > 0) g.drawString(line.toString(), x, cy);
+        if (line.length() > 0) {
+            g.drawString(line.toString(), x, cy);
+            cy += lineH;
+        }
+        return cy;
     }
 
     private static double[] loadTimes() {
