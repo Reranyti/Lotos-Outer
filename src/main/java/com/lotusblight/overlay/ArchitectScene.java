@@ -110,13 +110,17 @@ final class ArchitectScene {
                 moon.subtract(new java.awt.geom.Area(new Ellipse2D.Double(x - s * 0.4, y - s * 1.1, s * 2, s * 2.2)));
                 b.fill(moon);
             }
-            case GOLD -> {                           // sun with rays
-                b.fillOval((int) (x - s * 0.8), (int) (y - s * 0.8), (int) (s * 1.6), (int) (s * 1.6));
+            case GOLD -> {                           // four-pointed star
+                Path2D star = new Path2D.Double();
+                double outer = s * 1.5, inner = s * 0.42;
                 for (int i = 0; i < 8; i++) {
-                    double an = i * Math.PI / 4;
-                    b.drawLine((int) (x + Math.cos(an) * s * 1.1), (int) (y + Math.sin(an) * s * 1.1),
-                            (int) (x + Math.cos(an) * s * 1.7), (int) (y + Math.sin(an) * s * 1.7));
+                    double an = -Math.PI / 2 + i * Math.PI / 4;
+                    double rr = (i % 2 == 0) ? outer : inner;
+                    double px = x + Math.cos(an) * rr, py = y + Math.sin(an) * rr;
+                    if (i == 0) star.moveTo(px, py); else star.lineTo(px, py);
                 }
+                star.closePath();
+                b.fill(star);
             }
             case RED -> {                            // diamond with an inner spiral
                 Path2D d = new Path2D.Double();
