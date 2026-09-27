@@ -1,6 +1,9 @@
 package com.lotusblight.overlay;
 
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.Timer;
@@ -14,6 +17,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.awt.image.BufferedImage;
@@ -32,8 +36,12 @@ public final class TrailMain {
 
     public static void main(String[] args) throws Exception {
         int seconds = 30;
+        String audio = null;
+        double startAt = 0;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--seconds")) seconds = Integer.parseInt(args[i + 1]);
+            if (args[i].equals("--audio")) audio = args[i + 1];
+            if (args[i].equals("--at")) startAt = Double.parseDouble(args[i + 1]);
         }
         if (GraphicsEnvironment.isHeadless()) {
             System.err.println("No screen to draw on.");
@@ -41,6 +49,23 @@ public final class TrailMain {
         }
         int[] skin = loadSkin();
         long end = System.currentTimeMillis() + seconds * 1000L;
+
+        // Optional WAV, started at --at seconds. The scene follows the clip's own position, so picture
+        // and music never drift apart.
+        Clip clip = null;
+        if (audio != null) {
+            try (AudioInputStream in = AudioSystem.getAudioInputStream(new File(audio))) {
+                clip = AudioSystem.getClip();
+                clip.open(in);
+                clip.setMicrosecondPosition((long) (startAt * 1_000_000));
+                clip.start();
+            } catch (Exception e) {
+                System.err.println("no audio: " + e);
+                clip = null;
+            }
+        }
+        final Clip music = clip;
+        final double base = startAt;
 
         GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration();
@@ -64,11 +89,10 @@ public final class TrailMain {
             protected void paintComponent(Graphics graphics) {
                 Graphics2D g = (Graphics2D) graphics;
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                double time = (System.currentTimeMillis() - start) / 1000.0;
-                // Loop the singling-out panel in and out so both halves of the scene are visible.
-                double cycle = time % 12.0;
-                double panel = cycle < 6 ? 0 : Math.min(1, (cycle - 6) / 1.5) * Math.min(1, (12 - cycle) / 1.5);
-                scene.render(g, getWidth(), getHeight(), time, panel);
+                double time = music != null
+                        ? music.getMicrosecondPosition() / 1_000_000.0 - base
+                        : (System.currentTimeMillis() - start) / 1000.0;
+                scene.render(g, getWidth(), getHeight(), time, 0);
             }
         };
         frame.setContentPane(canvas);
