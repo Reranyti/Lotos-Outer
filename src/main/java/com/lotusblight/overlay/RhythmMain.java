@@ -62,6 +62,7 @@ public final class RhythmMain {
             } catch (Exception e) { System.err.println("no audio: " + e); clip = null; }
         }
         final Clip music = clip;
+        if (startAt > 0) game.skipTo(startAt * 1000);
 
         GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration();

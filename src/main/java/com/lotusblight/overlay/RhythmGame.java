@@ -32,6 +32,14 @@ final class RhythmGame {
         this.hit = new boolean[map.circles.size()];
     }
 
+    /** Starting mid-song: drop every note before timeMs without counting it as a miss. */
+    void skipTo(double timeMs) {
+        while (nextMiss < map.circles.size() && map.circles.get(nextMiss).timeMs() < timeMs - map.hitWindowMs) {
+            hit[nextMiss] = true;
+            nextMiss++;
+        }
+    }
+
     boolean alive() { return hp > 0; }
     boolean finished(double timeMs) { return nextMiss >= map.circles.size() && timeMs > lastTime() + 500; }
     double hpFraction() { return Math.max(0, hp) / maxHp; }
