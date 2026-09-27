@@ -108,6 +108,31 @@ public final class LotusPlayerState {
         player.getPersistentData().put(ROOT_TAG, root);
     }
 
+    private static final String NORMAL_BRANCH_ARRIVED_KEY = "NormalBranchArrived";
+    private static final String NORMAL_BRANCH_EXIT_PENDING_KEY = "NormalBranchExitPending";
+
+    /** True once the entry scene has finished and the player has actually been moved to the empty place. */
+    public static boolean isNormalBranchArrived(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_ARRIVED_KEY);
+    }
+
+    public static void markNormalBranchArrived(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_ARRIVED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Set by a death in the empty place: the next respawn (or login) starts the exit on the client. */
+    public static boolean isNormalBranchExitPending(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_EXIT_PENDING_KEY);
+    }
+
+    public static void setNormalBranchExitPending(Player player, boolean pending) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_EXIT_PENDING_KEY, pending);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     /** True once the player is far enough in that the main lotus stops answering and the shoots go quiet. */
     public static boolean isNormalBranchSilencing(Player player) {
         return !isNormalBranchClosed(player) && !isNormalBranchEntered(player)

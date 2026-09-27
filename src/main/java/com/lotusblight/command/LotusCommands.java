@@ -75,7 +75,9 @@ public final class LotusCommands {
                             "step " + com.lotusblight.data.LotusPlayerState.getNormalBranchStep(p)
                                     + "/" + com.lotusblight.data.LotusPlayerState.NORMAL_BRANCH_STEPS
                                     + ", closed=" + com.lotusblight.data.LotusPlayerState.isNormalBranchClosed(p)
-                                    + ", entered=" + com.lotusblight.data.LotusPlayerState.isNormalBranchEntered(p)), false);
+                                    + ", entered=" + com.lotusblight.data.LotusPlayerState.isNormalBranchEntered(p)
+                                    + ", arrived=" + com.lotusblight.data.LotusPlayerState.isNormalBranchArrived(p)
+                                    + ", exitPending=" + com.lotusblight.data.LotusPlayerState.isNormalBranchExitPending(p)), false);
                     return 1;
                 }))
                 .then(Commands.literal("step")
@@ -87,6 +89,10 @@ public final class LotusCommands {
                                 })))
                 .then(Commands.literal("enter").executes(ctx -> {
                     com.lotusblight.branch.NormalBranchEntry.begin(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }))
+                .then(Commands.literal("exit").executes(ctx -> {
+                    com.lotusblight.branch.NormalBranchExit.start(ctx.getSource().getPlayerOrException());
                     return 1;
                 }))
                 .then(Commands.literal("lock").executes(ctx -> {

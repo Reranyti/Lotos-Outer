@@ -1,8 +1,10 @@
 package com.lotusblight.branch;
 
 import com.lotusblight.data.LotusPlayerState;
+import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.slf4j.Logger;
 
 /**
  * Runs once the death-run is complete: it marks the player as having entered the Нормальная_ветка and,
@@ -11,6 +13,8 @@ import net.minecraft.world.phys.Vec3;
  * for now this locks the branch in so it can never be re-triggered or lost.
  */
 public final class NormalBranchEntry {
+    private static final Logger LOG = LogUtils.getLogger();
+
     private NormalBranchEntry() {}
 
     /** Where a player arrives in the empty place. */
@@ -25,6 +29,10 @@ public final class NormalBranchEntry {
 
     /** Called at the end of the entry scene: drop the player into the empty place. */
     static void finish(ServerPlayer player) {
-        NormalBranchDimension.send(player, ARRIVAL);
+        if (NormalBranchDimension.send(player, ARRIVAL)) {
+            LotusPlayerState.markNormalBranchArrived(player);
+        } else {
+            LOG.warn("Нормальная_ветка: the hollow dimension is missing, {} stays where they are", player.getScoreboardName());
+        }
     }
 }
