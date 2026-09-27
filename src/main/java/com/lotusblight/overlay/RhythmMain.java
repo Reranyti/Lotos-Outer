@@ -36,7 +36,11 @@ public final class RhythmMain {
 
     public static void main(String[] args) throws Exception {
         String audio = null;
-        for (int i = 0; i < args.length - 1; i++) if (args[i].equals("--audio")) audio = args[i + 1];
+        double startAt = 0;
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equals("--audio")) audio = args[i + 1];
+            if (args[i].equals("--at")) startAt = Double.parseDouble(args[i + 1]);
+        }
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
 
         OsuMap map = OsuMap.load(MAP);
@@ -47,11 +51,13 @@ public final class RhythmMain {
         Hazards hazards = new Hazards(skin, gc0.getBounds().height);
 
         Clip clip = null;
-        long startNano = System.nanoTime();
+        final long startNano = System.nanoTime();
+        final double base = startAt;
         if (audio != null) {
             try (AudioInputStream in = AudioSystem.getAudioInputStream(new File(audio))) {
                 clip = AudioSystem.getClip();
                 clip.open(in);
+                clip.setMicrosecondPosition((long) (startAt * 1_000_000));
                 clip.start();
             } catch (Exception e) { System.err.println("no audio: " + e); clip = null; }
         }
@@ -75,7 +81,7 @@ public final class RhythmMain {
                 Graphics2D g = (Graphics2D) graphics;
                 int w = getWidth(), h = getHeight();
                 double t = music != null ? music.getMicrosecondPosition() / 1000.0
-                        : (System.nanoTime() - startNano) / 1_000_000.0;
+                        : base * 1000 + (System.nanoTime() - startNano) / 1_000_000.0;
                 g.setColor(new Color(0x120820));
                 g.fillRect(0, 0, w, h);
 
@@ -99,7 +105,7 @@ public final class RhythmMain {
             @Override public void mousePressed(MouseEvent e) {
                 if (over[0] || e.getButton() != MouseEvent.BUTTON1) return;
                 double t = music != null ? music.getMicrosecondPosition() / 1000.0
-                        : (System.nanoTime() - startNano) / 1_000_000.0;
+                        : base * 1000 + (System.nanoTime() - startNano) / 1_000_000.0;
                 game.click(e.getX(), e.getY(), t, canvas.getWidth(), canvas.getHeight());
             }
         });

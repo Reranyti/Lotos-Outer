@@ -304,7 +304,10 @@ tasks.register('runRhythm', JavaExec) {
     classpath = sourceSets.main.output
     mainClass = 'com.lotusblight.overlay.RhythmMain'
     def wav = file('build/scene/promised.wav')
-    if (wav.exists()) args '--audio', wav.absolutePath
+    def a = []
+    if (wav.exists()) a += ['--audio', wav.absolutePath]
+    if (project.hasProperty('at')) a += ['--at', project.getProperty('at')]
+    args a
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
