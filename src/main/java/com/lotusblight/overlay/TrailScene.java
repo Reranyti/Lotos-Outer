@@ -65,11 +65,10 @@ final class TrailScene {
         double startX = margin + originX;
         double floorY = h - baseBar - h * 0.02;
 
-        // A whole group of four (one pose) drops in at once on each beat, left to right. The copies are
-        // frozen, so the row is a still trail, not a march.
+        // Copies drop in ONE per beat, left to right. The pose changes every four (4+4+4+4). The copies
+        // are frozen, so the row is a still trail, not a march.
         double since = Math.max(0, time - sceneStart);
-        int groups = (int) (since / BEAT_SEC) + 1;
-        int shown = Math.min(slots, groups * POSE_RUN);
+        int shown = Math.min(slots, (int) (since / BEAT_SEC) + 1);
         for (int i = 0; i < shown; i++) {
             double x = startX + i * dx;
             int k = (i / POSE_RUN) % POSES;
