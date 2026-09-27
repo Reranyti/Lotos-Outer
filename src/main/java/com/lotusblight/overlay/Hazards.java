@@ -1,10 +1,14 @@
 package com.lotusblight.overlay;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * What gets in the player's way during the rhythm game: the Glitcher himself wandering across and, now
@@ -13,9 +17,20 @@ import java.awt.image.BufferedImage;
  * can see and reach them.
  */
 final class Hazards {
+    private static final double FAKE_START_MS = 81_000;   // 1:21 - the Glitcher starts spewing decoys
+
     private final BufferedImage glitcher;
     private final int gW;
     private final int gH;
+
+    /** A decoy circle: born at the centre, orbiting out, made to look like a real note. */
+    private static final class Fake {
+        double angle, spin, radius, radialV, born;
+    }
+
+    private final List<Fake> fakes = new ArrayList<>();
+    private final Random rnd = new Random(99);
+    private double lastSpawn = -1;
 
     Hazards(int[] skin, int height) {
         double scale = height * 0.40 / 32.0;
@@ -38,6 +53,8 @@ final class Hazards {
 
     void render(Graphics2D g, int w, int h, double timeMs) {
         double t = timeMs / 1000.0;
+
+        drawFakes(g, w, h, timeMs);
 
         // The Glitcher paces across the lower playfield, swaying, blocking whatever he passes.
         double gx = w * (0.5 + 0.42 * Math.sin(t * 0.55));
@@ -65,5 +82,45 @@ final class Hazards {
             b.fillRect((int) (cx - bandW / 2), 0, 4, h);
             b.dispose();
         }
+    }
+
+    /** From 1:21, decoy circles pour out of the centre, orbiting left and right to confuse the eye. */
+    private void drawFakes(Graphics2D g, int w, int h, double timeMs) {
+        if (timeMs < FAKE_START_MS) { fakes.clear(); return; }
+        double cx = w * 0.5, cy = h * 0.5;
+        double note = h * 0.05;                        // roughly the real circle size
+
+        // Spawn a couple every so often, alternating spin direction.
+        if (lastSpawn < 0 || timeMs - lastSpawn > 260) {
+            lastSpawn = timeMs;
+            for (int n = 0; n < 2; n++) {
+                Fake f = new Fake();
+                f.angle = rnd.nextDouble() * Math.PI * 2;
+                f.spin = (rnd.nextBoolean() ? 1 : -1) * (1.2 + rnd.nextDouble() * 1.5);
+                f.radius = note;
+                f.radialV = h * (0.10 + rnd.nextDouble() * 0.10);
+                f.born = timeMs;
+                fakes.add(f);
+            }
+        }
+
+        Graphics2D b = (Graphics2D) g.create();
+        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        fakes.removeIf(f -> timeMs - f.born > 2200);
+        for (Fake f : fakes) {
+            double age = (timeMs - f.born) / 1000.0;
+            double rad = f.radius + f.radialV * age;
+            double ang = f.angle + f.spin * age;
+            double x = cx + Math.cos(ang) * rad;
+            double y = cy + Math.sin(ang) * rad;
+            float alpha = (float) Math.max(0, 1 - age / 2.2);
+            // Same look as a real note, so it blends in.
+            b.setColor(new Color(0x2A, 0x0B, 0x4A, (int) (alpha * 200)));
+            b.fillOval((int) (x - note), (int) (y - note), (int) (note * 2), (int) (note * 2));
+            b.setStroke(new BasicStroke((float) (note * 0.18)));
+            b.setColor(new Color(0xB0, 0x60, 0xFF, (int) (alpha * 240)));
+            b.drawOval((int) (x - note), (int) (y - note), (int) (note * 2), (int) (note * 2));
+        }
+        b.dispose();
     }
 }
