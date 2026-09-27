@@ -67,7 +67,7 @@ public final class GameMain {
         OsuMap map1 = OsuMap.load("/assets/lotusblight/overlay/map_1.osu");
         OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2.osu");
         RhythmGame g1 = new RhythmGame(map1, 48);
-        RhythmGame g2 = new RhythmGame(map2, 180);
+        RhythmGame g2 = new RhythmGame(map2, 220);
         Hazards hazards = new Hazards(skin, screen.height);
         // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
         FinaleVideo anim = video != null || videoResource != null ? openVideo(video, videoResource)
