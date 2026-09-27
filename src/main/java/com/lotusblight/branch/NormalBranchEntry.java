@@ -19,8 +19,12 @@ public final class NormalBranchEntry {
     public static void begin(ServerPlayer player) {
         if (LotusPlayerState.isNormalBranchEntered(player)) return;
         LotusPlayerState.markNormalBranchEntered(player);
-        // For now the run ends by dropping the player straight into the empty place. The staged entry
-        // scene (red sky -> water -> lift -> collapse) is layered in front of this next.
+        // Run the entry scene; it calls finish() when the collapse is done.
+        NormalBranchScene.start(player);
+    }
+
+    /** Called at the end of the entry scene: drop the player into the empty place. */
+    static void finish(ServerPlayer player) {
         NormalBranchDimension.send(player, ARRIVAL);
     }
 }

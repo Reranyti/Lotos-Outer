@@ -24,7 +24,7 @@ import java.util.Optional;
 public final class NetworkHandler {
     // Bumped whenever a packet is added, removed or changes shape - a mismatched client is refused
     // at login instead of failing to decode mid-game.
-    private static final String PROTOCOL_VERSION = "5";
+    private static final String PROTOCOL_VERSION = "6";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(LotusBlight.MODID, "map_sync"),
@@ -67,5 +67,6 @@ public final class NetworkHandler {
         CHANNEL.registerMessage(id++, HonchoMeetingChoicePacket.class, HonchoMeetingChoicePacket::encode, HonchoMeetingChoicePacket::decode, HonchoMeetingChoicePacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(id++, HonchoLinePacket.class, HonchoLinePacket::encode, HonchoLinePacket::decode, HonchoLinePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(id++, HonchoStoryQuestionPacket.class, HonchoStoryQuestionPacket::encode, HonchoStoryQuestionPacket::decode, HonchoStoryQuestionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(id++, NormalBranchScenePacket.class, NormalBranchScenePacket::encode, NormalBranchScenePacket::decode, NormalBranchScenePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }
