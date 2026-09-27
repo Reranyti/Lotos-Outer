@@ -297,6 +297,17 @@ tasks.register('runScene', JavaExec) {
     args a
 }
 
+// The finale animation as a frame sequence + audio (how the overlay will show it): ./gradlew runAnim
+// Frames live in build/scene/frames (f_0001.jpg..., anim.wav), made once with:
+//   ffmpeg -i Анимация.mp4 -vf fps=15,scale=1280:720 -q:v 4 build/scene/frames/f_%04d.jpg
+//   ffmpeg -i Анимация.mp4 -ar 44100 -ac 2 build/scene/frames/anim.wav
+tasks.register('runAnim', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.VideoMain'
+    args '--frames', file('build/scene/frames').absolutePath,
+            '--audio', file('build/scene/frames/anim.wav').absolutePath, '--fps', '15'
+}
+
 // The first song's rhythm game (PROMISED FUTURE) over a backdrop: ./gradlew runRhythm
 // Needs build/scene/promised.wav - regenerate with:
 //   ffmpeg -i src/main/resources/assets/lotusblight/overlay/map_1.ogg -ar 44100 -ac 2 build/scene/promised.wav
