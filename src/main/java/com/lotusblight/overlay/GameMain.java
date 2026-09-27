@@ -58,8 +58,9 @@ public final class GameMain {
         RhythmGame g2 = new RhythmGame(map2, 180);
         Hazards hazards = new Hazards(skin, screen.height);
         VideoScene anim = framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
+        FakeWindows fakeWindows = new FakeWindows();
 
-        Engine engine = new Engine(g1, g2, anim, song1Wav, song2Wav, animWav);
+        Engine engine = new Engine(g1, g2, anim, fakeWindows, song1Wav, song2Wav, animWav);
 
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
@@ -95,13 +96,15 @@ public final class GameMain {
     private static final class Engine {
         private final RhythmGame g1, g2;
         private final VideoScene anim;
+        private final FakeWindows fakeWindows;
         private final String song1Wav, song2Wav, animWav;
         private Phase phase = Phase.SONG1;
         private Clip clip;
         private long phaseStartNano = System.nanoTime();
 
-        Engine(RhythmGame g1, RhythmGame g2, VideoScene anim, String s1, String s2, String aw) {
-            this.g1 = g1; this.g2 = g2; this.anim = anim; this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
+        Engine(RhythmGame g1, RhythmGame g2, VideoScene anim, FakeWindows fw, String s1, String s2, String aw) {
+            this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw;
+            this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
         }
 
@@ -149,6 +152,8 @@ public final class GameMain {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
                     } else {
                         g2.render(g, w, h, t, false);
+                        // The Glitcher's phase-two attack: fake error windows on the vocal syllables.
+                        fakeWindows.render(g, w, h, t);
                     }
                     if (!g2.alive()) { phase = Phase.DEFEAT; stop(); }
                     else if (g2.finished(t)) { phase = Phase.RESULTS; stop(); }
