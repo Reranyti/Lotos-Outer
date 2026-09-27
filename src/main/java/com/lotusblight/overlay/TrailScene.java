@@ -59,10 +59,9 @@ final class TrailScene {
 
         double baseBar = h * 0.055;
         double dx = spriteW * SPACING;
-        double margin = w * 0.03;
-        // Groups of four - one pose each - repeat (4+4+4+4, then again) as the row builds left to right.
-        int slots = (int) Math.ceil((w - 2 * margin) / dx) + 1;
-        double startX = margin + originX;
+        // Exactly 4+4+4+4 = 16 copies per replay, centred - no stray 17th. The next replay restarts it.
+        int slots = POSES * POSE_RUN;
+        double startX = w / 2.0 - (slots - 1) * dx / 2.0 + originX;
         double floorY = h - baseBar - h * 0.02;
 
         // Copies drop in ONE per beat, left to right. The pose changes every four (4+4+4+4). The copies
