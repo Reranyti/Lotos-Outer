@@ -31,9 +31,27 @@ final class FakeWindows {
     };
     private static final String[][] BUTTONS = {{"OK"}, {"Proceed", "Delete"}, {"Retry", "Cancel"}};
 
+    // When no sung phrase is active, windows fall back to the chant.
+    private static final String[] CHANTS = {"有线", "无信号"};
+
+    /** A sung phrase and when it starts, in seconds. */
+    private record Phrase(double t, String text) {}
+    private final List<Phrase> phrases = loadPhrases();
+
+    /** The phrase being sung at time t (seconds), or null before the first one. */
+    private String phraseAt(double t) {
+        String cur = null;
+        for (Phrase p : phrases) {
+            if (p.t() <= t && t - p.t() < 1.4) cur = p.text();   // shown briefly after it's sung
+        }
+        return cur;
+    }
+
     /** One dialog: where it sits and which fake text it shows. */
     private static final class Win {
         int x, y, w, h, title, body, btn;
+        boolean chant;
+        String chantText;              // the sung phrase (or a fallback chant syllable)
         double born;
     }
 
@@ -49,7 +67,7 @@ final class FakeWindows {
     /** Spawns any dialog whose syllable has arrived and draws the pile. timeMs is the track time. */
     void render(Graphics2D g, int w, int h, double timeMs) {
         while (spawned < times.length && times[spawned] * 1000 <= timeMs) {
-            wins.add(makeWindow(spawned, w, h));
+            wins.add(makeWindow(spawned, w, h, times[spawned]));
             spawned++;
         }
         // Keep the pile bounded so it stays a wall, not a memory leak.
@@ -62,7 +80,7 @@ final class FakeWindows {
     void reset() { wins.clear(); spawned = 0; }
 
     /** Lay the dialogs along a slowly turning path so the pile winds into a spiral, meme-style. */
-    private Win makeWindow(int i, int screenW, int screenH) {
+    private Win makeWindow(int i, int screenW, int screenH, double tSec) {
         Win win = new Win();
         win.w = (int) (screenW * 0.22);
         win.h = (int) (win.w * 0.42);
@@ -74,6 +92,16 @@ final class FakeWindows {
         win.title = i % TITLES.length;
         win.body = rnd.nextInt(BODIES.length);
         win.btn = rnd.nextInt(BUTTONS.length);
+        // A window either chants the phrase being sung right now, or shows an error. When a phrase is
+        // sung, windows echo it; otherwise they fall back to the 有线/无信号 syllables.
+        String phrase = phraseAt(tSec);
+        if (phrase != null) {
+            win.chant = true;
+            win.chantText = phrase;
+        } else if (i % 2 == 0) {
+            win.chant = true;
+            win.chantText = CHANTS[rnd.nextInt(CHANTS.length)];
+        }
         return win;
     }
 
@@ -98,6 +126,20 @@ final class FakeWindows {
         g.setColor(new Color(0x808080));
         g.setStroke(new BasicStroke(1));
         g.drawRect(win.x, win.y, win.w, win.h);
+        if (win.chant) {
+            // A window that shows the sung phrase, big and centred.
+            g.setColor(Color.BLACK);
+            String s = win.chantText;
+            float size = win.h * 0.34f;
+            g.setFont(g.getFont().deriveFont(Font.BOLD, size));
+            while (g.getFontMetrics().stringWidth(s) > win.w * 0.9 && size > 8) {
+                size -= 2;
+                g.setFont(g.getFont().deriveFont(Font.BOLD, size));
+            }
+            int sw = g.getFontMetrics().stringWidth(s);
+            g.drawString(s, win.x + (win.w - sw) / 2, win.y + barH + (int) ((win.h - barH) * 0.62));
+            return;
+        }
         // Red error icon.
         int ix = win.x + win.w / 14, iy = win.y + barH + win.h / 8, is = (int) (win.h * 0.22);
         g.setColor(new Color(0xD0021B));
@@ -158,5 +200,23 @@ final class FakeWindows {
         double[] a = new double[t.size()];
         for (int i = 0; i < a.length; i++) a[i] = t.get(i);
         return a;
+    }
+
+    /** The sung phrases with their start times, from phrases.txt ("seconds<TAB>text" per line). */
+    private static List<Phrase> loadPhrases() {
+        List<Phrase> list = new ArrayList<>();
+        try (InputStream in = FakeWindows.class.getResourceAsStream("/assets/lotusblight/overlay/phrases.txt")) {
+            if (in != null) {
+                BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+                String line;
+                while ((line = r.readLine()) != null) {
+                    if (line.isBlank() || line.startsWith("#")) continue;
+                    String[] p = line.split("\\t", 2);
+                    if (p.length == 2) list.add(new Phrase(Double.parseDouble(p[0].trim()), p[1].trim()));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return list;
     }
 }
