@@ -297,6 +297,16 @@ tasks.register('runScene', JavaExec) {
     args a
 }
 
+// The first song's rhythm game (PROMISED FUTURE) over a backdrop: ./gradlew runRhythm
+// Needs build/scene/promised.wav - regenerate with:
+//   ffmpeg -i src/main/resources/assets/lotusblight/overlay/map_1.ogg -ar 44100 -ac 2 build/scene/promised.wav
+tasks.register('runRhythm', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.RhythmMain'
+    def wav = file('build/scene/promised.wav')
+    if (wav.exists()) args '--audio', wav.absolutePath
+}
+
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.register('lotusLibJar', Jar) {
     archiveBaseName = 'lotuslib'
