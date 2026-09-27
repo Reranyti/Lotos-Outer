@@ -41,6 +41,10 @@ public final class RhythmMain {
 
         OsuMap map = OsuMap.load(MAP);
         RhythmGame game = new RhythmGame(map, SONG1_HP);
+        int[] skin = loadSkin();
+        GraphicsConfiguration gc0 = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getDefaultScreenDevice().getDefaultConfiguration();
+        Hazards hazards = new Hazards(skin, gc0.getBounds().height);
 
         Clip clip = null;
         long startNano = System.nanoTime();
@@ -77,6 +81,7 @@ public final class RhythmMain {
 
                 game.update(t);
                 game.render(g, w, h, t);
+                hazards.render(g, w, h, t);
 
                 if (!game.alive() || game.finished(t)) {
                     over[0] = true;
@@ -102,5 +107,13 @@ public final class RhythmMain {
         frame.setVisible(true);
         frame.requestFocus();
         new Timer(1000 / FPS, e -> frame.repaint()).start();
+    }
+
+    private static int[] loadSkin() throws Exception {
+        try (java.io.InputStream in = RhythmMain.class.getResourceAsStream(
+                "/assets/lotusblight/textures/overlay/glitcher.png")) {
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(in);
+            return img.getRGB(0, 0, 64, 64, null, 0, 64);
+        }
     }
 }
