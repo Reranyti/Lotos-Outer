@@ -42,6 +42,19 @@ public final class NormalBranchDeaths {
         } else if (step > 0) {
             LotusPlayerState.setNormalBranchStep(player, 0);
         }
+        syncSilence(player);
+    }
+
+    @SubscribeEvent
+    public static void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) syncSilence(player);
+    }
+
+    /** Tells the client whether the main lotus should be quiet for this player (the one visible tell). */
+    public static void syncSilence(ServerPlayer player) {
+        com.lotusblight.map.NetworkHandler.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                new com.lotusblight.map.NormalBranchSilencePacket(LotusPlayerState.isNormalBranchSilencing(player)));
     }
 
     /** Whether this death is the one the run needs next at the given step. */

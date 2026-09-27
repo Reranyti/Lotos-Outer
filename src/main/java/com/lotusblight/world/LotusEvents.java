@@ -331,7 +331,13 @@ public class LotusEvents {
     public void onLotusInteract(PlayerInteractEvent.RightClickBlock event) {
         if (event.getEntity().level().isClientSide()) {
             if (event.getEntity().level().getBlockState(event.getPos()).is(ModBlocks.INFECTED_LOTUS.get())) {
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> com.lotusblight.client.LotusClientHooks.openDialogue(event.getHitVec()));
+                // Once the player is partway into the Нормальная_ветка the lotus won't answer any more.
+                boolean quiet = DistExecutor.unsafeRunForDist(
+                        () -> () -> com.lotusblight.client.NormalBranchClient.isSilenced(),
+                        () -> () -> false);
+                if (!quiet) {
+                    DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> com.lotusblight.client.LotusClientHooks.openDialogue(event.getHitVec()));
+                }
                 event.setCanceled(true);
             }
             return;
