@@ -16,9 +16,10 @@ import java.awt.image.BufferedImage;
  */
 final class TrailScene {
     private static final int POSES = 4;              // look back, arms crossed, marionette, sitting
-    private static final double BEAT_SEC = 0.60;     // 100 BPM - a frozen copy drops on each beat
-    private static final double SWEEP_SEC = 2.2;     // the panel's trip across the screen
-    private static final double SPACING = 0.34;      // column gap as a fraction of sprite width
+    private static final int POSE_RUN = 4;           // copies sharing a pose before it steps
+    private static final double BEAT_SEC = 0.30;     // a frozen copy drops on each half-beat
+    private static final double SPACING = 0.22;      // column gap as a fraction of sprite width (dense)
+    private static final double SETTLE_SEC = 0.16;   // the spawn tilt straightens over this
 
     private final BufferedImage[] sprites = new BufferedImage[POSES];
     private final double[] lift = new double[POSES]; // how far each pose sits off the floor
@@ -31,7 +32,7 @@ final class TrailScene {
 
     TrailScene(int[] skin, int height) {
         // Sprites rendered at half scale and blitted 2x (pixelated anyway) to save memory.
-        this.scale = height * 0.52 / 32.0;
+        this.scale = height * 0.42 / 32.0;
         double rs = scale / 2;
         SkinModel model = new SkinModel();
         SoftRenderer r = new SoftRenderer((int) (26 * rs), (int) (42 * rs));
@@ -56,43 +57,53 @@ final class TrailScene {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         drawBackdrop(g, w, h);
 
-        int barH = (int) (h * 0.07);
+        double baseBar = h * 0.055;
         double dx = spriteW * SPACING;
-        // A row that fills the whole width, centred.
-        int slots = (int) Math.ceil(w / dx) + 2;
-        double total = (slots - 1) * dx;
-        double startX = w / 2.0 - total / 2.0;
-        double floorY = h - barH - h * 0.02;
+        double margin = w * 0.03;
+        // Groups of four - one pose each - repeat (4+4+4+4, then again) as the row builds left to right.
+        int slots = (int) Math.ceil((w - 2 * margin) / dx) + 1;
+        double startX = margin + originX;
+        double floorY = h - baseBar - h * 0.02;
 
-        // Frozen copies drop in one per beat until the row is full. Each one keeps the walk phase it was
-        // dropped at, so the row is a still trail whose legs criss-cross - it does not march.
+        // Frozen copies drop in one per beat, left to right. Each keeps the pose it was dropped at, so
+        // the row is a still trail, not a march. Poses run in groups of four.
         double since = Math.max(0, time - sceneStart);
         int shown = Math.min(slots, (int) (since / BEAT_SEC) + 1);
-
         for (int i = 0; i < shown; i++) {
             double x = startX + i * dx;
-            int k = i % POSES;
-            g.drawImage(sprites[k], (int) (x - originX), (int) (floorY + lift[k] - originY), null);
+            int k = (i / POSE_RUN) % POSES;
+            double dy = floorY + lift[k] - originY;
+            // Each copy pops in tilted a little (alternating side) and rights itself to zero.
+            double age = since - i * BEAT_SEC;
+            double tilt = age < SETTLE_SEC ? (i % 2 == 0 ? 1 : -1) * 0.22 * (1 - age / SETTLE_SEC) : 0;
+            if (tilt != 0) {
+                java.awt.geom.AffineTransform old = g.getTransform();
+                g.rotate(tilt, x, floorY);
+                g.drawImage(sprites[k], (int) (x - originX), (int) dy, null);
+                g.setTransform(old);
+            } else {
+                g.drawImage(sprites[k], (int) (x - originX), (int) dy, null);
+            }
         }
 
-        // Once the row is full, a purple band sweeps across with the one live figure inside it, which
-        // plays through the four poses.
-        double rowFull = sceneStart + slots * BEAT_SEC;
-        if (time > rowFull) {
-            double p = ((time - rowFull) / SWEEP_SEC) % 1.0;
-            int k = ((int) (time / BEAT_SEC)) % POSES;
-            drawPanel(g, w, h, k, floorY, p);
-        }
+        drawBars(g, w, h, baseBar, time - sceneStart);
+    }
 
+    /** Purple letterbox bars that pulse thicker on each beat. */
+    private void drawBars(Graphics2D g, int w, int h, double baseBar, double t) {
+        // A quick swell right after each beat that decays before the next.
+        double phase = (t / BEAT_SEC) % 1.0;
+        double pulse = Math.exp(-phase * 4) * baseBar * 0.8;
+        int barH = (int) (baseBar + pulse);
         g.setColor(new Color(0x7A24FF));
         g.fillRect(0, 0, w, barH);
         g.fillRect(0, h - barH, w, barH);
     }
 
-    /** The purple vertical band that slides across the screen with the one live figure inside it. */
-    private void drawPanel(Graphics2D g, int w, int h, int k, double floorY, double p) {
+    /** The fixed purple vertical band in the centre with the one live figure inside it. */
+    private void drawPanel(Graphics2D g, int w, int h, int k, double floorY) {
         double bandW = w * 0.30;
-        double cx = -bandW / 2 + (w + bandW) * p;    // sweeps left to right
+        double cx = w * 0.5;                         // fixed in the centre
         Graphics2D b = (Graphics2D) g.create();
         b.setPaint(new java.awt.GradientPaint((float) (cx - bandW / 2), 0, new Color(0x2A0B4A),
                 (float) (cx + bandW / 2), 0, new Color(0x5A1B8C)));
