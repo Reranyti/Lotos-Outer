@@ -285,6 +285,18 @@ tasks.register('runTrail', JavaExec) {
     args '--seconds', project.findProperty('seconds') ?: '30'
 }
 
+// The whole finale beat, synced to the track, from 2:15: ./gradlew runScene
+// Needs build/scene/way.wav (the track as WAV) - regenerate with:
+//   ffmpeg -i art/music/finale/boss11_the_way_im_wired.ogg -ar 44100 -ac 2 build/scene/way.wav
+tasks.register('runScene', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.SceneMain'
+    def wav = file('build/scene/way.wav')
+    def a = ['--seconds', project.findProperty('seconds') ?: '55', '--at', project.findProperty('at') ?: '135']
+    if (wav.exists()) a += ['--audio', wav.absolutePath]
+    args a
+}
+
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.register('lotusLibJar', Jar) {
     archiveBaseName = 'lotuslib'
