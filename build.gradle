@@ -289,6 +289,8 @@ tasks.register('runExit', JavaExec) {
     if (project.hasProperty('noFight')) a += ['--no-fight']
     if (file('build/scene/promised.wav').exists()) a += ['--song1', file('build/scene/promised.wav').absolutePath]
     if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
+    if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
+            '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
     args a
 }
 

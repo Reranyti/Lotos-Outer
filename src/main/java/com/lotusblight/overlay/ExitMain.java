@@ -35,7 +35,8 @@ import java.util.concurrent.TimeUnit;
  * Alt+F4 end it at any point.
  *
  * Usage: java -cp lotusblight.jar com.lotusblight.overlay.ExitMain [--jar lotusblight-VERSION.jar]
- *        [--song1 a.wav] [--song2 b.wav] [--from STAGE] [--no-minimize] [--no-fight]
+ *        [--song1 a.wav] [--song2 b.wav] [--frames DIR --animAudio a.wav --animFps N]
+ *        [--from STAGE] [--no-minimize] [--no-fight]
  */
 public final class ExitMain {
     private static final String SKIN = "/assets/lotusblight/textures/overlay/glitcher.png";
@@ -47,12 +48,15 @@ public final class ExitMain {
     public static void main(String[] args) throws Exception {
         String jar = "lotusblight.jar";
         String song1 = null, song2 = null, from = null;
+        List<String> animArgs = new ArrayList<>();
         for (int i = 0; i < args.length - 1; i++) {
             switch (args[i]) {
                 case "--jar" -> jar = args[i + 1];
                 case "--song1" -> song1 = args[i + 1];
                 case "--song2" -> song2 = args[i + 1];
                 case "--from" -> from = args[i + 1];
+                // The finale animation for the fight, passed through as is.
+                case "--frames", "--animAudio", "--animFps" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 default -> {}
             }
         }
@@ -85,10 +89,13 @@ public final class ExitMain {
         List<String> fightArgs = new ArrayList<>();
         if (song1 != null) fightArgs.addAll(List.of("--song1", song1));
         if (song2 != null) fightArgs.addAll(List.of("--song2", song2));
+        fightArgs.addAll(animArgs);
         ExitScene.Stage start = from == null ? null : ExitScene.Stage.valueOf(from.toUpperCase(Locale.ROOT));
         ExitScene scene = new ExitScene(screen.width, screen.height, floorY, skin, desktop, body,
                 () -> Toolkit.getDefaultToolkit().beep());
         if (start != null) scene.jumpTo(start);
+        // The icons that fell in the scene stay gone through the fight.
+        GameMain.keepIconsHidden(desktop);
         SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null));
     }
 
@@ -159,6 +166,7 @@ public final class ExitMain {
             try {
                 long until = System.currentTimeMillis() + SONG_WAIT_MS;
                 for (int i = 0; i + 1 < fightArgs.size(); i += 2) {
+                    if (!fightArgs.get(i).startsWith("--song")) continue;
                     File song = new File(fightArgs.get(i + 1));
                     while (!song.isFile() && System.currentTimeMillis() < until) Thread.sleep(100);
                 }

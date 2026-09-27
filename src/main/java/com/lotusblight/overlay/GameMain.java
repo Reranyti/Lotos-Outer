@@ -34,6 +34,13 @@ public final class GameMain {
     private static final Color CATCH_INPUT = new Color(0, 0, 0, 1);
 
     private enum Phase { SONG1, SONG2, RESULTS, DEFEAT }
+
+    /** Icons taken off the desktop before the fight (by the exit scene), kept covered while it runs. */
+    private static volatile DesktopSnapshot hiddenIcons;
+
+    static void keepIconsHidden(DesktopSnapshot desktop) {
+        hiddenIcons = desktop;
+    }
     // The finale animation plays as the song-2 backdrop from 2:15 (the video is that 2:15-3:04 window).
     private static final double ANIM_START_MS = 135_000;
 
@@ -81,6 +88,12 @@ public final class GameMain {
                 g.setColor(CATCH_INPUT);            // catch clicks; the desktop shows through
                 g.fillRect(0, 0, getWidth(), getHeight());
                 g.setComposite(AlphaComposite.SrcOver);
+                if (hiddenIcons != null) {
+                    // Bare wallpaper where icons were knocked off before the fight.
+                    for (DesktopSnapshot.Icon icon : hiddenIcons.icons) {
+                        if (icon.taken) g.drawImage(icon.cover, icon.bounds.x, icon.bounds.y, null);
+                    }
+                }
                 engine.render(g, getWidth(), getHeight(), hazards);
             }
         };
