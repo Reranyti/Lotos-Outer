@@ -15,15 +15,13 @@ import java.awt.image.BufferedImage;
  * stays smooth however wide the row.
  */
 final class TrailScene {
-    private static final int FRAMES = 48;            // sprites in one walk cycle
-    private static final double CYCLES_PER_SEC = 0.6; // the live panel walker's pace
-    private static final int STEP_FRAMES = 6;        // walk-frame gap between neighbours (leg criss-cross)
+    private static final int POSES = 4;              // look back, arms crossed, marionette, sitting
     private static final double BEAT_SEC = 0.60;     // 100 BPM - a frozen copy drops on each beat
     private static final double SWEEP_SEC = 2.2;     // the panel's trip across the screen
     private static final double SPACING = 0.34;      // column gap as a fraction of sprite width
 
-    private final BufferedImage[] sprites = new BufferedImage[FRAMES];
-    private final double[] bob = new double[FRAMES];
+    private final BufferedImage[] sprites = new BufferedImage[POSES];
+    private final double[] lift = new double[POSES]; // how far each pose sits off the floor
     private final double scale;
     private final int spriteW;
     private final int spriteH;
@@ -41,11 +39,10 @@ final class TrailScene {
         this.spriteH = r.height * 2;
         this.originX = r.width;
         this.originY = (r.height - 2 * rs) * 2;
-        for (int k = 0; k < FRAMES; k++) {
-            double phase = 2 * Math.PI * k / FRAMES;
-            bob[k] = Math.abs(Math.cos(phase)) * scale * 0.7;
+        for (int k = 0; k < POSES; k++) {
+            lift[k] = k == 3 ? scale * 6 : 0;    // the sitting pose rests lower
             r.clear();
-            r.draw(model, skin, walkPose(phase), rs, r.width / 2.0, r.height - 2 * rs);
+            r.draw(model, skin, pose(k), rs, r.width / 2.0, r.height - 2 * rs);
             sprites[k] = new BufferedImage(spriteW, spriteH, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = sprites[k].createGraphics();
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
@@ -74,16 +71,17 @@ final class TrailScene {
 
         for (int i = 0; i < shown; i++) {
             double x = startX + i * dx;
-            int k = (i * STEP_FRAMES) % FRAMES;
-            g.drawImage(sprites[k], (int) (x - originX), (int) (floorY - bob[k] - originY), null);
+            int k = i % POSES;
+            g.drawImage(sprites[k], (int) (x - originX), (int) (floorY + lift[k] - originY), null);
         }
 
-        // Once the row is full, a purple band sweeps across with the one live walker inside it.
+        // Once the row is full, a purple band sweeps across with the one live figure inside it, which
+        // plays through the four poses.
         double rowFull = sceneStart + slots * BEAT_SEC;
         if (time > rowFull) {
             double p = ((time - rowFull) / SWEEP_SEC) % 1.0;
-            double leadFrame = time * CYCLES_PER_SEC * FRAMES;
-            drawPanel(g, w, h, leadFrame, floorY, p);
+            int k = ((int) (time / BEAT_SEC)) % POSES;
+            drawPanel(g, w, h, k, floorY, p);
         }
 
         g.setColor(new Color(0x7A24FF));
@@ -91,32 +89,73 @@ final class TrailScene {
         g.fillRect(0, h - barH, w, barH);
     }
 
-    /** The purple vertical band that slides across the screen with a single clean Glitcher walking. */
-    private void drawPanel(Graphics2D g, int w, int h, double leadFrame, double floorY, double p) {
+    /** The purple vertical band that slides across the screen with the one live figure inside it. */
+    private void drawPanel(Graphics2D g, int w, int h, int k, double floorY, double p) {
         double bandW = w * 0.30;
         double cx = -bandW / 2 + (w + bandW) * p;    // sweeps left to right
         Graphics2D b = (Graphics2D) g.create();
         b.setPaint(new java.awt.GradientPaint((float) (cx - bandW / 2), 0, new Color(0x2A0B4A),
                 (float) (cx + bandW / 2), 0, new Color(0x5A1B8C)));
         b.fillRect((int) (cx - bandW / 2), 0, (int) bandW, h);
-        int k = ((int) Math.round(leadFrame) % FRAMES + FRAMES) % FRAMES;
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        b.drawImage(sprites[k], (int) (cx - originX), (int) (floorY - bob[k] - originY), null);
+        if (k == 2) drawStrings(b, cx, floorY);
+        b.drawImage(sprites[k], (int) (cx - originX), (int) (floorY + lift[k] - originY), null);
         b.dispose();
     }
 
-    /** A profile walk: legs swing wide, arms counter-swing, the body leans forward. */
-    private static SoftRenderer.Pose walkPose(double phase) {
-        SoftRenderer.Pose pose = new SoftRenderer.Pose();
-        pose.yaw = -Math.PI / 2;                 // side profile, facing the walk
-        pose.pitch = 0.12;                        // slight forward lean
-        double s = Math.sin(phase);
-        pose.partPitch[SkinModel.Part.RIGHT_LEG.ordinal()] = s * 1.05;
-        pose.partPitch[SkinModel.Part.LEFT_LEG.ordinal()] = -s * 1.05;
-        pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = -s * 0.75;
-        pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = s * 0.75;
-        pose.partPitch[SkinModel.Part.HEAD.ordinal()] = 0.15 + Math.cos(phase * 2) * 0.05;
-        return pose;
+    /** Puppet strings up to the top for the marionette pose. */
+    private void drawStrings(Graphics2D g, double cx, double floorY) {
+        g.setColor(new Color(0xC0, 0xA0, 0xFF, 120));
+        double topY = floorY - spriteH;
+        for (double off : new double[]{-spriteW * 0.32, -spriteW * 0.12, spriteW * 0.12, spriteW * 0.32}) {
+            g.drawLine((int) (cx + off * 0.6), 0, (int) (cx + off), (int) (topY + spriteH * 0.35));
+        }
+    }
+
+    /** One of the four held poses: look back, arms crossed, marionette, sitting cross-legged. */
+    private static SoftRenderer.Pose pose(int which) {
+        SoftRenderer.Pose p = new SoftRenderer.Pose();
+        int ra = SkinModel.Part.RIGHT_ARM.ordinal(), la = SkinModel.Part.LEFT_ARM.ordinal();
+        int rl = SkinModel.Part.RIGHT_LEG.ordinal(), ll = SkinModel.Part.LEFT_LEG.ordinal();
+        int hd = SkinModel.Part.HEAD.ordinal();
+        switch (which) {
+            case 0 -> {                              // looking back over the shoulder
+                p.yaw = -0.4;
+                p.partYaw[hd] = 2.4;
+                p.partPitch[hd] = 0.1;
+                p.partRoll[ra] = -0.15;
+                p.partRoll[la] = 0.15;
+            }
+            case 1 -> {                              // arms crossed, head slightly down
+                p.yaw = 0.15;
+                p.partPitch[ra] = -1.35;
+                p.partPitch[la] = -1.35;
+                p.partYaw[ra] = 0.9;                 // swing each forearm across the chest
+                p.partYaw[la] = -0.9;
+                p.partPitch[hd] = 0.35;
+            }
+            case 2 -> {                              // marionette, hung by the limbs
+                p.yaw = 0.1;
+                p.partPitch[ra] = -2.6;
+                p.partPitch[la] = -2.6;
+                p.partRoll[ra] = -0.7;               // arms up and out
+                p.partRoll[la] = 0.7;
+                p.partRoll[rl] = -0.5;               // legs splayed out
+                p.partRoll[ll] = 0.5;
+                p.partPitch[hd] = -0.4;              // head lolling back
+            }
+            default -> {                             // sitting cross-legged
+                p.yaw = 0.1;
+                p.partPitch[rl] = 1.6;               // knees up and folded in
+                p.partPitch[ll] = 1.6;
+                p.partRoll[rl] = 0.7;
+                p.partRoll[ll] = -0.7;
+                p.partPitch[ra] = -0.5;              // hands resting toward the knees
+                p.partPitch[la] = -0.5;
+                p.partPitch[hd] = 0.2;
+            }
+        }
+        return p;
     }
 
     private void drawBackdrop(Graphics2D g, int w, int h) {
