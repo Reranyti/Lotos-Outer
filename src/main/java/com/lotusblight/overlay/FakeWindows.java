@@ -66,33 +66,27 @@ final class FakeWindows {
         this.times = loadTimes();
     }
 
-    // Each window lives about this long, then fades and is gone - so even in a dense chant the wall keeps
-    // churning and clearing instead of piling up forever.
-    private static final double LIFETIME_MS = 2600;
-    private static final double FADE_MS = 700;
-
     /** Spawns any dialog whose syllable has arrived and draws the pile. timeMs is the track time. */
     void render(Graphics2D g, int w, int h, double timeMs) {
         while (spawned < times.length && times[spawned] * 1000 <= timeMs) {
-            Win win = makeWindow(spawned, w, h, times[spawned]);
-            win.born = timeMs;
-            wins.add(win);
+            wins.add(makeWindow(spawned, w, h, times[spawned]));
+            lastSpawnMs = timeMs;
+            fade = 1;
             spawned++;
         }
-        // Drop windows that have lived out their time.
-        wins.removeIf(win -> timeMs - win.born > LIFETIME_MS);
+        // Keep the pile bounded so it stays a wall, not a memory leak.
+        while (wins.size() > 160) wins.remove(0);
+        // In a gap between phrases (or after the last one), the whole wall fades away and clears.
+        if (lastSpawnMs >= 0 && timeMs - lastSpawnMs > 1200) {
+            fade -= 0.04;
+            if (fade <= 0) { wins.clear(); fade = 0; return; }
+        }
         if (wins.isEmpty()) return;
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        for (Win win : wins) {
-            double age = timeMs - win.born;
-            float alpha = age > LIFETIME_MS - FADE_MS
-                    ? (float) Math.max(0, (LIFETIME_MS - age) / FADE_MS) : 1f;
-            if (alpha < 1f) b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
-            draw(b, win);
-            if (alpha < 1f) b.setComposite(java.awt.AlphaComposite.SrcOver);
-        }
+        if (fade < 1) b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) fade));
+        for (Win win : wins) draw(b, win);
         b.dispose();
     }
 
