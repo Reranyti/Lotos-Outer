@@ -91,6 +91,12 @@ templates — the biome colors them in game.
 **Прочее / Other**: `textures/misc/star_light.png` — Звёздный Свет в сцене StarFall и его иконка в чате
 / Star Light in the StarFall scene and his chat icon.
 
+## Библиотеки / Libraries
+
+| Библиотека / Library | Зачем / What for | Лицензия / License |
+|---|---|---|
+| [JCodec](https://github.com/jcodec/jcodec) 0.2.5 (`jcodec`, `jcodec-javase`), JCodecProject | декодирование видео / video decoding | BSD 2-Clause; текст лежит в jar рядом с библиотекой: `assets/lotusblight/overlay/lib/JCODEC_LICENSE.txt` / the text ships in the jar next to the library |
+
 ## Ассеты Minecraft / Minecraft assets
 
 Несколько моделей мода используют ванильные текстуры Minecraft (Mojang Studios): кувшинка у ростков

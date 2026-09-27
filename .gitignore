@@ -28,3 +28,6 @@ libs/*.jar
 
 # Local mod backups (not for the repo)
 mods-backup-*/
+
+# The finale video - too big for git; the release jar is built where it lives
+art/video/

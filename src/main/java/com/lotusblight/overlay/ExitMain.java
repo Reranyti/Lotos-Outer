@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Usage: java -cp lotusblight.jar com.lotusblight.overlay.ExitMain [--jar lotusblight-VERSION.jar]
  *        [--song1 a.wav] [--song2 b.wav] [--frames DIR --animAudio a.wav --animFps N]
- *        [--from STAGE] [--no-minimize] [--no-fight]
+ *        [--video finale.mp4] [--from STAGE] [--no-minimize] [--no-fight] [--cleanup]
  */
 public final class ExitMain {
     private static final String SKIN = "/assets/lotusblight/textures/overlay/glitcher.png";
@@ -47,7 +47,7 @@ public final class ExitMain {
 
     public static void main(String[] args) throws Exception {
         String jar = "lotusblight.jar";
-        String song1 = null, song2 = null, from = null;
+        String song1 = null, song2 = null, from = null, video = null;
         List<String> animArgs = new ArrayList<>();
         for (int i = 0; i < args.length - 1; i++) {
             switch (args[i]) {
@@ -55,6 +55,7 @@ public final class ExitMain {
                 case "--song1" -> song1 = args[i + 1];
                 case "--song2" -> song2 = args[i + 1];
                 case "--from" -> from = args[i + 1];
+                case "--video" -> video = args[i + 1];
                 // The finale animation for the fight, passed through as is.
                 case "--frames", "--animAudio", "--animFps" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 default -> {}
@@ -63,6 +64,7 @@ public final class ExitMain {
         List<String> flags = List.of(args);
         boolean minimize = !flags.contains("--no-minimize") && isWindows();
         boolean fight = !flags.contains("--no-fight");
+        boolean cleanup = flags.contains("--cleanup");
         if (GraphicsEnvironment.isHeadless()) {
             System.err.println("No screen to draw on.");
             System.exit(2);
@@ -86,20 +88,58 @@ public final class ExitMain {
         // Looked at before our window exists, so the picture is of the desktop and not of us.
         DesktopSnapshot desktop = DesktopSnapshot.capture(screen, floorY);
 
+        // The finale animation: cut from the video into frames in the background, well before the fight
+        // gets to them.
+        FinaleFrames frames = video == null ? null : startFrames(new File(video));
+
         List<String> fightArgs = new ArrayList<>();
         if (song1 != null) fightArgs.addAll(List.of("--song1", song1));
         if (song2 != null) fightArgs.addAll(List.of("--song2", song2));
         fightArgs.addAll(animArgs);
+
+        if (cleanup) {
+            // Run from the mod: our own temporary files go once the process ends, whichever way.
+            List<File> ours = new ArrayList<>();
+            for (String path : new String[]{song1, song2, video}) if (path != null) ours.add(new File(path));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (frames != null) frames.clean();
+                for (File f : ours) f.delete();
+            }));
+        }
         ExitScene.Stage start = from == null ? null : ExitScene.Stage.valueOf(from.toUpperCase(Locale.ROOT));
         ExitScene scene = new ExitScene(screen.width, screen.height, floorY, skin, desktop, body,
                 () -> Toolkit.getDefaultToolkit().beep());
         if (start != null) scene.jumpTo(start);
         // The icons that fell in the scene stay gone through the fight.
         GameMain.keepIconsHidden(desktop);
-        SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null));
+        SwingUtilities.invokeLater(() -> show(screen, scene, fight ? fightArgs : null, frames));
     }
 
-    private static void show(Rectangle screen, ExitScene scene, List<String> fightArgs) {
+    /** Starts cutting the video into frames on a quiet background thread. */
+    private static FinaleFrames startFrames(File video) {
+        File dir = new File(System.getProperty("java.io.tmpdir"), "lotusblight" + File.separator + "frames");
+        FinaleFrames frames;
+        try {
+            frames = new FinaleFrames(video, dir);
+        } catch (LinkageError e) {
+            System.err.println("Finale frames: no video decoder on the classpath (" + e + ")");
+            return null;
+        }
+        Thread worker = new Thread(() -> {
+            try {
+                frames.run(60_000);
+            } catch (Throwable e) {
+                // No animation then - the fight plays on without it.
+                System.err.println("Finale frames: " + e);
+            }
+        }, "finale frames");
+        worker.setDaemon(true);
+        worker.setPriority(Thread.MIN_PRIORITY);
+        worker.start();
+        return frames;
+    }
+
+    private static void show(Rectangle screen, ExitScene scene, List<String> fightArgs, FinaleFrames frames) {
         JFrame frame = new JFrame("Ошибка");
         frame.setUndecorated(true);
         frame.setBounds(screen);
@@ -153,6 +193,10 @@ public final class ExitMain {
                 ((Timer) e.getSource()).stop();
                 frame.dispose();
                 if (fightArgs == null) System.exit(0);
+                if (frames != null) {
+                    fightArgs.addAll(List.of("--frames", new File(System.getProperty("java.io.tmpdir"),
+                            "lotusblight" + File.separator + "frames").getPath(), "--animFps", String.valueOf(frames.fps())));
+                }
                 startFight(fightArgs);
                 return;
             }

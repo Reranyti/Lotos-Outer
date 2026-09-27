@@ -22,17 +22,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * The fight's two tracks as WAV files. They ship in the jar as Ogg Vorbis, which plain Java can't play,
- * so they are decoded here with the stb_vorbis the game already carries and written to our own folder
- * under the system temp directory - nothing else is written anywhere. Each file appears only once it is
- * complete (written under a temporary name, then moved into place).
+ * What the exit process needs from the jar, put where it can use it. The fight's two tracks ship as Ogg
+ * Vorbis, which plain Java can't play, so they are decoded to WAV with the stb_vorbis the game already
+ * carries; the finale video and the video decoder's libraries are copied out as they are. All of it goes
+ * to our own folder under the system temp directory - nothing else is written anywhere - and each file
+ * appears only once complete (written under a temporary name, then moved into place).
  */
 final class NormalBranchTracks {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String[] SOURCES = {"overlay/map_1.ogg", "overlay/map_2.ogg"};
+    private static final String VIDEO = "overlay/finale.mp4";
+    /** The exit process's libraries, shipped as plain files in the jar - keep in step with build.gradle. */
+    private static final String[] LIBS = {"jcodec-0.2.5.jar", "jcodec-javase-0.2.5.jar"};
 
     private NormalBranchTracks() {}
 
@@ -43,6 +49,32 @@ final class NormalBranchTracks {
 
     static Path song(int n) {
         return folder().resolve("song" + n + ".wav");
+    }
+
+    static Path video() {
+        return folder().resolve("finale.mp4");
+    }
+
+    /**
+     * Copies the exit process's libraries out of the jar (small, done right here - they must be in
+     * place before the process starts) and returns them as classpath entries. Missing ones are skipped.
+     */
+    static List<String> libraries(Minecraft mc) {
+        List<String> paths = new ArrayList<>();
+        for (String lib : LIBS) {
+            Path out = folder().resolve("lib").resolve(lib);
+            try {
+                Optional<Resource> res = mc.getResourceManager().getResource(new ResourceLocation(LotusBlight.MODID, "overlay/lib/" + lib));
+                if (res.isEmpty()) continue;
+                try (InputStream in = res.get().open()) {
+                    copy(in, out);
+                }
+                paths.add(out.toString());
+            } catch (IOException e) {
+                LOG.warn("Нормальная_ветка: can't unpack {}: {}", lib, e.toString());
+            }
+        }
+        return paths;
     }
 
     /**
@@ -63,7 +95,16 @@ final class NormalBranchTracks {
                 LOG.warn("Нормальная_ветка: can't read {}: {}", SOURCES[i], e.toString());
             }
         }
+        Optional<Resource> video = mc.getResourceManager().getResource(new ResourceLocation(LotusBlight.MODID, VIDEO));
         Thread worker = new Thread(() -> {
+            // The video first: the exit starts cutting it into frames as soon as it's there.
+            if (video.isPresent()) {
+                try (InputStream in = video.get().open()) {
+                    copy(in, video());
+                } catch (IOException e) {
+                    LOG.warn("Нормальная_ветка: can't unpack {}: {}", VIDEO, e.toString());
+                }
+            }
             for (int i = 0; i < ogg.length; i++) {
                 if (ogg[i] == null) continue;
                 try {
@@ -75,6 +116,14 @@ final class NormalBranchTracks {
         }, "LotusBlight tracks");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    /** Writes a stream to a file, under a temporary name until it's complete. */
+    private static void copy(InputStream in, Path out) throws IOException {
+        Files.createDirectories(out.getParent());
+        Path part = out.resolveSibling(out.getFileName() + ".part");
+        Files.copy(in, part, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(part, out, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
 
     private static void writeWav(byte[] ogg, Path out) throws IOException {

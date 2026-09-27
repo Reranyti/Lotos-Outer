@@ -105,10 +105,13 @@ public final class NormalBranchFreeze {
             reset();
             return;
         }
+        List<String> cp = new ArrayList<>();
+        cp.add(classpath);
+        cp.addAll(NormalBranchTracks.libraries(mc));
         List<String> command = new ArrayList<>();
         command.add(javaExecutable());
         command.add("-cp");
-        command.add(classpath);
+        command.add(String.join(File.pathSeparator, cp));
         command.add(EXIT_MAIN);
         command.add("--jar");
         command.add(LotusBlight.MODID + "-" + NormalBranchJar.version() + ".jar");
@@ -118,6 +121,10 @@ public final class NormalBranchFreeze {
         command.add(NormalBranchTracks.song(1).toString());
         command.add("--song2");
         command.add(NormalBranchTracks.song(2).toString());
+        command.add("--video");
+        command.add(NormalBranchTracks.video().toString());
+        // Our temporary files go away with the process.
+        command.add("--cleanup");
         Thread starter = new Thread(() -> {
             try {
                 Process process = new ProcessBuilder(command)

@@ -162,7 +162,20 @@ repositories {
 
 }
 
+configurations {
+    // Libraries for the separate overlay process only (com.lotusblight.overlay). They go into the jar as
+    // plain files the mod hands to that process's classpath - Forge itself never loads them.
+    overlayLib { transitive = false }
+}
+
 dependencies {
+    // JCodec: cuts the finale video into frames on the player's machine (overlay FinaleFrames).
+    // BSD 2-Clause - see CREDITS.txt. Keep the version in step with NormalBranchTracks.LIBS.
+    overlayLib 'org.jcodec:jcodec:0.2.5'
+    overlayLib 'org.jcodec:jcodec-javase:0.2.5'
+    compileOnly 'org.jcodec:jcodec:0.2.5'
+    compileOnly 'org.jcodec:jcodec-javase:0.2.5'
+
     // Specify the version of Minecraft to use.
     // Any artifact can be supplied so long as it has a "userdev" classifier artifact and is a compatible patcher artifact.
     // The "userdev" classifier will be requested and setup by ForgeGradle.
@@ -256,6 +269,15 @@ tasks.named('processResources', ProcessResources).configure {
     // of the jar.
     exclude '**/*.bbmodel'
 
+    // The overlay process's own libraries, as plain files (see configurations.overlayLib).
+    from(configurations.overlayLib) { into 'assets/lotusblight/overlay/lib' }
+    // The finale video, as is, from a local folder that stays out of git (art/video is ignored): the
+    // release jar is built where the video lives. Without it the fight just plays with no animation.
+    from('art/video') {
+        include 'finale.mp4'
+        into 'assets/lotusblight/overlay'
+    }
+
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
             forge_version: forge_version, forge_version_range: forge_version_range,
@@ -282,15 +304,20 @@ tasks.register('runOverlay', JavaExec) {
 // STAGE: error, shatter, emerge, windows, fourth, error2, type, silence, stomp. The fight uses the same
 // build/scene WAVs as runGame.
 tasks.register('runExit', JavaExec) {
-    classpath = sourceSets.main.output
+    classpath = sourceSets.main.output + configurations.overlayLib
     mainClass = 'com.lotusblight.overlay.ExitMain'
     def a = ['--jar', project.findProperty('jar') ?: "${mod_id}-${mod_version}.jar"]
     if (project.hasProperty('from')) a += ['--from', project.getProperty('from')]
     if (project.hasProperty('noFight')) a += ['--no-fight']
     if (file('build/scene/promised.wav').exists()) a += ['--song1', file('build/scene/promised.wav').absolutePath]
     if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
-    if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
-            '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    // The animation: cut from art/video/finale.mp4 like the mod does, else ffmpeg's frames from build/scene.
+    if (file('art/video/finale.mp4').exists()) {
+        a += ['--video', file('art/video/finale.mp4').absolutePath]
+    } else if (file('build/scene/frames').exists()) {
+        a += ['--frames', file('build/scene/frames').absolutePath,
+              '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    }
     args a
 }
 

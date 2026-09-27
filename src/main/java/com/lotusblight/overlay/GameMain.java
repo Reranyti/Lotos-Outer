@@ -178,7 +178,7 @@ public final class GameMain {
                     // Song 2 has no HP bar. Before 2:15 the circles play over the desktop; from 2:15 the
                     // finale animation plays clean - no circles, no bar - to the end.
                     g2.update(t);
-                    if (anim != null && t >= ANIM_START_MS) {
+                    if (anim != null && t >= ANIM_START_MS && anim.ready()) {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
                         karaoke.render(g, w, h, t / 1000.0);   // chorus lyrics over the animation
                     } else {
