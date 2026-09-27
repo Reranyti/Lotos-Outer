@@ -3,117 +3,115 @@ package com.lotusblight.overlay;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.GradientPaint;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.awt.image.RescaleOp;
 
 /**
- * The "walking loop" scene: the Glitcher walks in profile and drags a long trail of his own earlier
- * frames behind him, onion-skin style, over a dark purple spiral backdrop. Every so often a purple
- * panel slides across and singles him out large, without the trail. Purely a picture - it draws itself
- * for a given moment in time and touches nothing.
+ * The "echo" scene: the Glitcher holds one menacing pose (leaning forward, arms up near his head) and
+ * that pose repeats into a growing arc of copies sweeping up and to the left, onion-skin style, over a
+ * dark purple backdrop. The real figure is on the right, brightest; copies fade into the dark behind.
+ * The pose steps every few copies and the arc grows across the scene, then it loops.
+ *
+ * The pose loop is rendered once at start into a handful of sprites; each frame just blits those.
  */
 final class TrailScene {
-    // The trail's copies, front to back, and how far apart and how much darker each one is.
-    private static final int TRAIL = 16;
-    private static final double PHASE_STEP = 0.42;
+    private static final int POSES = 8;             // key poses in the held-pose loop
+    private static final double POSE_PER_SEC = 6.0; // how fast the loop plays at the front
+    private static final int COPIES_PER_POSE = 4;   // the pose changes every 4 copies
+    private static final int MAX_COPIES = 40;
+    private static final double GROW_PER_SEC = 9.0;  // copies added per second
+    private static final double LOOP_SEC = 5.2;      // grow, then start over
 
-    private final int[] skin;
-    private final SkinModel model = new SkinModel();
-    private final SoftRenderer figure;
+    private final BufferedImage[] sprites = new BufferedImage[POSES];
     private final double scale;
-    private final double stride;          // horizontal gap between trail copies
+    private final int spriteW;
+    private final int spriteH;
+    private final double originX;
+    private final double originY;
     private BufferedImage spiral;
 
     TrailScene(int[] skin, int height) {
-        this.skin = skin;
-        // The lead figure is about half the screen tall, leaving headroom and floor.
-        this.scale = height * 0.50 / 32.0;
-        this.figure = new SoftRenderer((int) (26 * scale), (int) (42 * scale));
-        this.stride = scale * 3.2;
+        // Big figure; sprites rendered at half and blitted 2x (pixelated anyway) to save memory.
+        this.scale = height * 0.52 / 32.0;
+        double rs = scale / 2;
+        SkinModel model = new SkinModel();
+        SoftRenderer r = new SoftRenderer((int) (30 * rs), (int) (40 * rs));
+        this.spriteW = r.width * 2;
+        this.spriteH = r.height * 2;
+        this.originX = r.width;
+        this.originY = (r.height - 2 * rs) * 2;
+        for (int k = 0; k < POSES; k++) {
+            r.clear();
+            r.draw(model, skin, menacePose(k / (double) POSES), rs, r.width / 2.0, r.height - 2 * rs);
+            sprites[k] = new BufferedImage(spriteW, spriteH, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = sprites[k].createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+            g.drawImage(r.image, 0, 0, spriteW, spriteH, null);
+            g.dispose();
+        }
     }
 
     /**
-     * Draws the scene at time seconds into the canvas w x h. panel is 0 before the singling-out panel,
-     * rising to 1 as it covers the screen.
+     * Draws the scene at time seconds into the canvas w x h. panel rises 0..1 as the singling-out band
+     * covers the screen (kept for the second half of the beat).
      */
     void render(Graphics2D g, int w, int h, double time, double panel) {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        // The floor the feet walk along.
-        double floorY = h * 0.98;
-        double leadX = w * 0.30;
-        double phase = time * 7.0;
-
         drawBackdrop(g, w, h, time);
 
-        // Trail from the back forward, so nearer copies cover farther ones.
-        for (int i = TRAIL; i >= 1; i--) {
-            double t = i / (double) TRAIL;                 // 1 at the back
-            double bright = 0.30 + 0.70 * (1 - t);         // fades into the dark behind
-            float alpha = (float) (0.35 + 0.65 * (1 - t));
-            drawFigure(g, leadX + i * stride, floorY, phase - i * PHASE_STEP, bright, alpha, false);
-        }
-        // The lead figure, full brightness.
-        drawFigure(g, leadX, floorY, phase, 1.0, 1f, false);
+        double frontX = w * 0.60;
+        double frontY = h * 0.98;
+        double dx = spriteW * 0.34;        // horizontal gap between copies
+        double poseFront = time * POSE_PER_SEC;
 
-        if (panel > 0) drawPanel(g, w, h, time, panel);
+        // The arc grows over the scene, then resets - it "repeats" every LOOP_SEC.
+        double localT = time % LOOP_SEC;
+        int copies = (int) Math.min(MAX_COPIES, 3 + localT * GROW_PER_SEC);
+
+        // Back to front, so nearer copies cover farther ones.
+        for (int i = copies; i >= 0; i--) {
+            double t = i / (double) MAX_COPIES;
+            // A curve up and to the left: x steps left, y climbs and eases off.
+            double x = frontX - i * dx;
+            double y = frontY - Math.pow(i, 0.85) * (spriteH * 0.06);
+            int pose = ((int) Math.floor(poseFront - i / (double) COPIES_PER_POSE) % POSES + POSES) % POSES;
+            float alpha = i == 0 ? 1f : (float) Math.max(0.12, 0.85 * (1 - t));
+            draw(g, sprites[pose], x, y, alpha);
+        }
     }
 
-    /** The purple vertical band that slides in and shows one clean, large Glitcher. */
-    private void drawPanel(Graphics2D g, int w, int h, double time, double panel) {
-        double bandW = w * 0.34;
-        double cx = w * (1.15 - 1.05 * panel);            // slides in from the right
-        Graphics2D p = (Graphics2D) g.create();
-        p.setPaint(new GradientPaint((float) (cx - bandW / 2), 0, new Color(0x2A0B4A),
-                (float) (cx + bandW / 2), 0, new Color(0x5A1B8C)));
-        p.fillRect((int) (cx - bandW / 2), 0, (int) bandW, h);
-        // A crisp figure walking inside the band, no trail.
-        drawFigure(p, cx, h * 0.98, time * 7.0, 1.15, 1f, true);
-        p.dispose();
-    }
-
-    private void drawFigure(Graphics2D g, double x, double floorY, double phase,
-                            double bright, float alpha, boolean lit) {
-        figure.clear();
-        double bob = Math.abs(Math.cos(phase)) * scale * 0.7;    // rises on each step
-        double originX = figure.width / 2.0;
-        double originY = figure.height - 2 * scale;
-        figure.draw(model, skin, walkPose(phase), scale, originX, originY);
-
-        BufferedImage img = figure.image;
-        if (bright != 1.0 || alpha != 1f) {
-            float b = (float) bright;
-            img = new RescaleOp(new float[]{b, b, b, alpha}, new float[]{0, 0, 0, 0}, null)
-                    .filter(figure.image, null);
-        }
+    private void draw(Graphics2D g, BufferedImage sprite, double x, double y, float alpha) {
         int drawX = (int) (x - originX);
-        int drawY = (int) (floorY - bob - originY);
-        if (lit) {
-            // A soft radial glow behind the singled-out figure, fading to nothing at the edge.
-            Graphics2D gl = (Graphics2D) g.create();
-            float gw = figure.width * 1.1f, gh = figure.height * 1.0f;
-            float gx = (float) x, gy = (float) (floorY - figure.height * 0.45);
-            gl.setPaint(new java.awt.RadialGradientPaint(gx, gy, Math.max(gw, gh) / 2,
-                    new float[]{0f, 1f},
-                    new Color[]{new Color(0xB0, 0x60, 0xFF, 150), new Color(0xB0, 0x60, 0xFF, 0)}));
-            gl.fillRect((int) (gx - gw / 2), (int) (gy - gh / 2), (int) gw, (int) gh);
-            gl.dispose();
+        int drawY = (int) (y - originY);
+        if (alpha >= 1f) {
+            g.drawImage(sprite, drawX, drawY, null);
+        } else {
+            Graphics2D c = (Graphics2D) g.create();
+            c.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+            c.drawImage(sprite, drawX, drawY, null);
+            c.dispose();
         }
-        g.drawImage(img, drawX, drawY, null);
     }
 
-    /** A big, slow stride in profile: legs swing wide, arms counter-swing, the body leans forward. */
-    private SoftRenderer.Pose walkPose(double phase) {
+    /**
+     * The held pose: leaning hard forward, turned three-quarters to camera, both arms raised up toward
+     * the head. phase (0..1) makes it breathe - arms and head sway a little through the loop.
+     */
+    private static SoftRenderer.Pose menacePose(double phase) {
         SoftRenderer.Pose pose = new SoftRenderer.Pose();
-        pose.yaw = -Math.PI / 2;                 // side profile, facing the way it walks
-        pose.pitch = 0.12;                        // slight forward lean
-        double s = Math.sin(phase);
-        pose.partPitch[SkinModel.Part.RIGHT_LEG.ordinal()] = s * 1.05;
-        pose.partPitch[SkinModel.Part.LEFT_LEG.ordinal()] = -s * 1.05;
-        pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = -s * 0.75;
-        pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = s * 0.75;
-        pose.partPitch[SkinModel.Part.HEAD.ordinal()] = 0.15 + Math.cos(phase * 2) * 0.05;
+        double a = 2 * Math.PI * phase;
+        pose.yaw = -0.55;                          // three-quarter view
+        pose.pitch = 0.5;                          // hunched forward
+        double sway = Math.sin(a);
+        // Arms up near the head, swaying through the loop.
+        pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = -2.5 + sway * 0.2;
+        pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = -2.5 - sway * 0.2;
+        pose.partRoll[SkinModel.Part.RIGHT_ARM.ordinal()] = -0.4;
+        pose.partRoll[SkinModel.Part.LEFT_ARM.ordinal()] = 0.4;
+        // Legs planted, a slight stagger.
+        pose.partPitch[SkinModel.Part.RIGHT_LEG.ordinal()] = 0.35;
+        pose.partPitch[SkinModel.Part.LEFT_LEG.ordinal()] = -0.25;
+        pose.partPitch[SkinModel.Part.HEAD.ordinal()] = 0.25 + Math.cos(a) * 0.08;
         return pose;
     }
 
@@ -121,11 +119,10 @@ final class TrailScene {
         g.setColor(new Color(0x120820));
         g.fillRect(0, 0, w, h);
         if (spiral == null || spiral.getWidth() != w || spiral.getHeight() != h) spiral = buildSpiral(w, h);
-        // Slowly turning spiral, dim.
         Graphics2D s = (Graphics2D) g.create();
         s.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         s.rotate(time * 0.15, w / 2.0, h / 2.0);
-        double over = 1.6;   // large enough that the corners stay covered while it turns
+        double over = 1.6;
         s.drawImage(spiral, (int) (-w * (over - 1) / 2), (int) (-h * (over - 1) / 2),
                 (int) (w * over), (int) (h * over), null);
         s.dispose();
@@ -140,9 +137,8 @@ final class TrailScene {
             for (int x = 0; x < w; x++) {
                 double dx = x - cx, dy = y - cy;
                 double r = Math.hypot(dx, dy);
-                double a = Math.atan2(dy, dx);
-                // Bands that wind outward form the spiral arms.
-                double v = Math.sin(a * 2 + r * 0.03);
+                double an = Math.atan2(dy, dx);
+                double v = Math.sin(an * 2 + r * 0.03);
                 if (v > 0.3) {
                     double fade = 0.10 + 0.14 * (1 - r / maxR);
                     int alpha = (int) (Math.min(1, (v - 0.3) / 0.7) * fade * 255);
