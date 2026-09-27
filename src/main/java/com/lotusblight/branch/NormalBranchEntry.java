@@ -2,6 +2,7 @@ package com.lotusblight.branch;
 
 import com.lotusblight.data.LotusPlayerState;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Runs once the death-run is complete: it marks the player as having entered the Нормальная_ветка and,
@@ -12,9 +13,14 @@ import net.minecraft.server.level.ServerPlayer;
 public final class NormalBranchEntry {
     private NormalBranchEntry() {}
 
+    /** Where a player arrives in the empty place. */
+    private static final Vec3 ARRIVAL = new Vec3(0.5, 96.0, 0.5);
+
     public static void begin(ServerPlayer player) {
         if (LotusPlayerState.isNormalBranchEntered(player)) return;
         LotusPlayerState.markNormalBranchEntered(player);
-        // The staged entry scene (red sky -> water -> lift -> collapse -> teleport) is wired in next.
+        // For now the run ends by dropping the player straight into the empty place. The staged entry
+        // scene (red sky -> water -> lift -> collapse) is layered in front of this next.
+        NormalBranchDimension.send(player, ARRIVAL);
     }
 }
