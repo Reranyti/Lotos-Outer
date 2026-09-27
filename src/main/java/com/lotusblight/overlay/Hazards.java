@@ -80,28 +80,30 @@ final class Hazards {
     private void drawFakes(Graphics2D g, int w, int h, double timeMs) {
         if (timeMs < FAKE_START_MS) return;
         double cx = w * 0.5, cy = h * 0.5;
-        double note = h * 0.05;                        // roughly the real circle size
-        double maxR = Math.hypot(w, h) / 2 * 1.05;     // out to the corners
-        int perArm = 16;
-        double radiusStep = maxR / perArm;
-        double angleStep = 0.6;                         // how tightly the arm winds
-        double spin = timeMs / 1000.0 * 0.8;            // the whole spiral turns
+        double note = h * 0.06;
+        double maxR = Math.hypot(w, h) / 2 * 1.05;
+        int count = 46;
+        double turns = 3.0;                            // how many times the arm winds to the centre
+        double t = timeMs / 1000.0;
+        double travel = t * 0.16;                      // circles fly inward
+        double spin = t * 0.35;                        // and the whole tunnel turns
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        for (int arm = 0; arm < 2; arm++) {
-            double dir = arm == 0 ? 1 : -1;             // one winds left, the other right
-            for (int i = 0; i < perArm; i++) {
-                double r = (i + 0.6) * radiusStep;
-                double ang = arm * Math.PI + i * angleStep + dir * spin;
-                double x = cx + Math.cos(ang) * r;
-                double y = cy + Math.sin(ang) * r;
-                b.setColor(new Color(0x2A, 0x0B, 0x4A, 200));
-                b.fillOval((int) (x - note), (int) (y - note), (int) (note * 2), (int) (note * 2));
-                b.setStroke(new BasicStroke((float) (note * 0.18)));
-                b.setColor(new Color(0xB0, 0x60, 0xFF, 235));
-                b.drawOval((int) (x - note), (int) (y - note), (int) (note * 2), (int) (note * 2));
-            }
+        for (int i = 0; i < count; i++) {
+            double depth = ((i / (double) count) - travel) % 1.0;   // 0 at the centre, 1 at the rim
+            if (depth < 0) depth += 1;
+            double r = maxR * depth;
+            double ang = depth * turns * Math.PI * 2 + spin;
+            double x = cx + Math.cos(ang) * r;
+            double y = cy + Math.sin(ang) * r;
+            double size = note * (0.22 + 0.9 * depth);              // small deep in, big at the rim
+            float alpha = (float) Math.min(1, depth * 2.5);         // fade out of the centre
+            b.setColor(new Color(0x2A, 0x0B, 0x4A, (int) (alpha * 200)));
+            b.fillOval((int) (x - size), (int) (y - size), (int) (size * 2), (int) (size * 2));
+            b.setStroke(new BasicStroke((float) (size * 0.18)));
+            b.setColor(new Color(0xB0, 0x60, 0xFF, (int) (alpha * 235)));
+            b.drawOval((int) (x - size), (int) (y - size), (int) (size * 2), (int) (size * 2));
         }
         b.dispose();
     }
