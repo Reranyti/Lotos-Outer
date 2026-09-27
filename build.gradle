@@ -270,6 +270,72 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+// The desktop overlay on its own, without starting the game: ./gradlew runOverlay [-Pseconds=N]
+tasks.register('runOverlay', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.OverlayMain'
+    args '--seconds', project.findProperty('seconds') ?: '60'
+    systemProperty 'lotusblight.overlay.debug', 'true'
+}
+
+// The walking-loop scene on its own, black full-screen: ./gradlew runTrail [-Pseconds=N]
+tasks.register('runTrail', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.TrailMain'
+    args '--seconds', project.findProperty('seconds') ?: '30'
+}
+
+// The whole finale beat, synced to the track, from 2:15: ./gradlew runScene
+// Needs build/scene/way.wav (the track as WAV) - regenerate with:
+//   ffmpeg -i art/music/finale/boss11_the_way_im_wired.ogg -ar 44100 -ac 2 build/scene/way.wav
+tasks.register('runScene', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.SceneMain'
+    def wav = file('build/scene/way.wav')
+    def a = ['--seconds', project.findProperty('seconds') ?: '55', '--at', project.findProperty('at') ?: '135']
+    if (wav.exists()) a += ['--audio', wav.absolutePath]
+    args a
+}
+
+// The finale animation as a frame sequence + audio (how the overlay will show it): ./gradlew runAnim
+// Frames live in build/scene/frames (f_0001.jpg..., anim.wav), made once with:
+//   ffmpeg -i Анимация.mp4 -vf fps=15,scale=1280:720 -q:v 4 build/scene/frames/f_%04d.jpg
+//   ffmpeg -i Анимация.mp4 -ar 44100 -ac 2 build/scene/frames/anim.wav
+tasks.register('runAnim', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.VideoMain'
+    args '--frames', file('build/scene/frames').absolutePath,
+            '--audio', file('build/scene/frames/anim.wav').absolutePath, '--fps', '30'
+}
+
+// The whole boss encounter end to end (song1 -> animation -> song2 -> results): ./gradlew runGame
+tasks.register('runGame', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.GameMain'
+    def a = []
+    if (file('build/scene/promised.wav').exists()) a += ['--song1', file('build/scene/promised.wav').absolutePath]
+    if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
+    if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
+            '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    if (project.hasProperty('start2')) a += ['--start2', project.getProperty('start2')]   // preview song 2
+    args a
+}
+
+// The first song's rhythm game (PROMISED FUTURE) over a backdrop: ./gradlew runRhythm
+// Needs build/scene/promised.wav - regenerate with:
+//   ffmpeg -i src/main/resources/assets/lotusblight/overlay/map_1.ogg -ar 44100 -ac 2 build/scene/promised.wav
+tasks.register('runRhythm', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.RhythmMain'
+    def song = project.hasProperty('song') ? project.getProperty('song') : '1'
+    def wav = file(song == '2' ? 'build/scene/way.wav' : 'build/scene/promised.wav')
+    def a = ['--song', song]
+    if (wav.exists()) a += ['--audio', wav.absolutePath]
+    if (project.hasProperty('at')) a += ['--at', project.getProperty('at')]
+    if (project.hasProperty('window')) a += ['--window']
+    args a
+}
+
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.register('lotusLibJar', Jar) {
     archiveBaseName = 'lotuslib'
