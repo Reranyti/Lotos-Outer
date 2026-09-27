@@ -75,12 +75,14 @@ final class TrailScene {
             g.drawImage(sprites[k], (int) (x - originX), (int) (floorY + lift[k] - originY), null);
         }
 
-        drawBars(g, w, h, baseBar, time - sceneStart);
+        // Bars pulse on the absolute track beat, so they land with the camera punch.
+        drawBars(g, w, h, baseBar, time);
     }
 
     /**
      * The panel part after the row (from 2:44): just the fixed purple band in the centre with one
-     * figure holding a single pose, no row of copies. pose picks which of the four is held.
+     * figure holding a single pose, no row of copies. pose picks which of the four is held. time is the
+     * absolute track time, so the bars stay on the beat.
      */
     void renderPanelPart(Graphics2D g, int w, int h, double time, int pose) {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);

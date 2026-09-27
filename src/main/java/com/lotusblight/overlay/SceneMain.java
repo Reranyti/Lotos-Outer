@@ -87,10 +87,10 @@ public final class SceneMain {
                         : base + (System.currentTimeMillis() - start) / 1000.0;
                 int w = getWidth(), h = getHeight();
 
-                // Camera punch: a quick zoom-in on each beat that eases back before the next.
-                double beat = 0.60;
+                // Camera punch: same beat and swell shape as the pulsing bars, so they land together.
+                double beat = 0.30;
                 double phase = (t / beat) % 1.0;
-                double zoom = 1.0 + Math.exp(-phase * 6) * 0.05;
+                double zoom = 1.0 + Math.exp(-phase * 4) * 0.05;
                 g.translate(w / 2.0, h / 2.0);
                 g.scale(zoom, zoom);
                 g.translate(-w / 2.0, -h / 2.0);
@@ -113,7 +113,7 @@ public final class SceneMain {
                     double startAtCue = PANEL_REPLAYS[0];
                     int idx = 0;
                     for (int i = 0; i < PANEL_REPLAYS.length; i++) if (t >= PANEL_REPLAYS[i]) { startAtCue = PANEL_REPLAYS[i]; idx = i; }
-                    row.renderPanelPart(g, w, h, t - startAtCue, idx);
+                    row.renderPanelPart(g, w, h, t, idx);
                 }
             }
         };
