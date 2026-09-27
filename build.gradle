@@ -317,6 +317,7 @@ tasks.register('runGame', JavaExec) {
     if (file('build/scene/way.wav').exists()) a += ['--song2', file('build/scene/way.wav').absolutePath]
     if (file('build/scene/frames').exists()) a += ['--frames', file('build/scene/frames').absolutePath,
             '--animAudio', file('build/scene/frames/anim.wav').absolutePath, '--animFps', '30']
+    if (project.hasProperty('start2')) a += ['--start2', project.getProperty('start2')]   // preview song 2
     args a
 }
 

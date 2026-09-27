@@ -39,13 +39,14 @@ public final class GameMain {
 
     public static void main(String[] args) throws Exception {
         String song1Wav = null, song2Wav = null, framesDir = null, animWav = null;
-        double animFps = 30;
+        double animFps = 30, startSong2 = -1;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
             if (args[i].equals("--frames")) framesDir = args[i + 1];
             if (args[i].equals("--animAudio")) animWav = args[i + 1];
             if (args[i].equals("--animFps")) animFps = Double.parseDouble(args[i + 1]);
+            if (args[i].equals("--start2")) startSong2 = Double.parseDouble(args[i + 1]);
         }
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
 
@@ -62,6 +63,7 @@ public final class GameMain {
         Karaoke karaoke = new Karaoke();
 
         Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, song1Wav, song2Wav, animWav);
+        if (startSong2 >= 0) engine.jumpToSong2(startSong2);
 
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
@@ -108,6 +110,14 @@ public final class GameMain {
             this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
+        }
+
+        /** Jump straight into song 2 at a given track time (for previewing phase two). */
+        void jumpToSong2(double seconds) {
+            phase = Phase.SONG2;
+            play(song2Wav);
+            if (clip != null) clip.setMicrosecondPosition((long) (seconds * 1_000_000));
+            g2.skipTo(seconds * 1000);
         }
 
         private void play(String wav) {

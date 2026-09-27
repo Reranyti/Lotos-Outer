@@ -84,11 +84,12 @@ final class FakeWindows {
         Win win = new Win();
         win.w = (int) (screenW * 0.22);
         win.h = (int) (win.w * 0.42);
-        double cx = screenW * 0.5, cy = screenH * 0.5;
-        double ang = i * 0.5;                       // winds around
-        double rad = (i % 40) * (screenW * 0.006);  // spirals out, then restarts the arm
-        win.x = (int) (cx + Math.cos(ang) * rad - win.w / 2.0);
-        win.y = (int) (cy + Math.sin(ang) * rad * 0.6 - win.h / 2.0);
+        // A diagonal staircase that bounces off the screen edges, like the classic error-spam cascade:
+        // each window steps a little right-and-down from the last, folding back at the borders.
+        double stepX = screenW * 0.022, stepY = screenH * 0.03;
+        double spanX = screenW - win.w, spanY = screenH - win.h;
+        win.x = (int) bounce(i * stepX, spanX);
+        win.y = (int) bounce(i * stepY, spanY);
         win.title = i % TITLES.length;
         win.body = rnd.nextInt(BODIES.length);
         win.btn = rnd.nextInt(BUTTONS.length);
@@ -166,6 +167,14 @@ final class FakeWindows {
             g.drawString(s, bx + bw / 5, byy + (int) (bh * 0.68));
             bx += bw + gap;
         }
+    }
+
+    /** Folds a growing value back and forth within [0, span] - a triangle wave, for the bounce. */
+    private static double bounce(double v, double span) {
+        if (span <= 0) return 0;
+        double m = v % (2 * span);
+        if (m < 0) m += 2 * span;
+        return m <= span ? m : 2 * span - m;
     }
 
     private static void wrap(Graphics2D g, String text, int x, int y, int maxW, int lineH) {
