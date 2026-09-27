@@ -7,7 +7,6 @@ import com.mojang.logging.LogUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.CodeSource;
 
 /**
  * The safe "the mod disappears" lock for the Нормальная_ветка ending. When the ending fires we write a
@@ -62,10 +61,8 @@ public final class NormalBranchLock {
     /** Identifies the installed jar - its size and modified time, so a reinstall reads as a new file. */
     private static String fingerprint() {
         try {
-            CodeSource src = NormalBranchLock.class.getProtectionDomain().getCodeSource();
-            if (src == null || src.getLocation() == null) return "dev";
-            Path jar = Path.of(src.getLocation().toURI());
-            if (!Files.isRegularFile(jar)) return "dev";      // running from classes, not a jar
+            Path jar = NormalBranchJar.jar();
+            if (jar == null) return "dev";      // running from build folders, not a jar
             return jar.getFileName() + "|" + Files.size(jar) + "|" + Files.getLastModifiedTime(jar).toMillis();
         } catch (Exception e) {
             return "dev";
