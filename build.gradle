@@ -303,10 +303,12 @@ tasks.register('runScene', JavaExec) {
 tasks.register('runRhythm', JavaExec) {
     classpath = sourceSets.main.output
     mainClass = 'com.lotusblight.overlay.RhythmMain'
-    def wav = file('build/scene/promised.wav')
-    def a = []
+    def song = project.hasProperty('song') ? project.getProperty('song') : '1'
+    def wav = file(song == '2' ? 'build/scene/way.wav' : 'build/scene/promised.wav')
+    def a = ['--song', song]
     if (wav.exists()) a += ['--audio', wav.absolutePath]
     if (project.hasProperty('at')) a += ['--at', project.getProperty('at')]
+    if (project.hasProperty('window')) a += ['--window']
     args a
 }
 

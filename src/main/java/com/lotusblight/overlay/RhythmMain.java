@@ -19,32 +19,39 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Runs the first song's rhythm game (PROMISED FUTURE) in a black full-screen window for playing and
- * tuning: circles over a dark backdrop, driven by the music clock, left-click to hit, Esc to quit. The
- * scene behind the circles will be added later; for now it is a plain backdrop.
+ * Runs a song's rhythm game: circles driven by the music clock, left-click to hit, Esc to quit. By
+ * default it plays over the real desktop as a see-through overlay (the desktop stays fully visible, other
+ * windows are minimized while it runs); pass --window for a plain black test window instead.
  *
- * Usage: java com.lotusblight.overlay.RhythmMain [--audio file.wav]
+ * Usage: java com.lotusblight.overlay.RhythmMain [--song 1|2] [--audio f.wav] [--at s] [--window]
  */
 public final class RhythmMain {
-    private static final String MAP = "/assets/lotusblight/overlay/map_1.osu";
     private static final int FPS = 60;
-    private static final int SONG1_HP = 48;
+    // Alpha 1 of 255: invisible, but it makes Windows send the clicks to us, not through to the desktop.
+    private static final Color CATCH_INPUT = new Color(0, 0, 0, 1);
 
     private RhythmMain() {}
 
     public static void main(String[] args) throws Exception {
         String audio = null;
         double startAt = 0;
-        for (int i = 0; i < args.length - 1; i++) {
-            if (args[i].equals("--audio")) audio = args[i + 1];
-            if (args[i].equals("--at")) startAt = Double.parseDouble(args[i + 1]);
+        int song = 1;
+        boolean desktop = true;
+        for (int i = 0; i < args.length; i++) {
+            if (i < args.length - 1 && args[i].equals("--audio")) audio = args[i + 1];
+            if (i < args.length - 1 && args[i].equals("--at")) startAt = Double.parseDouble(args[i + 1]);
+            if (i < args.length - 1 && args[i].equals("--song")) song = Integer.parseInt(args[i + 1]);
+            if (args[i].equals("--window")) desktop = false;
         }
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
 
-        OsuMap map = OsuMap.load(MAP);
-        RhythmGame game = new RhythmGame(map, SONG1_HP);
+        OsuMap map = OsuMap.load(song == 2 ? "/assets/lotusblight/overlay/map_2.osu"
+                : "/assets/lotusblight/overlay/map_1.osu");
+        RhythmGame game = new RhythmGame(map, song == 2 ? 180 : 48);
+        final boolean overDesktop = desktop;
         int[] skin = loadSkin();
         GraphicsConfiguration gc0 = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration();
@@ -64,13 +71,20 @@ public final class RhythmMain {
         final Clip music = clip;
         if (startAt > 0) game.skipTo(startAt * 1000);
 
+        // On the desktop overlay, clear other windows out of the way and bring them back on exit.
+        if (overDesktop && isWindows()) {
+            shell("MinimizeAll()");
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shell("UndoMinimizeALL()")));
+        }
+
         GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration();
         Rectangle screen = gc.getBounds();
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
         frame.setBounds(screen);
-        frame.setBackground(Color.BLACK);
+        frame.setBackground(overDesktop ? new Color(0, 0, 0, 0) : Color.BLACK);
+        frame.setAlwaysOnTop(overDesktop);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ESCAPE) System.exit(0); }
@@ -83,8 +97,16 @@ public final class RhythmMain {
                 int w = getWidth(), h = getHeight();
                 double t = music != null ? music.getMicrosecondPosition() / 1000.0
                         : base * 1000 + (System.nanoTime() - startNano) / 1_000_000.0;
-                g.setColor(new Color(0x120820));
-                g.fillRect(0, 0, w, h);
+                if (overDesktop) {
+                    // Barely-there fill so the desktop shows through but clicks still land on us.
+                    g.setComposite(java.awt.AlphaComposite.Src);
+                    g.setColor(CATCH_INPUT);
+                    g.fillRect(0, 0, w, h);
+                    g.setComposite(java.awt.AlphaComposite.SrcOver);
+                } else {
+                    g.setColor(new Color(0x120820));
+                    g.fillRect(0, 0, w, h);
+                }
 
                 game.update(t);
                 game.render(g, w, h, t);
@@ -121,6 +143,21 @@ public final class RhythmMain {
                 "/assets/lotusblight/textures/overlay/glitcher.png")) {
             java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(in);
             return img.getRGB(0, 0, 64, 64, null, 0, 64);
+        }
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase().contains("win");
+    }
+
+    /** Calls one method of Explorer's Shell.Application through PowerShell (minimize / restore windows). */
+    private static void shell(String call) {
+        try {
+            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+                    "(New-Object -ComObject Shell.Application)." + call)
+                    .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+            p.waitFor(5, TimeUnit.SECONDS);
+        } catch (Exception ignored) {
         }
     }
 }
