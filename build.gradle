@@ -278,6 +278,13 @@ tasks.register('runOverlay', JavaExec) {
     systemProperty 'lotusblight.overlay.debug', 'true'
 }
 
+// The walking-loop scene on its own, black full-screen: ./gradlew runTrail [-Pseconds=N]
+tasks.register('runTrail', JavaExec) {
+    classpath = sourceSets.main.output
+    mainClass = 'com.lotusblight.overlay.TrailMain'
+    args '--seconds', project.findProperty('seconds') ?: '30'
+}
+
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.register('lotusLibJar', Jar) {
     archiveBaseName = 'lotuslib'
