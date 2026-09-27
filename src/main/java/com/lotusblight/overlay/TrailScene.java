@@ -16,11 +16,11 @@ import java.awt.image.BufferedImage;
  */
 final class TrailScene {
     private static final int FRAMES = 48;            // sprites in one walk cycle
-    private static final double CYCLES_PER_SEC = 1.1;
-    private static final int STEP_FRAMES = 4;        // walk-frame gap between neighbours (leg criss-cross)
-    private static final double BEAT_SEC = 0.30;     // a copy appears each beat
+    private static final double CYCLES_PER_SEC = 0.6; // the live panel walker's pace
+    private static final int STEP_FRAMES = 6;        // walk-frame gap between neighbours (leg criss-cross)
+    private static final double BEAT_SEC = 0.60;     // 100 BPM - a frozen copy drops on each beat
     private static final double SWEEP_SEC = 2.2;     // the panel's trip across the screen
-    private static final double SPACING = 0.42;      // column gap as a fraction of sprite width
+    private static final double SPACING = 0.34;      // column gap as a fraction of sprite width
 
     private final BufferedImage[] sprites = new BufferedImage[FRAMES];
     private final double[] bob = new double[FRAMES];
@@ -66,22 +66,23 @@ final class TrailScene {
         double total = (slots - 1) * dx;
         double startX = w / 2.0 - total / 2.0;
         double floorY = h - barH - h * 0.02;
-        double leadFrame = time * CYCLES_PER_SEC * FRAMES;
 
-        // Copies come in one per beat until the row is full.
+        // Frozen copies drop in one per beat until the row is full. Each one keeps the walk phase it was
+        // dropped at, so the row is a still trail whose legs criss-cross - it does not march.
         double since = Math.max(0, time - sceneStart);
         int shown = Math.min(slots, (int) (since / BEAT_SEC) + 1);
 
         for (int i = 0; i < shown; i++) {
             double x = startX + i * dx;
-            int k = ((int) Math.round(leadFrame - i * STEP_FRAMES) % FRAMES + FRAMES) % FRAMES;
+            int k = (i * STEP_FRAMES) % FRAMES;
             g.drawImage(sprites[k], (int) (x - originX), (int) (floorY - bob[k] - originY), null);
         }
 
-        // Once the row is full, a purple band sweeps across showing one clean walker inside it.
+        // Once the row is full, a purple band sweeps across with the one live walker inside it.
         double rowFull = sceneStart + slots * BEAT_SEC;
         if (time > rowFull) {
             double p = ((time - rowFull) / SWEEP_SEC) % 1.0;
+            double leadFrame = time * CYCLES_PER_SEC * FRAMES;
             drawPanel(g, w, h, leadFrame, floorY, p);
         }
 
