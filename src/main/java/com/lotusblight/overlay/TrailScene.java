@@ -65,25 +65,15 @@ final class TrailScene {
         double startX = margin + originX;
         double floorY = h - baseBar - h * 0.02;
 
-        // Frozen copies drop in one per beat, left to right. Each keeps the pose it was dropped at, so
-        // the row is a still trail, not a march. Poses run in groups of four.
+        // A whole group of four (one pose) drops in at once on each beat, left to right. The copies are
+        // frozen, so the row is a still trail, not a march.
         double since = Math.max(0, time - sceneStart);
-        int shown = Math.min(slots, (int) (since / BEAT_SEC) + 1);
+        int groups = (int) (since / BEAT_SEC) + 1;
+        int shown = Math.min(slots, groups * POSE_RUN);
         for (int i = 0; i < shown; i++) {
             double x = startX + i * dx;
             int k = (i / POSE_RUN) % POSES;
-            double dy = floorY + lift[k] - originY;
-            // Each copy pops in tilted a little (alternating side) and rights itself to zero.
-            double age = since - i * BEAT_SEC;
-            double tilt = age < SETTLE_SEC ? (i % 2 == 0 ? 1 : -1) * 0.22 * (1 - age / SETTLE_SEC) : 0;
-            if (tilt != 0) {
-                java.awt.geom.AffineTransform old = g.getTransform();
-                g.rotate(tilt, x, floorY);
-                g.drawImage(sprites[k], (int) (x - originX), (int) dy, null);
-                g.setTransform(old);
-            } else {
-                g.drawImage(sprites[k], (int) (x - originX), (int) dy, null);
-            }
+            g.drawImage(sprites[k], (int) (x - originX), (int) (floorY + lift[k] - originY), null);
         }
 
         drawBars(g, w, h, baseBar, time - sceneStart);
