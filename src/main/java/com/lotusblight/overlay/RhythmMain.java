@@ -14,6 +14,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -114,13 +115,25 @@ public final class RhythmMain {
 
                 if (!game.alive() || game.finished(t)) {
                     over[0] = true;
-                    g.setColor(new Color(0, 0, 0, 160));
+                    boolean won = game.alive();
+                    g.setColor(new Color(0, 0, 0, 205));
                     g.fillRect(0, 0, w, h);
-                    g.setColor(game.alive() ? new Color(0xB060FF) : new Color(0xFF4060));
-                    g.setFont(g.getFont().deriveFont(Font.BOLD, (float) (h * 0.09)));
-                    String s = game.alive() ? "ПРОЙДЕНО" : "ПОРАЖЕНИЕ";
-                    int sw = g.getFontMetrics().stringWidth(s);
-                    g.drawString(s, (w - sw) / 2, h / 2);
+                    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    double acc = game.total() == 0 ? 0 : game.hits() / (double) game.total();
+                    if (won) {
+                        String grade = RhythmGame.grade(acc);
+                        overLine(g, w, "РАНГ  " + grade, h * 0.22, h * 0.13);
+                        overLine(g, w, String.format("Точность  %.1f%%", acc * 100), h * 0.44, h * 0.05);
+                        overLine(g, w, "Попаданий  " + game.hits() + " / " + game.total(), h * 0.53, h * 0.05);
+                        overLine(g, w, "Промахов  " + game.misses(), h * 0.61, h * 0.05);
+                        overLine(g, w, "Макс. комбо  " + game.maxCombo(), h * 0.69, h * 0.05);
+                    } else {
+                        g.setColor(new Color(0xFF4060));
+                        g.setFont(g.getFont().deriveFont(Font.BOLD, (float) (h * 0.12)));
+                        String s = "ПОРАЖЕНИЕ";
+                        g.drawString(s, (w - g.getFontMetrics().stringWidth(s)) / 2, (int) (h * 0.5));
+                    }
+                    overLine(g, w, "Esc — выход", h * 0.9, h * 0.035);
                 }
             }
         };
@@ -136,6 +149,12 @@ public final class RhythmMain {
         frame.setVisible(true);
         frame.requestFocus();
         new Timer(1000 / FPS, e -> frame.repaint()).start();
+    }
+
+    private static void overLine(Graphics2D g, int w, String s, double y, double size) {
+        g.setColor(new Color(0xE0C0FF));
+        g.setFont(g.getFont().deriveFont(Font.BOLD, (float) size));
+        g.drawString(s, (w - g.getFontMetrics().stringWidth(s)) / 2, (int) y);
     }
 
     private static int[] loadSkin() throws Exception {
