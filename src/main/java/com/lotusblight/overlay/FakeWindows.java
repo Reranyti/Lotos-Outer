@@ -62,6 +62,10 @@ final class FakeWindows {
     private final java.util.Random rnd = new java.util.Random(1);
     private double lastSpawnMs = -1;
     private double fade = 1;            // the whole pile fades out in the gaps between phrases
+    /** Next step along the staircase - it only moves on when a window takes a new spot. */
+    private int path;
+    /** Spots of windows the player closed; new windows fill these first, in the order they were freed. */
+    private final java.util.ArrayDeque<int[]> freed = new java.util.ArrayDeque<>();
 
     FakeWindows() {
         this.times = loadTimes();
@@ -70,7 +74,15 @@ final class FakeWindows {
     /** Spawns any dialog whose syllable has arrived and draws the pile. timeMs is the track time. */
     void render(Graphics2D g, int w, int h, double timeMs) {
         while (spawned < times.length && times[spawned] * 1000 <= timeMs) {
-            wins.add(makeWindow(spawned, w, h, times[spawned]));
+            // A closed window's spot is taken again before the staircase goes on, so closing windows
+            // keeps the wall where it was instead of letting it spread over more of the screen.
+            int[] spot = freed.poll();
+            Win win = makeWindow(spot == null ? path++ : path, w, h, times[spawned]);
+            if (spot != null) {
+                win.x = spot[0];
+                win.y = spot[1];
+            }
+            wins.add(win);
             lastSpawnMs = timeMs;
             fade = 1;
             spawned++;
@@ -80,7 +92,7 @@ final class FakeWindows {
         // In a gap between phrases (or after the last one), the whole wall fades away and clears.
         if (lastSpawnMs >= 0 && timeMs - lastSpawnMs > 1200) {
             fade -= 0.04;
-            if (fade <= 0) { wins.clear(); fade = 0; return; }
+            if (fade <= 0) { wins.clear(); freed.clear(); fade = 0; return; }
         }
         if (wins.isEmpty()) return;
 
@@ -97,13 +109,14 @@ final class FakeWindows {
             Win win = wins.get(i);
             if (mx >= win.x && mx <= win.x + win.w && my >= win.y && my <= win.y + win.h) {
                 wins.remove(i);
+                freed.add(new int[]{win.x, win.y});
                 return true;
             }
         }
         return false;
     }
 
-    void reset() { wins.clear(); spawned = 0; fade = 1; lastSpawnMs = -1; }
+    void reset() { wins.clear(); freed.clear(); spawned = 0; path = 0; fade = 1; lastSpawnMs = -1; }
 
     /** Lay the dialogs along a slowly turning path so the pile winds into a spiral, meme-style. */
     private Win makeWindow(int i, int screenW, int screenH, double tSec) {
