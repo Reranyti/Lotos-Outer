@@ -88,6 +88,12 @@ public final class LotusCommands {
                 .then(Commands.literal("enter").executes(ctx -> {
                     com.lotusblight.branch.NormalBranchEntry.begin(ctx.getSource().getPlayerOrException());
                     return 1;
+                }))
+                .then(Commands.literal("lock").executes(ctx -> {
+                    com.lotusblight.branch.NormalBranchLock.engage();
+                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                            "Lock written. The mod stands down on the next launch until it is reinstalled."), false);
+                    return 1;
                 }));
     }
 
