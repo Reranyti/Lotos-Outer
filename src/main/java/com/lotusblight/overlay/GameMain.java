@@ -154,6 +154,29 @@ public final class GameMain {
 
         private void stop() { if (clip != null) { clip.stop(); clip.close(); clip = null; } }
 
+        /**
+         * The track has played to its end. A song counts as over then even if its last circle sits too
+         * close to the end for the usual half-second after it - the clock follows the track, and stops
+         * with it.
+         */
+        private boolean trackOver() {
+            return clip != null && clip.getFramePosition() >= clip.getFrameLength();
+        }
+
+        /** Seconds the results or the defeat screen stays up before the fight closes by itself. */
+        private static final double END_SCREEN_SECONDS = 10;
+        private long endedAt;
+
+        private void end(Phase last) {
+            phase = last;
+            stop();
+            endedAt = System.nanoTime();
+        }
+
+        private void closeWhenShown() {
+            if ((System.nanoTime() - endedAt) / 1e9 >= END_SCREEN_SECONDS) System.exit(0);
+        }
+
         private double clockMs() {
             return clip != null ? clip.getMicrosecondPosition() / 1000.0
                     : (System.nanoTime() - phaseStartNano) / 1e6;
@@ -175,8 +198,8 @@ public final class GameMain {
                     g1.update(t);
                     g1.render(g, w, h, t);
                     hazards.render(g, w, h, t);
-                    if (!g1.alive()) { phase = Phase.DEFEAT; stop(); }
-                    else if (g1.finished(t)) { phase = Phase.SONG2; play(song2Wav); }
+                    if (!g1.alive()) end(Phase.DEFEAT);
+                    else if (g1.finished(t) || trackOver()) { phase = Phase.SONG2; play(song2Wav); }
                 }
                 case SONG2 -> {
                     g2.update(t);
@@ -192,11 +215,11 @@ public final class GameMain {
                         g2.render(g, w, h, t);
                         fakeWindows.render(g, w, h, t);
                     }
-                    if (!g2.alive()) { phase = Phase.DEFEAT; stop(); }
-                    else if (g2.finished(t)) { phase = Phase.RESULTS; stop(); }
+                    if (!g2.alive()) end(Phase.DEFEAT);
+                    else if (g2.finished(t) || trackOver()) end(Phase.RESULTS);
                 }
-                case RESULTS -> results(g, w, h);
-                case DEFEAT -> defeat(g, w, h);
+                case RESULTS -> { results(g, w, h); closeWhenShown(); }
+                case DEFEAT -> { defeat(g, w, h); closeWhenShown(); }
             }
         }
 
