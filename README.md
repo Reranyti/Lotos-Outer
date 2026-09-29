@@ -86,6 +86,14 @@ jar-файлы появятся в `build/libs/`. Моды, с которыми 
 
 Авторы: Reranyti и neiber573.
 
+
+##Скриноты ветки(Reranity)
+<img width="1255" height="753" alt="image" src="https://github.com/user-attachments/assets/e6e38819-b07e-433e-bebd-908644a2e1d9" />
+<img width="1263" height="725" alt="image" src="https://github.com/user-attachments/assets/7082c2d8-40da-4759-b266-7054fa570802" />
+<img width="1291" height="739" alt="image" src="https://github.com/user-attachments/assets/571e0cb0-0eb5-445f-a7ba-e0d743b240f7" />
+
+
+
 ---
 
 <a name="english"></a>
@@ -172,6 +180,8 @@ Automated checks (GameTest): `./gradlew runGameTestServer`. The recommended pack
 ## Links
 
 - [CHANGELOG.md](CHANGELOG.md) — version history
+
+
 - [ASSETS.md](ASSETS.md) — assets and their authors
 - [LICENSE](LICENSE) — license
 
