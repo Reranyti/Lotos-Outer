@@ -21,6 +21,9 @@ Lotus Blight — бесплатный некоммерческий фанатс�
 - **События.** Побег от лотоса, StarFall со Звёздным Светом, бой с боссом-предателем, внутренний
   голос, страницы дневника Объекта Ноль.
 - **Хончо.** Помощник на ветке войны, со своей моделью, катсценой встречи и историей.
+- **«Проклятая».** Четвёртая, скрытая ветка: измерение, «зависание» игры и босс Глитчер прямо на
+  вашем рабочем столе (ритм-бой из двух песен). Ничего не удаляет и не читает ваши файлы — подробности в
+  [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **Живая карта**, очищающий порошок, метеоритное снаряжение, репутация с фракциями, свой календарь.
 
 ## Установка
@@ -119,6 +122,9 @@ characters or story (see [LICENSE](LICENSE) and [ASSETS.md](ASSETS.md)).
 - **Events.** The Lotus Chase, StarFall with Star Light, the traitor boss fight, the inner voice, the
   Object Zero diary pages.
 - **Honcho.** An assistant on the war branch, with his own model, meeting cutscene and story.
+- **The Cursed branch.** A fourth, hidden branch: a dimension, the game "freezing", and the Glitcher boss
+  right on your desktop (a two-song rhythm fight). It deletes nothing and reads none of your files —
+  see [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **A living map**, cleansing powder, meteorite gear, faction reputation, a calendar of its own.
 
 ## Installing
