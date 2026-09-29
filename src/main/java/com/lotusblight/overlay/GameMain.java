@@ -38,6 +38,27 @@ public final class GameMain {
     /** Icons taken off the desktop before the fight (by the exit scene), kept covered while it runs. */
     private static volatile DesktopSnapshot hiddenIcons;
 
+    /** The pictures of the desktop's icons (from the screen shot taken before the fight), or none. */
+    static java.util.List<java.awt.image.BufferedImage> desktopIcons() {
+        DesktopSnapshot d = hiddenIcons;
+        java.util.List<java.awt.image.BufferedImage> list = new java.util.ArrayList<>();
+        if (d != null) for (DesktopSnapshot.Icon icon : d.icons) list.add(icon.image);
+        return list;
+    }
+
+    static java.util.List<java.awt.Rectangle> desktopIconSpots() {
+        DesktopSnapshot d = hiddenIcons;
+        java.util.List<java.awt.Rectangle> list = new java.util.ArrayList<>();
+        if (d != null) for (DesktopSnapshot.Icon icon : d.icons) list.add(icon.bounds);
+        return list;
+    }
+
+    /** He picked this one up: the overlay paints bare wallpaper over it (nothing on the real desktop moves). */
+    static void takeDesktopIcon(int index) {
+        DesktopSnapshot d = hiddenIcons;
+        if (d != null && index >= 0 && index < d.icons.size()) d.icons.get(index).taken = true;
+    }
+
     static void keepIconsHidden(DesktopSnapshot desktop) {
         hiddenIcons = desktop;
     }
@@ -206,6 +227,7 @@ public final class GameMain {
                     // From 2:15 the finale animation is the backdrop: it goes down first, the chorus
                     // lyrics over it, and the circles with the HP bars on top of everything, so the fight
                     // carries on over the video. Before that the circles play over the desktop, with the
+                    hazards.renderBack(g, w, h, t);
                     // Glitcher's fake error windows piling up on top of them.
                     if (anim != null && t >= ANIM_START_MS && anim.ready()) {
                         anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);

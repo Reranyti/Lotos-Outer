@@ -16,95 +16,313 @@ import java.awt.image.BufferedImage;
 final class Hazards {
     private static final double FAKE_START_MS = 81_000;   // 1:21 - the Glitcher starts spewing decoys
 
-    private final BufferedImage glitcher;
-    private final int gW;
-    private final int gH;
+    private static final double WATCH_START_MS = 92_000; // 1:32 - the field draws away, something looks on
+    private static final double RETURN_MS = 104_000;      // 1:44 - all of it goes, back to the wallpaper
+    private static final double AERO_IN_MS = 30_000;      // 0:30 - the desktop turns into an Aero wallpaper
+    private static final int EYES = 800;
+    private static final int PER_RING = 26;             // eyes in one ring; the rings grow outwards like scales
+    private static final double RING_GROWTH = 1.125;
+    private static final double SPIN_RAMP_S = 6.0;         // how long the eyes take to get up to speed
+    private static final double SPIN_MAX = 0.6;            // rad/s once they do
 
+    private final GlitcherActor actor;
+    private java.util.List<BufferedImage> icons;
+    private final BufferedImage eyeSprite = makeEyeSprite();
+    // Each eye: polar angle, distance from the centre (0 hole edge .. 1 screen rim), tilt jitter, size jitter.
+    private final double[][] eyes = new double[EYES][4];
+    private final double[][] stars = new double[320][4];     // x, y (0..1), brightness, twinkle
+    private final double[][] streaks = new double[520][3];   // angle, how far out, brightness
 
     Hazards(int[] skin, int height) {
-        double scale = height * 0.40 / 32.0;
-        double rs = scale / 2;
-        SkinModel model = new SkinModel();
-        SoftRenderer r = new SoftRenderer((int) (26 * rs), (int) (42 * rs));
-        r.clear();
-        SoftRenderer.Pose p = new SoftRenderer.Pose();
-        p.yaw = -0.4;
-        p.partPitch[SkinModel.Part.HEAD.ordinal()] = 0.1;
-        r.draw(model, skin, p, rs, r.width / 2.0, r.height - 2 * rs);
-        this.gW = r.width * 2;
-        this.gH = r.height * 2;
-        this.glitcher = new BufferedImage(gW, gH, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = glitcher.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-        g.drawImage(r.image, 0, 0, gW, gH, null);
-        g.dispose();
+        java.util.Random rnd = new java.util.Random(81);
+        for (double[] s : stars) { s[0] = rnd.nextDouble(); s[1] = rnd.nextDouble(); s[2] = 0.3 + rnd.nextDouble() * 0.7; s[3] = rnd.nextDouble(); }
+        for (double[] s : streaks) { s[0] = rnd.nextDouble() * Math.PI * 2; s[1] = Math.pow(rnd.nextDouble(), 1.6); s[2] = rnd.nextDouble(); }
+        for (double[] e : eyes) {
+            e[0] = rnd.nextDouble() * Math.PI * 2;
+            e[1] = Math.pow(rnd.nextDouble(), 0.75);
+            e[2] = (rnd.nextDouble() - 0.5) * 1.2;
+            e[3] = 0.8 + rnd.nextDouble() * 0.5;
+        }
+        this.actor = new GlitcherActor(skin, height);
     }
 
     void render(Graphics2D g, int w, int h, double timeMs) {
         double t = timeMs / 1000.0;
 
-        drawFakes(g, w, h, timeMs);
+        // From 1:21 the eyes open all over the screen and he goes to stand in the middle of them.
+        // From 1:32 the whole field draws away and something behind it looks on; at 1:44 it is all gone.
+        double k = fieldAmount(timeMs);
+        double z = recede(timeMs);
+        double fs = 1 - 0.7 * z;                                   // how much of its size the field keeps
+        double fcy = h * 0.5 + h * 0.24 * z;                       // and where it sits
 
-        // The Glitcher paces across the lower playfield, swaying, blocking whatever he passes.
-        double gx = w * (0.5 + 0.42 * Math.sin(t * 0.55));
-        double gy = h * 0.72 + Math.abs(Math.sin(t * 1.6)) * h * 0.03;
-        double lean = Math.sin(t * 0.55) * 0.12;
-        java.awt.geom.AffineTransform old = g.getTransform();
-        g.rotate(lean, gx, gy);
-        g.drawImage(glitcher, (int) (gx - gW / 2.0), (int) (gy - gH), null);
-        g.setTransform(old);
+        // The Glitcher walks, throws icons, stomps and rises to the middle of the eyes.
+        if (icons == null && timeMs >= GlitcherActor.COLLECT_FROM - 2000) icons = loadIcons();
+        if (!actorBehind(timeMs)) actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+        actor.renderEffects(g, w, h, timeMs, h * 0.72);
+    }
 
-        // Every so often a purple wall slides across and hides the circles behind it.
-        double period = 9.0;
-        double phase = (t % period) / period;
-        if (phase < 0.5) {
-            double p = phase / 0.5;                    // 0..1 sweep
-            double bandW = w * 0.26;
-            double cx = -bandW + (w + 2 * bandW) * p;
-            Graphics2D b = (Graphics2D) g.create();
-            b.setPaint(new GradientPaint((float) (cx - bandW / 2), 0, new Color(0x2A0B4A),
-                    (float) (cx + bandW / 2), 0, new Color(0x6A24C0)));
-            b.fillRect((int) (cx - bandW / 2), 0, (int) bandW, h);
-            // A soft glitch edge.
-            b.setColor(new Color(0xB0, 0x60, 0xFF, 120));
-            b.fillRect((int) (cx + bandW / 2 - 4), 0, 4, h);
-            b.fillRect((int) (cx - bandW / 2), 0, 4, h);
-            b.dispose();
+    private static java.util.List<BufferedImage> loadIcons() {
+        java.util.List<BufferedImage> found = GameMain.desktopIcons();
+        return found.isEmpty() ? GlitcherActor.fallbackIcons() : found;
+    }
+
+    private static double smooth(double x) {
+        x = Math.max(0, Math.min(1, x));
+        return x * x * (3 - 2 * x);
+    }
+
+    /** How much of the eye field is there: opens from 1:21, is gone again by 1:44. */
+    private static double fieldAmount(double timeMs) {
+        return smooth((timeMs - FAKE_START_MS) / 1000.0) * (1 - smooth((timeMs - RETURN_MS) / 1500.0));
+    }
+
+    /** How far the field has drawn away: 0 up to 1:32, 1 while it looks on, back to 0 as it all ends. */
+    private static double recede(double timeMs) {
+        return smooth((timeMs - WATCH_START_MS) / 2500.0) * (1 - smooth((timeMs - RETURN_MS) / 1500.0));
+    }
+
+    /** How much of the Aero wallpaper shows: in from 0:30, torn away for the eyes at 1:20, back at 1:44. */
+    private static double aeroAmount(double ms) {
+        double first = ms < GlitcherActor.BLACKOUT_MS ? smooth((ms - AERO_IN_MS) / 3000.0) : 0;
+        double again = smooth((ms - RETURN_MS) / 2000.0);
+        return Math.max(first, again);
+    }
+
+    /** Glitching only while it is being torn away or put back; the slow fade in at 0:30 is smooth. */
+    private static double aeroGlitch(double ms) {
+        if (ms >= RETURN_MS && ms < RETURN_MS + 2000) return 1 - (ms - RETURN_MS) / 2000.0;
+        return 0;
+    }
+
+    // The wallpaper before the eyes and the (different) one the desktop comes back to after them.
+    private final BufferedImage[] aeroPics = new BufferedImage[2];
+
+    private void drawAero(Graphics2D g, int w, int h, double ms) {
+        double a = aeroAmount(ms);
+        if (a <= 0) return;
+        int variant = ms >= RETURN_MS ? 1 : 0;
+        BufferedImage aero = aeroPics[variant];
+        if (aero == null || aero.getWidth() != w || aero.getHeight() != h) {
+            aero = AeroWallpaper.paint(w, h, variant);
+            aeroPics[variant] = aero;
         }
+        double t = ms / 1000.0;
+        Graphics2D b = (Graphics2D) g.create();
+        b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) a));
+        double glitch = aeroGlitch(ms);
+        if (glitch <= 0) {
+            b.drawImage(aero, 0, 0, null);
+        } else {
+            // The picture comes apart in strips that slide sideways, and the colour channels drift.
+            java.util.Random rnd = new java.util.Random((long) (ms / 90));
+            int strips = 26;
+            int sh = h / strips + 1;
+            for (int i = 0; i < strips; i++) {
+                int y = i * sh;
+                int dx = (int) ((rnd.nextDouble() - 0.5) * 2 * w * 0.09 * glitch);
+                b.drawImage(aero, dx, y, dx + w, Math.min(h, y + sh), 0, y, w, Math.min(h, y + sh), null);
+            }
+        }
+        // Soft bubbles rising, a little different every moment.
+        AeroWallpaper.bubbles(b, w, h, t, a);
+        b.dispose();
     }
 
     /**
-     * From 1:21, decoy circles fill the whole screen as two counter-rotating spiral arms - one winding
-     * left, one right - all looking like real notes, to confuse the eye.
+     * The part that lies behind everything, including the circles, so they stay in reach: while the field
+     * has drawn away, the screen goes to a starry dark with a black disc and a single eye in it, streaks
+     * winding into it, watching the game - and the cursor.
      */
-    private void drawFakes(Graphics2D g, int w, int h, double timeMs) {
-        if (timeMs < FAKE_START_MS) return;
-        double cx = w * 0.5, cy = h * 0.5;
-        double note = h * 0.06;
-        double maxR = Math.hypot(w, h) / 2 * 1.05;
-        int count = 46;
-        double turns = 3.0;                            // how many times the arm winds to the centre
-        double t = timeMs / 1000.0;
-        double travel = t * 0.16;                      // circles fly inward
-        double spin = t * 0.35;                        // and the whole tunnel turns
+    void renderBack(Graphics2D g, int w, int h, double timeMs) {
+        drawAero(g, w, h, timeMs);
+        actor.renderAnger(g, w, h, timeMs);
+        double dark = GlitcherActor.blackout(timeMs);
+        if (dark > 0) {
+            g.setColor(new Color(0, 0, 0, (int) (255 * dark)));
+            g.fillRect(0, 0, w, h);
+        }
+        double z = recede(timeMs);
+        if (z > 0) drawVoid(g, w, h, timeMs, z);
+        // The eyes lie behind the circles and the health bars, so the notes stay easy to read.
+        double fs = 1 - 0.7 * z, fcy = h * 0.5 + h * 0.24 * z;
+        drawEyes(g, w, h, timeMs, fieldAmount(timeMs), fcy, fs);
+        if (actorBehind(timeMs)) {
+            if (icons == null) icons = loadIcons();
+            actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+        }
+    }
 
+    /** While the eyes are open he floats behind the circles, so he never hides a note. */
+    private static boolean actorBehind(double ms) {
+        return ms >= GlitcherActor.STOMP_MS && ms < GlitcherActor.RETURN_MS + 3000;
+    }
+
+    private void drawVoid(Graphics2D g, int w, int h, double timeMs, double z) {
+        double t = timeMs / 1000.0;
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        for (int i = 0; i < count; i++) {
-            double depth = ((i / (double) count) - travel) % 1.0;   // 0 at the centre, 1 at the rim
-            if (depth < 0) depth += 1;
-            double r = maxR * depth;
-            double ang = depth * turns * Math.PI * 2 + spin;
-            double x = cx + Math.cos(ang) * r;
-            double y = cy + Math.sin(ang) * r;
-            double size = note * (0.22 + 0.9 * depth);              // small deep in, big at the rim
-            float alpha = (float) Math.min(1, depth * 2.5);         // fade out of the centre
-            b.setColor(new Color(0x2A, 0x0B, 0x4A, (int) (alpha * 200)));
-            b.fillOval((int) (x - size), (int) (y - size), (int) (size * 2), (int) (size * 2));
-            b.setStroke(new BasicStroke((float) (size * 0.18)));
-            b.setColor(new Color(0xB0, 0x60, 0xFF, (int) (alpha * 235)));
-            b.drawOval((int) (x - size), (int) (y - size), (int) (size * 2), (int) (size * 2));
+        b.setColor(new Color(0, 0, 0, (int) (250 * z)));
+        b.fillRect(0, 0, w, h);
+
+        for (int i = 0; i < stars.length; i++) {
+            double[] s = stars[i];
+            float tw = (float) (0.55 + 0.45 * Math.sin(t * (0.8 + s[3]) + s[2] * 6.28));
+            b.setColor(new Color(1f, 1f, 1f, (float) (z * tw * s[2])));
+            int sz = s[3] > 0.8 ? 3 : 2;
+            b.fillRect((int) (s[0] * w), (int) (s[1] * h), sz, sz);
+        }
+
+        double cx = w * 0.5, cy = h * 0.36, disc = h * 0.2;
+        // The streaks wind into the disc from all sides and slowly turn.
+        b.setStroke(new BasicStroke(1.4f));
+        for (double[] s : streaks) {
+            double r0 = disc * (1.25 + s[1] * 5.0);
+            double a0 = s[0] + t * 0.05 * (1 + s[2]);
+            double px = 0, py = 0;
+            for (int j = 0; j <= 7; j++) {
+                double r = r0 * (1 - j / 8.0 * 0.32);
+                double a = a0 + Math.log(r0 / r) * 2.2 + 0.0;
+                double x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.9;
+                if (j > 0) {
+                    float al = (float) (z * 0.5 * (1 - (r / (disc * 6.5))) * (0.4 + 0.6 * s[2]));
+                    if (al > 0) {
+                        b.setColor(new Color(1f, 1f, 1f, Math.min(1f, al)));
+                        b.draw(new java.awt.geom.Line2D.Double(px, py, x, y));
+                    }
+                }
+                px = x; py = y;
+            }
+        }
+        // The line of light across the middle.
+        b.setPaint(new GradientPaint(0, (float) cy, new Color(1f, 1f, 1f, 0f), (float) (w * 0.5), (float) cy,
+                new Color(1f, 1f, 1f, (float) (0.9 * z))));
+        b.fillRect(0, (int) cy - 1, w / 2, 2);
+        b.setPaint(new GradientPaint((float) (w * 0.5), (float) cy, new Color(1f, 1f, 1f, (float) (0.9 * z)), w, (float) cy,
+                new Color(1f, 1f, 1f, 0f)));
+        b.fillRect(w / 2, (int) cy - 1, w - w / 2, 2);
+
+        // The disc, and the eye in it.
+        b.setColor(new Color(0, 0, 0, (int) (255 * z)));
+        b.fillOval((int) (cx - disc), (int) (cy - disc), (int) (disc * 2), (int) (disc * 2));
+        b.setColor(new Color(1f, 1f, 1f, (float) (0.35 * z)));
+        b.setStroke(new BasicStroke(3f));
+        b.drawOval((int) (cx - disc), (int) (cy - disc), (int) (disc * 2), (int) (disc * 2));
+
+        double blink = 1 - 0.9 * Math.max(0, 1 - Math.abs(((t % 5.3) - 2.65)) * 7);     // a slow blink now and then
+        double ew = disc * 0.95, eh = disc * 0.5 * blink;
+        java.awt.geom.Path2D.Double eye = new java.awt.geom.Path2D.Double();
+        eye.moveTo(cx - ew, cy);
+        eye.quadTo(cx, cy - eh * 2, cx + ew, cy);
+        eye.quadTo(cx, cy + eh * 2, cx - ew, cy);
+        eye.closePath();
+        b.setColor(new Color(1f, 1f, 1f, (float) z));
+        b.setStroke(new BasicStroke(4f));
+        b.draw(eye);
+        java.awt.Shape oldClip = b.getClip();
+        b.clip(eye);
+        // It looks where the cursor is.
+        double lx = 0, ly = 0;
+        try {
+            java.awt.PointerInfo pi = java.awt.MouseInfo.getPointerInfo();
+            if (pi != null) {
+                lx = pi.getLocation().x - cx;
+                ly = pi.getLocation().y - cy;
+            }
+        } catch (RuntimeException ignored) { }
+        double len = Math.hypot(lx, ly);
+        double reach = disc * 0.32;
+        double ix = cx + (len > 0 ? lx / len * Math.min(reach, len * 0.25) : 0);
+        double iy = cy + (len > 0 ? ly / len * Math.min(reach * 0.5, len * 0.12) : 0);
+        double ir = disc * 0.3;
+        b.setColor(new Color(1f, 1f, 1f, (float) z));
+        b.fillOval((int) (ix - ir), (int) (iy - ir), (int) (ir * 2), (int) (ir * 2));
+        b.setColor(new Color(0, 0, 0, (int) (255 * z)));
+        double pr = ir * 0.45;
+        b.fillOval((int) (ix - pr), (int) (iy - pr), (int) (pr * 2), (int) (pr * 2));
+        b.setClip(oldClip);
+        b.dispose();
+    }
+
+    /**
+     * From 1:21 a great many eyes fill the screen around a black hole with the Glitcher in it, all
+     * looking at him. After a few seconds the whole field starts to turn, slowly and then faster.
+     */
+    private void drawEyes(Graphics2D g, int w, int h, double timeMs, double k, double cy, double fs) {
+        if (k <= 0) return;
+        double cx = w * 0.5;
+        double hole = h * 0.24 * fs;
+        double maxR = Math.hypot(w, h) / 2 * 1.02 * fs;
+        double dt = Math.max(0, (timeMs - FAKE_START_MS) / 1000.0 - 2.0);
+        double rot = SPIN_MAX * (dt - SPIN_RAMP_S * (1 - Math.exp(-dt / SPIN_RAMP_S)));
+
+        Graphics2D b = (Graphics2D) g.create();
+        b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        b.setColor(new Color(0, 0, 0, (int) (235 * k)));
+        b.fillOval((int) (cx - hole), (int) (cy - hole), (int) (hole * 2), (int) (hole * 2));
+        double t = timeMs / 1000.0;
+        // Rings of eyes, each ring a step further out and a step bigger, lying along the ring like scales.
+        int idx = 0;
+        double r = hole * 1.14;
+        for (int ring = 0; r < maxR * 1.08 && idx + PER_RING <= EYES; ring++, r *= RING_GROWTH) {
+            double spin = rot;
+            double stagger = (ring % 2) * Math.PI / PER_RING;
+            double depth = Math.min(1.0, 0.55 + 0.05 * ring);
+            double len = Math.PI * 2 * r / PER_RING;
+            for (int j = 0; j < PER_RING; j++, idx++) {
+                double[] e = eyes[idx];
+                double ang = j * Math.PI * 2 / PER_RING + stagger + spin + (e[2] * 0.02);
+                double x = cx + Math.cos(ang) * r;
+                double y = cy + Math.sin(ang) * r;
+                double sc = len * 1.02 * (0.94 + 0.12 * e[3]) / eyeSprite.getWidth();
+                double tilt = ang + Math.PI / 2 + e[2] * 0.08;
+                // A slow blink, each eye on its own time.
+                double bl = (t * 0.27 + e[0] * 0.16) % 1.0;
+                double lid = bl < 0.05 ? Math.abs(bl / 0.05 - 0.5) * 2 : 1;
+                b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) (k * depth)));
+                java.awt.geom.AffineTransform old = b.getTransform();
+                b.translate(x, y);
+                b.rotate(tilt);
+                b.scale(sc, sc * (0.15 + 0.85 * lid));
+                b.drawImage(eyeSprite, -eyeSprite.getWidth() / 2, -eyeSprite.getHeight() / 2, null);
+                // The pupil looks at the middle: inwards along the eye's own y axis.
+                if (lid > 0.5) {
+                    b.setColor(new Color(255, 255, 255, 235));
+                    b.fillOval(-11, 6 - 11, 22, 22);
+                    b.setColor(new Color(0x9A, 0x90, 0x30, 200));
+                    b.fillOval(-13, 4 - 4, 10, 10);
+                }
+                b.setTransform(old);
+            }
         }
         b.dispose();
+    }
+
+    /** One eye outline, doubled with a pink and an olive ghost like a badly printed page. */
+    private static BufferedImage makeEyeSprite() {
+        int sw = 200, sh = 100;
+        BufferedImage img = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        java.awt.geom.Path2D.Double almond = new java.awt.geom.Path2D.Double();
+        almond.moveTo(12, sh / 2.0);
+        almond.quadTo(sw / 2.0, -34, sw - 12, sh / 2.0);
+        almond.quadTo(sw / 2.0, sh + 34, 12, sh / 2.0);
+        almond.closePath();
+        g.setColor(new Color(0, 0, 0, 120));
+        g.fill(almond);
+        g.setStroke(new BasicStroke(3.5f));
+        g.translate(4, 3);
+        g.setColor(new Color(0xB0, 0x50, 0x90, 170));
+        g.draw(almond);
+        g.translate(-8, 1);
+        g.setColor(new Color(0x90, 0x90, 0x30, 170));
+        g.draw(almond);
+        g.translate(4, -4);
+        g.setColor(new Color(255, 255, 255, 235));
+        g.draw(almond);
+        g.dispose();
+        return img;
     }
 }

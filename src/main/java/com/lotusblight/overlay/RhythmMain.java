@@ -81,6 +81,12 @@ public final class RhythmMain {
         GraphicsConfiguration gc = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration();
         Rectangle screen = gc.getBounds();
+        if (overDesktop) {
+            Thread.sleep(900);                      // let the windows finish minimising before looking
+            // The icons on the desktop, as the fight gets them from the exit: pictures only, the real ones stay put.
+            java.awt.Insets insets = java.awt.Toolkit.getDefaultToolkit().getScreenInsets(gc);
+            GameMain.keepIconsHidden(DesktopSnapshot.capture(screen, screen.height - insets.bottom));
+        }
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
         frame.setBounds(screen);
@@ -110,6 +116,7 @@ public final class RhythmMain {
                 }
 
                 game.update(t);
+                hazards.renderBack(g, w, h, t);
                 game.render(g, w, h, t);
                 hazards.render(g, w, h, t);
 
