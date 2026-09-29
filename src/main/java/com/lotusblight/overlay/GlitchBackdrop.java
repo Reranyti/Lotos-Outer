@@ -57,7 +57,7 @@ final class GlitchBackdrop {
         o.setColor(new Color(0, 0, 0, 55));
         for (int y = 0; y < h; y += 4) o.fillRect(0, y, w, 1);
         o.setPaint(new RadialGradientPaint((float) (w / 2.0), (float) (h / 2.0), (float) (h * 0.78), new float[]{0f, 0.6f, 1f},
-                new Color[]{new Color(0, 0, 0, 165), new Color(0, 0, 0, 105), new Color(0, 0, 0, 25)}));
+                new Color[]{new Color(0, 0, 0, 70), new Color(0, 0, 0, 40), new Color(0, 0, 0, 0)}));
         o.fillRect(0, 0, w, h);
         o.dispose();
     }

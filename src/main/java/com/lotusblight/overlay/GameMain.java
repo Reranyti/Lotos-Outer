@@ -65,6 +65,12 @@ public final class GameMain {
     // The finale animation plays as the song-2 backdrop from 2:15 (the video is that 2:15-3:04 window).
     private static final double ANIM_START_MS = 135_000;
 
+    // Set with --record FILE: instead of the eye mechanic, every space-bar press is written to FILE with the
+    // song clock, so the moments for the eye can be taken from someone tapping the beat.
+    private static File recordFile;
+    // Set with --contact WAV: the track that plays while the eye mechanic runs (the song itself is stopped then).
+    private static String contactWav;
+
     public static void main(String[] args) throws Exception {
         String song1Wav = null, song2Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
         double animFps = 30, startSong2 = -1;
@@ -77,7 +83,10 @@ public final class GameMain {
             if (args[i].equals("--animAudio")) animWav = args[i + 1];
             if (args[i].equals("--animFps")) animFps = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--start2")) startSong2 = Double.parseDouble(args[i + 1]);
+            if (args[i].equals("--record")) recordFile = new File(args[i + 1]);
+            if (args[i].equals("--contact")) contactWav = args[i + 1];
         }
+        if (recordFile != null) java.nio.file.Files.deleteIfExists(recordFile.toPath());
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
         // Pictures are read straight from memory - no temporary cache files on disk.
         javax.imageio.ImageIO.setUseCache(false);
@@ -88,7 +97,7 @@ public final class GameMain {
         OsuMap map1 = OsuMap.load("/assets/lotusblight/overlay/map_1.osu");
         OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2.osu");
         RhythmGame g1 = new RhythmGame(map1, 48);
-        RhythmGame g2 = new RhythmGame(map2, 220);
+        RhythmGame g2 = new RhythmGame(map2, 260);
         Hazards hazards = new Hazards(skin, screen.height);
         // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
         FinaleVideo anim = video != null || videoResource != null ? openVideo(video, videoResource)
@@ -96,10 +105,10 @@ public final class GameMain {
         FakeWindows fakeWindows = new FakeWindows();
         Karaoke karaoke = new Karaoke();
 
-        double[] contactBeats = ContactBreak.pickBeats(map2);
-        g2.mute(ContactBreak.START, ContactBreak.END);       // the eyes take over from the circles
+        double[] contactBeats = ContactBreak.beatTimes();
+        g2.mute(ContactBreak.START, ContactBreak.END);          // the eyes take over from the circles
         ContactBreak contact = new ContactBreak(contactBeats, g2::hurt,
-                () -> g2.contactHit(1.0 / Math.max(1, contactBeats.length)), skin);
+                () -> g2.contactHit(1.0 / Math.max(1, contactBeats.length)));
         Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, animWav);
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
 
@@ -146,6 +155,13 @@ public final class GameMain {
         private final FakeWindows fakeWindows;
         private final Karaoke karaoke;
         private final ContactBreak contact;
+        // The lesson: at 1:19 the song is paused, Honcho's track plays, and when it's done the song goes on.
+        private boolean tutorial, tutorialDone;
+        private long tutorialStartNano;
+        private Clip briefClip;
+        private boolean briefStarted;
+        private long resumeNano = -1;
+        private final ContactBreak tutor = new ContactBreak(ContactBreak.tutorialBeats(), d -> { }, () -> { });
         private java.awt.image.BufferedImage glitchBuf;
         private final String song1Wav, song2Wav, animWav;
         private Phase phase = Phase.SONG1;
@@ -156,18 +172,60 @@ public final class GameMain {
             this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k; this.contact = contact;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
+            if (contactWav != null) {
+                try (AudioInputStream in = AudioSystem.getAudioInputStream(new File(contactWav))) {
+                    briefClip = AudioSystem.getClip();
+                    briefClip.open(in);
+                } catch (Exception e) { briefClip = null; }
+            }
+        }
+
+        private static void gain(Clip c, double db) {
+            try {
+                javax.sound.sampled.FloatControl f = (javax.sound.sampled.FloatControl) c.getControl(javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
+                f.setValue((float) Math.max(f.getMinimum(), Math.min(f.getMaximum(), db)));
+            } catch (Exception ignored) { }
+        }
+
+        private void enterTutorial() {
+            if (clip != null) clip.stop();                  // stays open, where it stopped
+            tutor.setTutorial();
+            tutorial = true;
+            tutorialStartNano = System.nanoTime();
+            if (briefClip != null) { gain(briefClip, 0); briefClip.setFramePosition(0); briefClip.start(); }
+        }
+
+        private double tutorialMs() { return (System.nanoTime() - tutorialStartNano) / 1e6; }
+
+        private void stepTutorial(double tut) {
+            if (briefClip != null) {
+                double left = ContactBreak.TUTORIAL_LEN - tut;             // Honcho's track fades out over its last second and a half
+                gain(briefClip, left < 1500 ? -60 * (1 - Math.max(0, left) / 1500.0) : 0);
+            }
+            if (tut >= ContactBreak.TUTORIAL_LEN) {
+                tutorial = false;
+                tutorialDone = true;
+                if (briefClip != null) briefClip.stop();
+                if (clip != null) {
+                    gain(clip, -50);
+                    clip.start();                                          // from where it stopped
+                    resumeNano = System.nanoTime();
+                }
+            }
         }
 
         /** Jump straight into song 2 at a given track time (for previewing phase two). */
         void jumpToSong2(double seconds) {
             phase = Phase.SONG2;
+            if (seconds * 1000 >= ContactBreak.START) tutorialDone = true;
             play(song2Wav);
             if (clip != null) clip.setMicrosecondPosition((long) (seconds * 1_000_000));
             g2.skipTo(seconds * 1000);
         }
 
         private void play(String wav) {
-            stop();
+            // Only the song itself: Honcho's track, opened at the start, has to survive the change of song.
+            if (clip != null) { clip.stop(); clip.close(); clip = null; }
             // Without a track the clock runs on its own, so each song still starts from zero.
             phaseStartNano = System.nanoTime();
             if (wav == null) return;
@@ -179,7 +237,10 @@ public final class GameMain {
             phaseStartNano = System.nanoTime();
         }
 
-        private void stop() { if (clip != null) { clip.stop(); clip.close(); clip = null; } }
+        private void stop() {
+            if (clip != null) { clip.stop(); clip.close(); clip = null; }
+            if (briefClip != null) { briefClip.stop(); briefClip.close(); briefClip = null; }
+        }
 
         /**
          * The track has played to its end. A song counts as over then even if its last circle sits too
@@ -209,8 +270,42 @@ public final class GameMain {
                     : (System.nanoTime() - phaseStartNano) / 1e6;
         }
 
+        private int taps;
+        private double lastTapMs = -1e9;
+
         void space() {
-            if (phase == Phase.SONG2) contact.press(clockMs());
+            if (phase != Phase.SONG2) return;
+            double t = clockMs();
+            if (recordFile != null) {
+                taps++;
+                lastTapMs = t;
+                try {
+                    java.nio.file.Files.writeString(recordFile.toPath(), String.format(java.util.Locale.ROOT, "%.1f%n", t),
+                            java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+                } catch (java.io.IOException ignored) { }
+                return;
+            }
+            if (tutorial) { tutor.press(ContactBreak.START + tutorialMs()); return; }
+            contact.press(t);
+        }
+
+        private void recordHud(Graphics2D g, int w, int h, double t) {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            double since = t - lastTapMs;
+            if (since >= 0 && since < 300) {
+                double f = since / 300.0;
+                double r = h * (0.07 + 0.12 * f);
+                g.setStroke(new java.awt.BasicStroke((float) (h * 0.012 * (1 - f) + 2)));
+                g.setColor(new Color(255, 255, 255, (int) (255 * (1 - f))));
+                g.draw(new java.awt.geom.Ellipse2D.Double(w / 2.0 - r, h / 2.0 - r, r * 2, r * 2));
+            }
+            g.setFont(g.getFont().deriveFont(Font.BOLD, (float) (h * 0.03)));
+            String s1 = "ЗАПИСЬ БИТА — жми ПРОБЕЛ под бит.  Нажатий: " + taps + "   (" + String.format("%.1f", t / 1000.0) + " с)";
+            int tw = g.getFontMetrics().stringWidth(s1);
+            g.setColor(new Color(0, 0, 0, 190));
+            g.drawString(s1, (w - tw) / 2 + 2, (int) (h * 0.9) + 2);
+            g.setColor(Color.WHITE);
+            g.drawString(s1, (w - tw) / 2, (int) (h * 0.9));
         }
 
         void click(int x, int y, int w, int h) {
@@ -234,8 +329,15 @@ public final class GameMain {
                     else if (g1.finished(t) || trackOver()) { phase = Phase.SONG2; play(song2Wav); }
                 }
                 case SONG2 -> {
+                    if (!tutorial && !tutorialDone && recordFile == null && t >= ContactBreak.START) enterTutorial();
+                    if (tutorial) stepTutorial(tutorialMs());
+                    if (resumeNano > 0 && clip != null) {
+                        double f = (System.nanoTime() - resumeNano) / 1.5e9;
+                        gain(clip, -50 * (1 - Math.min(1, f)));
+                        if (f >= 1) resumeNano = -1;
+                    }
                     g2.update(t);
-                    contact.update(t);
+                    if (recordFile == null && !tutorial) contact.update(t);
                     double gl = ContactBreak.glitchAmount(t);
                     if (gl > 0) {
                         // 1:17: the whole picture - circles, windows, bars - is drawn aside, then torn.
@@ -251,9 +353,18 @@ public final class GameMain {
                         bg.dispose();
                         ContactBreak.blit(g, glitchBuf, w, h, gl, t);
                     } else {
-                        contact.renderBackdrop(g, w, h, t);
-                        contact.renderEye(g, w, h, t);
+                        if (tutorial) {
+                            // The lesson is a scene of its own; the song's clock stands still meanwhile.
+                            double vt = ContactBreak.START + tutorialMs();
+                            contact.renderBackdrop(g, w, h, vt);
+                            tutor.update(vt);
+                            tutor.renderEye(g, w, h, vt);
+                        } else {
+                            contact.renderBackdrop(g, w, h, t);
+                            if (recordFile == null) contact.renderEye(g, w, h, t);
+                        }
                         drawSong2(g, w, h, t);
+                        if (recordFile != null) recordHud(g, w, h, t);
                     }
                     if (!g2.alive()) end(Phase.DEFEAT);
                     else if (g2.finished(t) || trackOver()) end(Phase.RESULTS);
@@ -269,14 +380,19 @@ public final class GameMain {
             // lyrics over it, and the circles with the HP bars on top of everything, so the fight
             // carries on over the video. Before that the circles play over the desktop, with the
             // Glitcher's fake error windows piling up on top of them.
-            if (anim != null && t >= ANIM_START_MS && anim.ready()) {
-                anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
-                karaoke.render(g, w, h, t / 1000.0);
+            if (anim != null && t >= ANIM_START_MS - 1500 && anim.ready()) {
+                // The film comes up under the melting backdrop a moment before 2:15, holding its first picture.
+                double fadeIn = Math.min(1, (t - (ANIM_START_MS - 1500)) / 1500.0);
+                java.awt.Composite keep = g.getComposite();
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) fadeIn));
+                anim.render(g, w, h, Math.max(0, t - ANIM_START_MS) / 1000.0);
+                g.setComposite(keep);
+                if (t >= ANIM_START_MS) karaoke.render(g, w, h, t / 1000.0);
                 g2.render(g, w, h, t);
             } else {
                 g2.render(g, w, h, t);
                 // The torn-up backdrop is the Glitcher's windows while the eyes are on; no extra ones on top.
-                if (t < ContactBreak.START || t >= ContactBreak.END) fakeWindows.render(g, w, h, t);
+                if (t < ContactBreak.START || t >= ANIM_START_MS - 1500) fakeWindows.render(g, w, h, t);
             }
         }
 
