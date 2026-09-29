@@ -47,6 +47,7 @@ public final class LotusCommands {
                 .requires(source -> source.hasPermission(2))
                 .then(outbreakCommands())
                 .then(branchCommands())
+                .then(normalBranchCommands())
                 .then(mapCommands())
                 .then(glandCommands())
                 .then(Commands.literal("timewarp")
@@ -62,6 +63,44 @@ public final class LotusCommands {
                 .then(honchoCommands())
                 .then(Commands.literal("compat").executes(ctx -> compatReport(ctx.getSource())))
                 .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource()))));
+    }
+
+    // ---- /lotus normalbranch ... (testing the entry) --------------------
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> normalBranchCommands() {
+        return Commands.literal("normalbranch")
+                .then(Commands.literal("status").executes(ctx -> {
+                    ServerPlayer p = ctx.getSource().getPlayerOrException();
+                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                            "step " + com.lotusblight.data.LotusPlayerState.getNormalBranchStep(p)
+                                    + "/" + com.lotusblight.data.LotusPlayerState.NORMAL_BRANCH_STEPS
+                                    + ", closed=" + com.lotusblight.data.LotusPlayerState.isNormalBranchClosed(p)
+                                    + ", entered=" + com.lotusblight.data.LotusPlayerState.isNormalBranchEntered(p)
+                                    + ", arrived=" + com.lotusblight.data.LotusPlayerState.isNormalBranchArrived(p)
+                                    + ", exitPending=" + com.lotusblight.data.LotusPlayerState.isNormalBranchExitPending(p)), false);
+                    return 1;
+                }))
+                .then(Commands.literal("step")
+                        .then(Commands.argument("n", IntegerArgumentType.integer(0, com.lotusblight.data.LotusPlayerState.NORMAL_BRANCH_STEPS))
+                                .executes(ctx -> {
+                                    ServerPlayer p = ctx.getSource().getPlayerOrException();
+                                    com.lotusblight.data.LotusPlayerState.setNormalBranchStep(p, IntegerArgumentType.getInteger(ctx, "n"));
+                                    return 1;
+                                })))
+                .then(Commands.literal("enter").executes(ctx -> {
+                    com.lotusblight.branch.NormalBranchEntry.begin(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }))
+                .then(Commands.literal("exit").executes(ctx -> {
+                    com.lotusblight.branch.NormalBranchExit.start(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }))
+                .then(Commands.literal("lock").executes(ctx -> {
+                    com.lotusblight.branch.NormalBranchLock.engage();
+                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                            "Lock written. The mod stands down on the next launch until it is reinstalled."), false);
+                    return 1;
+                }));
     }
 
     // ---- /lotus outbreak ... --------------------------------------------

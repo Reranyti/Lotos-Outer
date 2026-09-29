@@ -153,24 +153,30 @@ public class LotusBlight {
         // Renderers, render layers and color handlers live in client.LotusClientSetup - referencing
         // client classes from this class made the whole mod fail to construct on a dedicated server.
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, LotusConfig.SPEC);
-        MinecraftForge.EVENT_BUS.register(new LotusEvents());
-        MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MossyGlandSpreadEngine());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MeteoriteSpreadEngine());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.MossyGlandWorldgen());
-        MinecraftForge.EVENT_BUS.register(new BarrierEvents());
-        MinecraftForge.EVENT_BUS.register(new RootGrowthEngine());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.GuardianManager());
-        MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossFight.class);
-        MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossArena.class);
-        MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.EpicenterManager());
+        // Once the Нормальная_ветка ending has fired for this jar, the mod stands down until it's
+        // reinstalled: its behaviour handlers below are simply never registered, so no spread, events,
+        // HUD or dialogue run - it acts as if it isn't installed. Blocks, items, commands and networking
+        // still register, so existing worlds load and the player can put a fresh jar in to bring it back.
+        if (!com.lotusblight.branch.NormalBranchLock.isLocked()) {
+            MinecraftForge.EVENT_BUS.register(new LotusEvents());
+            MinecraftForge.EVENT_BUS.register(new InfectionSpreadEngine());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MossyGlandSpreadEngine());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.MeteoriteSpreadEngine());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.MossyGlandWorldgen());
+            MinecraftForge.EVENT_BUS.register(new BarrierEvents());
+            MinecraftForge.EVENT_BUS.register(new RootGrowthEngine());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.spread.GuardianManager());
+            MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossFight.class);
+            MinecraftForge.EVENT_BUS.register(com.lotusblight.boss.TraitorBossArena.class);
+            MinecraftForge.EVENT_BUS.register(new GuaranteedSpawnManager());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.EpicenterManager());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.LotusChaseEvent());
+            MinecraftForge.EVENT_BUS.register(com.lotusblight.escape.LotusChaseStructure.class);
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.StarFallEvent());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.WorldBorderSetup());
+            MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.QuarantineBarrier());
+        }
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.LotusChaseEvent());
-        MinecraftForge.EVENT_BUS.register(com.lotusblight.escape.LotusChaseStructure.class);
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.escape.StarFallEvent());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.WorldBorderSetup());
-        MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.QuarantineBarrier());
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
         CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);

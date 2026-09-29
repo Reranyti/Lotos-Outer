@@ -47,6 +47,21 @@ rights belong to LSPLASH, the skin's to its author Gdux.
 | `sounds/star_fall_theme.ogg` | сцена StarFall со Звёздным Светом / the StarFall scene with Star Light | PAWDER — [«DOORS: The Stairwell UST»](https://www.youtube.com/watch?v=aEAX6nUlTfc), неофициальный саундтрек DOORS / an unofficial DOORS soundtrack |
 | `sounds/lotus_chase_theme.ogg` | Побег от лотоса / the Lotus Chase | Made For Evot — [«פרחים» (Flowers)](https://www.youtube.com/watch?v=1jeKYEiSyU4) |
 
+## Оверлей босса / The boss overlay
+
+Музыка и картинки боя «Проклятой» ветки (`assets/lotusblight/overlay/`). Треки и видео лежат в jar,
+но не в репозитории: их подкладывают при сборке из локальных папок `art/music`, `art/video`.
+The music and pictures of the Cursed branch's fight. The tracks and the video are in the jar but not in
+the repository: they are added at build time from the local `art/music` and `art/video` folders.
+
+| Файл / File | Что это / What | Источник / Source |
+|---|---|---|
+| `honcho_briefing.ogg` | урок Хончо во второй песне / Honcho's lesson in the second song | Peganex Productions — [«DOORS: OST – Honcho Encounter Briefing \| "YOU'RE HIRED!"»](https://www.youtube.com/watch?v=LWIr4inAsUg), неофициальный саундтрек DOORS / an unofficial DOORS soundtrack |
+| `map_1.ogg`, `map_2.ogg` | две песни боя / the fight's two songs | **уточнить / to confirm** |
+| `finale.mp4` | анимация финала / the finale animation | **уточнить / to confirm** |
+| `aero.jpg`, `aero2.jpg` | обои в стиле Aero / Aero-style wallpapers | найдены на Pinterest, авторы неизвестны — **уточнить**; уберём или заменим по просьбе автора / found on Pinterest, authors unknown — **to confirm**; will be removed or replaced at the author's request |
+| `textures/overlay/glitcher.png` | скин Глитчера / the Glitcher's skin | команда / the team |
+
 ## Модели и анимации GeckoLib / GeckoLib models and animations
 
 | Файл / File | Что это / What | Источник / Source |
@@ -90,6 +105,12 @@ templates — the biome colors them in game.
 
 **Прочее / Other**: `textures/misc/star_light.png` — Звёздный Свет в сцене StarFall и его иконка в чате
 / Star Light in the StarFall scene and his chat icon.
+
+## Библиотеки / Libraries
+
+| Библиотека / Library | Зачем / What for | Лицензия / License |
+|---|---|---|
+| [JCodec](https://github.com/jcodec/jcodec) 0.2.5 (`jcodec`, `jcodec-javase`), JCodecProject | декодирование видео / video decoding | BSD 2-Clause; текст лежит в jar рядом с библиотекой: `assets/lotusblight/overlay/lib/JCODEC_LICENSE.txt` / the text ships in the jar next to the library |
 
 ## Ассеты Minecraft / Minecraft assets
 

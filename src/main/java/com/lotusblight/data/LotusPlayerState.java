@@ -61,7 +61,83 @@ public final class LotusPlayerState {
         root.putInt(DIALOGUE_BRANCH_KEY, branch);
         root.putLong(BRANCH_CHOSEN_AT_KEY, player.level().getGameTime());
         player.getPersistentData().put(ROOT_TAG, root);
+        // Committing to any ordinary branch closes off the Нормальная_ветка for this world.
+        closeNormalBranch(player);
         return true;
+    }
+
+    // --- Нормальная_ветка ---------------------------------------------------------------------------
+    // A quiet, unadvertised path only reachable from the undecided branch by a precise, unbroken run of
+    // deaths. The order and the conditions live only here in the source; nothing points a player to it.
+    private static final String NORMAL_BRANCH_STEP_KEY = "NormalBranchStep";
+    private static final String NORMAL_BRANCH_CLOSED_KEY = "NormalBranchClosed";
+    private static final String NORMAL_BRANCH_ENTERED_KEY = "NormalBranchEntered";
+    /** Deaths that must land in order: three, then three, then two (see NormalBranchDeaths). */
+    public static final int NORMAL_BRANCH_STEPS = 8;
+    /** After this many steps the main lotus goes quiet for the player - the only tell there is. */
+    public static final int NORMAL_BRANCH_DROWNINGS = 3;
+
+    public static int getNormalBranchStep(Player player) {
+        return root(player, false).getInt(NORMAL_BRANCH_STEP_KEY);
+    }
+
+    public static void setNormalBranchStep(Player player, int step) {
+        CompoundTag root = root(player, true);
+        root.putInt(NORMAL_BRANCH_STEP_KEY, step);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static boolean isNormalBranchClosed(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_CLOSED_KEY);
+    }
+
+    public static void closeNormalBranch(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_CLOSED_KEY, true);
+        root.putInt(NORMAL_BRANCH_STEP_KEY, 0);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static boolean isNormalBranchEntered(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_ENTERED_KEY);
+    }
+
+    public static void markNormalBranchEntered(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_ENTERED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    private static final String NORMAL_BRANCH_ARRIVED_KEY = "NormalBranchArrived";
+    private static final String NORMAL_BRANCH_EXIT_PENDING_KEY = "NormalBranchExitPending";
+
+    /** True once the entry scene has finished and the player has actually been moved to the empty place. */
+    public static boolean isNormalBranchArrived(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_ARRIVED_KEY);
+    }
+
+    public static void markNormalBranchArrived(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_ARRIVED_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Set by a death in the empty place: the next respawn (or login) starts the exit on the client. */
+    public static boolean isNormalBranchExitPending(Player player) {
+        return root(player, false).getBoolean(NORMAL_BRANCH_EXIT_PENDING_KEY);
+    }
+
+    public static void setNormalBranchExitPending(Player player, boolean pending) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(NORMAL_BRANCH_EXIT_PENDING_KEY, pending);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** True once the player is far enough in that the main lotus stops answering and the shoots go quiet. */
+    public static boolean isNormalBranchSilencing(Player player) {
+        return !isNormalBranchClosed(player) && !isNormalBranchEntered(player)
+                && getNormalBranchStep(player) >= NORMAL_BRANCH_DROWNINGS
+                && getDialogueBranch(player) == BRANCH_UNDECIDED;
     }
 
     private static final String BRANCH_CHOSEN_AT_KEY = "BranchChosenAt";

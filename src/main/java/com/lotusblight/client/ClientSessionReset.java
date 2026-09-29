@@ -32,5 +32,7 @@ public final class ClientSessionReset {
         HonchoMeetingCutscene.reset();
         LotusChaseOverlay.stopAll();
         TraitorBossMusicOverlay.stop();
+        NormalBranchFreeze.reset();
+        NormalBranchClient.setSilenced(false);
     }
 }

@@ -16,6 +16,53 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.8000 — Release: «Проклятая» / the Cursed branch
+Открываем скрытую ветку. / The hidden branch is out in the open.
+
+### Русский
+- **Четвёртая ветка — «Проклятая».** Скрытая ветка, включается особой цепочкой смертей (как именно —
+  оставляем игрокам). Уводит в отдельное измерение, а заканчивается тем, что Minecraft «зависает»,
+  и поверх рабочего стола открывается босс. Ветка новая: могут быть шероховатости, пишите о них.
+- **Босс на рабочем столе — Глитчер.** Ритм-бой из двух песен прямо поверх рабочего стола (для игры —
+  кликайте по кругам; Esc выходит из боя в любой момент).
+  - **Первая песня.** Глитчер ходит по экрану, стучит по «стеклу», собирает и бросает иконки вашего
+    рабочего стола (только их картинки — сами иконки не двигаются), злится, топает — и экран гаснет,
+    открывается поле глаз, обои-Aero рвутся.
+  - **Вторая песня.** Экран рвётся и спрашивает «ты умрёшь?»; песня встаёт на паузу, Хончо в диалоговом
+    окне учит, как жать; потом контакт рвёт глаз-ромб: он раскалывается и смыкается на бите — жмите
+    ПРОБЕЛ, когда метка на ленте дойдёт до линии. Кругов в это время нет. В конце — анимация финала.
+- **Что это делает на вашем компьютере (без сюрпризов).** Мод ничего не удаляет и не перемещает,
+  не сканирует диски, не открывает ваши документы и ничего никуда не отправляет. Ошибки, «файлы»
+  и «зависание» — картинка. Для сцены он: делает снимок экрана и читает картинку текущих обоев Windows
+  (чтобы найти иконки), запускает второй процесс Java из jar, сворачивает окна через Проводник
+  (`Shell.Application`, при выходе они возвращаются) и кладёт распакованную музыку во временную папку
+  `%TEMP%\lotusblight` (убирается вместе с процессом). Рассчитано на Windows.
+- **Размер.** jar стал около 144 МБ: внутри финальное видео и музыка боя.
+- Новые ассеты и их авторы — в `ASSETS.md` (там же отмечено, что ещё нужно уточнить).
+
+### English
+- **The fourth branch — the Cursed one.** A hidden branch, started by a particular chain of deaths (we
+  leave the "how" for players to find). It takes you to a separate dimension and ends with Minecraft
+  "freezing" and a boss opening on top of your desktop. The branch is new — expect rough edges, and
+  report them.
+- **A boss on your desktop — the Glitcher.** A two-song rhythm fight right over your desktop (click the
+  circles; Esc leaves the fight at any moment).
+  - **First song.** The Glitcher walks about the screen, knocks on the "glass", picks up and throws
+    your desktop icons (only pictures of them — the icons themselves never move), gets angry, stomps —
+    and the screen goes dark, a field of eyes opens, the Aero wallpaper tears.
+  - **Second song.** The screen tears and asks "will you die?"; the song pauses, Honcho teaches you how
+    to press in a dialogue window; then a diamond eye cuts the contact off: it splits and closes on the
+    beat — press SPACE when the mark on the strip reaches the line. No circles during that. The finale
+    animation ends it.
+- **What it does on your computer (no surprises).** The mod deletes and moves nothing, scans no disks,
+  opens none of your documents and sends nothing anywhere. The errors, the "files" and the "freeze"
+  are pictures. For the scene it takes a screenshot and reads the picture of your current Windows
+  wallpaper (to find the icons), starts a second Java process from the jar, minimises windows through
+  Explorer (`Shell.Application`; they come back on exit) and puts the unpacked music in a temp folder,
+  `%TEMP%\lotusblight` (cleaned up with the process). Built for Windows.
+- **Size.** The jar is now about 144 MB: it carries the finale video and the fight's music.
+- New assets and their authors are listed in `ASSETS.md` (with what still needs confirming).
+
 ## 1.1050.2
 Мелкие правки — в счёт 50 версий не идут, войдут в полный лог 1.1100.
 Small changes — not counted toward the 50 versions, they go into the 1.1100 full log.

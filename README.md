@@ -21,6 +21,9 @@ Lotus Blight — бесплатный некоммерческий фанатс�
 - **События.** Побег от лотоса, StarFall со Звёздным Светом, бой с боссом-предателем, внутренний
   голос, страницы дневника Объекта Ноль.
 - **Хончо.** Помощник на ветке войны, со своей моделью, катсценой встречи и историей.
+- **«Проклятая».** Четвёртая, скрытая ветка: измерение, «зависание» игры и босс Глитчер прямо на
+  вашем рабочем столе (ритм-бой из двух песен). Ничего не удаляет и не читает ваши файлы — подробности в
+  [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **Живая карта**, очищающий порошок, метеоритное снаряжение, репутация с фракциями, свой календарь.
 
 ## Установка
@@ -86,6 +89,14 @@ jar-файлы появятся в `build/libs/`. Моды, с которыми 
 
 Авторы: Reranyti и neiber573.
 
+
+##Скриноты ветки(Reranity)
+<img width="1255" height="753" alt="image" src="https://github.com/user-attachments/assets/e6e38819-b07e-433e-bebd-908644a2e1d9" />
+<img width="1263" height="725" alt="image" src="https://github.com/user-attachments/assets/7082c2d8-40da-4759-b266-7054fa570802" />
+<img width="1291" height="739" alt="image" src="https://github.com/user-attachments/assets/571e0cb0-0eb5-445f-a7ba-e0d743b240f7" />
+
+
+
 ---
 
 <a name="english"></a>
@@ -111,6 +122,9 @@ characters or story (see [LICENSE](LICENSE) and [ASSETS.md](ASSETS.md)).
 - **Events.** The Lotus Chase, StarFall with Star Light, the traitor boss fight, the inner voice, the
   Object Zero diary pages.
 - **Honcho.** An assistant on the war branch, with his own model, meeting cutscene and story.
+- **The Cursed branch.** A fourth, hidden branch: a dimension, the game "freezing", and the Glitcher boss
+  right on your desktop (a two-song rhythm fight). It deletes nothing and reads none of your files —
+  see [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **A living map**, cleansing powder, meteorite gear, faction reputation, a calendar of its own.
 
 ## Installing
@@ -172,6 +186,8 @@ Automated checks (GameTest): `./gradlew runGameTestServer`. The recommended pack
 ## Links
 
 - [CHANGELOG.md](CHANGELOG.md) — version history
+
+
 - [ASSETS.md](ASSETS.md) — assets and their authors
 - [LICENSE](LICENSE) — license
 
