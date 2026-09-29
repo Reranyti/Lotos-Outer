@@ -277,6 +277,12 @@ tasks.named('processResources', ProcessResources).configure {
         include 'finale.mp4'
         into 'assets/lotusblight/overlay'
     }
+    // Honcho's track for the lesson, likewise from a local folder that stays out of git; without it the
+    // lesson is silent.
+    from('art/music/contact') {
+        include 'honcho_briefing.ogg'
+        into 'assets/lotusblight/overlay'
+    }
 
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,

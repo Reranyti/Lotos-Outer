@@ -121,6 +121,11 @@ public final class NormalBranchFreeze {
         command.add(NormalBranchTracks.song(1).toString());
         command.add("--song2");
         command.add(NormalBranchTracks.song(2).toString());
+        // Honcho's track for the lesson in the second song, if this jar carries it.
+        if (NormalBranchTracks.hasContact()) {
+            command.add("--contact");
+            command.add(NormalBranchTracks.contact().toString());
+        }
         // The video is read straight out of the jar by the fight - no copy on disk.
         command.add("--video-resource");
         command.add("/assets/" + LotusBlight.MODID + "/overlay/finale.mp4");

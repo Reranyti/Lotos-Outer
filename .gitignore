@@ -31,3 +31,6 @@ mods-backup-*/
 
 # The finale video - too big for git; the release jar is built where it lives
 art/video/
+
+# Honcho's track for the lesson - not ours to publish, the jar is built where it lives
+art/music/contact/
