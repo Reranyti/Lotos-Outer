@@ -96,7 +96,11 @@ public final class GameMain {
         FakeWindows fakeWindows = new FakeWindows();
         Karaoke karaoke = new Karaoke();
 
-        Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, song1Wav, song2Wav, animWav);
+        double[] contactBeats = ContactBreak.pickBeats(map2);
+        g2.mute(ContactBreak.START, ContactBreak.END);       // the eyes take over from the circles
+        ContactBreak contact = new ContactBreak(contactBeats, g2::hurt,
+                () -> g2.contactHit(1.0 / Math.max(1, contactBeats.length)), skin);
+        Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, animWav);
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
 
         JFrame frame = new JFrame("Lotus Blight");
@@ -106,7 +110,7 @@ public final class GameMain {
         frame.setAlwaysOnTop(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.addKeyListener(new KeyAdapter() {
-            @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ESCAPE) System.exit(0); }
+            @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ESCAPE) System.exit(0); if (e.getKeyCode() == KeyEvent.VK_SPACE) engine.space(); }
         });
         JComponent canvas = new JComponent() {
             @Override protected void paintComponent(Graphics graphics) {
@@ -141,13 +145,15 @@ public final class GameMain {
         private final FinaleVideo anim;
         private final FakeWindows fakeWindows;
         private final Karaoke karaoke;
+        private final ContactBreak contact;
+        private java.awt.image.BufferedImage glitchBuf;
         private final String song1Wav, song2Wav, animWav;
         private Phase phase = Phase.SONG1;
         private Clip clip;
         private long phaseStartNano = System.nanoTime();
 
-        Engine(RhythmGame g1, RhythmGame g2, FinaleVideo anim, FakeWindows fw, Karaoke k, String s1, String s2, String aw) {
-            this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k;
+        Engine(RhythmGame g1, RhythmGame g2, FinaleVideo anim, FakeWindows fw, Karaoke k, ContactBreak contact, String s1, String s2, String aw) {
+            this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k; this.contact = contact;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
         }
@@ -203,6 +209,10 @@ public final class GameMain {
                     : (System.nanoTime() - phaseStartNano) / 1e6;
         }
 
+        void space() {
+            if (phase == Phase.SONG2) contact.press(clockMs());
+        }
+
         void click(int x, int y, int w, int h) {
             double t = clockMs();
             if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
@@ -217,6 +227,7 @@ public final class GameMain {
             switch (phase) {
                 case SONG1 -> {
                     g1.update(t);
+                    hazards.renderBack(g, w, h, t);
                     g1.render(g, w, h, t);
                     hazards.render(g, w, h, t);
                     if (!g1.alive()) end(Phase.DEFEAT);
@@ -224,24 +235,48 @@ public final class GameMain {
                 }
                 case SONG2 -> {
                     g2.update(t);
-                    // From 2:15 the finale animation is the backdrop: it goes down first, the chorus
-                    // lyrics over it, and the circles with the HP bars on top of everything, so the fight
-                    // carries on over the video. Before that the circles play over the desktop, with the
-                    hazards.renderBack(g, w, h, t);
-                    // Glitcher's fake error windows piling up on top of them.
-                    if (anim != null && t >= ANIM_START_MS && anim.ready()) {
-                        anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
-                        karaoke.render(g, w, h, t / 1000.0);
-                        g2.render(g, w, h, t);
+                    contact.update(t);
+                    double gl = ContactBreak.glitchAmount(t);
+                    if (gl > 0) {
+                        // 1:17: the whole picture - circles, windows, bars - is drawn aside, then torn.
+                        if (glitchBuf == null || glitchBuf.getWidth() != w || glitchBuf.getHeight() != h) {
+                            glitchBuf = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                        }
+                        Graphics2D bg = glitchBuf.createGraphics();
+                        bg.setComposite(AlphaComposite.Clear);
+                        bg.fillRect(0, 0, w, h);
+                        bg.setComposite(AlphaComposite.SrcOver);
+                        drawSong2(bg, w, h, t);
+                        contact.renderText(bg, w, h, t);
+                        bg.dispose();
+                        ContactBreak.blit(g, glitchBuf, w, h, gl, t);
                     } else {
-                        g2.render(g, w, h, t);
-                        fakeWindows.render(g, w, h, t);
+                        contact.renderBackdrop(g, w, h, t);
+                        contact.renderEye(g, w, h, t);
+                        drawSong2(g, w, h, t);
                     }
                     if (!g2.alive()) end(Phase.DEFEAT);
                     else if (g2.finished(t) || trackOver()) end(Phase.RESULTS);
                 }
                 case RESULTS -> { results(g, w, h); closeWhenShown(); }
                 case DEFEAT -> { defeat(g, w, h); closeWhenShown(); }
+            }
+        }
+
+        /** The second song's picture: the film once it starts, otherwise circles under the fake windows. */
+        private void drawSong2(Graphics2D g, int w, int h, double t) {
+            // From 2:15 the finale animation is the backdrop: it goes down first, the chorus
+            // lyrics over it, and the circles with the HP bars on top of everything, so the fight
+            // carries on over the video. Before that the circles play over the desktop, with the
+            // Glitcher's fake error windows piling up on top of them.
+            if (anim != null && t >= ANIM_START_MS && anim.ready()) {
+                anim.render(g, w, h, (t - ANIM_START_MS) / 1000.0);
+                karaoke.render(g, w, h, t / 1000.0);
+                g2.render(g, w, h, t);
+            } else {
+                g2.render(g, w, h, t);
+                // The torn-up backdrop is the Glitcher's windows while the eyes are on; no extra ones on top.
+                if (t < ContactBreak.START || t >= ContactBreak.END) fakeWindows.render(g, w, h, t);
             }
         }
 

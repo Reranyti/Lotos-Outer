@@ -25,6 +25,7 @@ final class RhythmGame {
     private int maxCombo;
     private int hits;
     private int misses;
+    private int muted;                                   // circles switched off for another mechanic
     private int nextMiss;                                // first circle not yet hit or judged missed
     private final boolean[] hit;
     private double lastFlash;                            // time of the last hit, for a small flash
@@ -47,6 +48,20 @@ final class RhythmGame {
         }
     }
 
+    /** Circles inside [from, to) are switched off: another mechanic owns that stretch of the song. */
+    void mute(double fromMs, double toMs) {
+        for (int i = 0; i < map.circles.size(); i++) {
+            double t = map.circles.get(i).timeMs();
+            if (t >= fromMs && t < toMs && !hit[i]) { hit[i] = true; muted++; }
+        }
+    }
+
+    /** One contact beat landed: the Glitcher's bar drops by that beat's share of the circles that were switched off. */
+    void contactHit(double share) { bossHp -= muted * share; }
+
+    /** Damage that isn't a missed circle (the eye that wants the space bar). */
+    void hurt(double amount) { hp -= amount; }
+
     boolean alive() { return hp > 0; }
     boolean finished(double timeMs) { return nextMiss >= map.circles.size() && timeMs > lastTime() + 500; }
     double hpFraction() { return Math.max(0, hp) / maxHp; }
@@ -54,7 +69,7 @@ final class RhythmGame {
     int combo() { return combo; }
     int hits() { return hits; }
     int misses() { return misses; }
-    int total() { return map.circles.size(); }
+    int total() { return map.circles.size() - muted; }
     int maxCombo() { return maxCombo; }
 
     /** A rank for an accuracy 0..1, osu-style. */
@@ -144,8 +159,11 @@ final class RhythmGame {
     }
 
     private void drawHud(Graphics2D g, int w, int h, double timeMs) {
+        // From 1:19 of the second song the bars unfold to both sides and get their names.
+        double u = ContactBreak.unfold(timeMs);
+        double names = ContactBreak.labelAlpha(timeMs);
         // The Glitcher (boss) HP along the very top, wide and red-purple.
-        int bw = (int) (w * 0.7), bx = (w - bw) / 2, by = (int) (h * 0.018), bh = (int) (h * 0.022);
+        int bw = (int) (w * (0.7 + 0.24 * u)), bx = (w - bw) / 2, by = (int) (h * 0.018), bh = (int) (h * (0.022 + 0.006 * u));
         g.setColor(new Color(30, 12, 40));
         g.fillRect(bx, by, bw, bh);
         g.setColor(new Color(0x8A2BE2));
@@ -155,7 +173,7 @@ final class RhythmGame {
         g.drawRect(bx, by, bw, bh);
 
         // Player HP just under it, narrower.
-        int barW = (int) (w * 0.5), barX = (w - barW) / 2, barY = by + bh + (int) (h * 0.012), barH = (int) (h * 0.016);
+        int barW = (int) (w * (0.5 + 0.34 * u)), barX = (w - barW) / 2, barY = by + bh + (int) (h * 0.012), barH = (int) (h * (0.016 + 0.006 * u));
         g.setColor(new Color(40, 20, 60));
         g.fillRect(barX, barY, barW, barH);
         g.setColor(hpFraction() > 0.3 ? new Color(0x60D0FF) : new Color(0xFF4060));
@@ -163,12 +181,26 @@ final class RhythmGame {
         g.setColor(new Color(0xC0E0FF));
         g.drawRect(barX, barY, barW, barH);
 
+        if (names > 0) {
+            g.setFont(g.getFont().deriveFont(Font.BOLD, (float) (h * 0.017)));
+            label(g, "Ошибки", bx + 8, by + bh - (int) (bh * 0.22), names);
+            label(g, "Ваше хп", barX + 8, barY + barH - (int) (barH * 0.18), names);
+        }
+
         if (combo > 1) {
             g.setColor(new Color(0xE0, 0xC0, 0xFF, 220));
             g.setFont(g.getFont().deriveFont(Font.BOLD, (float) (h * 0.05)));
             String s = combo + "x";
             g.drawString(s, (int) (w * 0.03), (int) (h * 0.95));
         }
+    }
+
+    private static void label(Graphics2D g, String text, int x, int baseline, double alpha) {
+        int a = (int) (255 * Math.max(0, Math.min(1, alpha)));
+        g.setColor(new Color(0, 0, 0, a * 3 / 4));
+        g.drawString(text, x + 1, baseline + 1);
+        g.setColor(new Color(255, 255, 255, a));
+        g.drawString(text, x, baseline);
     }
 
     /** {offsetX, offsetY, circleRadius, fieldW, fieldH} for the centred playfield. */
