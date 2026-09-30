@@ -179,6 +179,8 @@ final class RhythmGame {
             }
         }
         java.awt.image.BufferedImage desktop = fx == null ? null : fx.desktop();
+        CircleArt.focusX = w / 2.0;
+        CircleArt.focusY = h / 2.0;
         double[] geo = geometry(w, h);
         double ox = geo[0], oy = geo[1], radius = geo[2], fw = geo[3], fh = geo[4];
 

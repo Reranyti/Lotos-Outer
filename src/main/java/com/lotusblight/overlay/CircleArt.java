@@ -244,59 +244,41 @@ final class CircleArt {
         return eye;
     }
 
-    /** {@code closing} 0..1 is the lid coming down after a hit. */
+    /** Where the eyes look: the middle of the playfield (set by the game each frame). */
+    static double focusX, focusY;
+
+    /**
+     * The eye of the first song's field of eyes, as it is there: the doubled outline in pink, olive and white round a
+     * dark almond, a white pupil with its olive dot turned towards the middle, the lid coming down now and then.
+     * {@code closing} 0..1 is the lid coming down after a hit.
+     */
     private static void drawEye(Graphics2D g, double cx, double cy, double r, double alpha, double dt, double approachMs,
                                 int idx, double t, double closing, boolean missed) {
-        double w = r * 2.9, h = w * 0.5;
-        double blink = ((t * 0.0004 + idx * 0.37) % 1.0) < 0.05 ? 0.15 : 1;
-        double open = Math.max(0.05, (1 - closing) * blink * smooth(alpha * 1.5));
+        BufferedImage sprite = eyeSprite();
+        double sc = r * 2.9 / sprite.getWidth();
+        double bl = ((t / 1000.0) * 0.27 + idx * 0.13) % 1.0;
+        double lid = bl < 0.05 ? Math.abs(bl / 0.05 - 0.5) * 2 : 1;      // a slow blink, each eye on its own time
+        double open = (0.15 + 0.85 * lid) * (1 - closing * 0.92) * smooth(alpha * 1.5 + 0.02);
         Graphics2D d = (Graphics2D) g.create();
         d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         double a = Math.max(0, Math.min(1, alpha));
-        d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) a));
+        d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) Math.max(0.0, Math.min(1.0, a))));
         d.translate(cx, cy);
-        d.scale(1, open);
-        // a white almond with the dark outline drawn round it
-        Path2D.Double almond = new Path2D.Double();
-        almond.moveTo(-w / 2, 0);
-        almond.quadTo(0, -h * 1.05, w / 2, 0);
-        almond.quadTo(0, h * 1.05, -w / 2, 0);
-        almond.closePath();
-        d.setColor(missed ? new Color(255, 190, 190) : new Color(246, 240, 246));
-        d.fill(almond);
-        // the pupil looks where the pointer is
-        double lx = 0, ly = 0;
-        try {
-            java.awt.PointerInfo pi = java.awt.MouseInfo.getPointerInfo();
-            if (pi != null) {
-                lx = pi.getLocation().x - cx;
-                ly = pi.getLocation().y - cy;
-            }
-        } catch (RuntimeException ignored) { }
-        double len = Math.max(1, Math.hypot(lx, ly));
-        double px = lx / len * Math.min(w * 0.18, len * 0.2), py = ly / len * Math.min(h * 0.2, len * 0.1) / Math.max(0.15, open);
-        java.awt.Shape oldClip = d.getClip();
-        d.clip(almond);
-        d.setColor(new Color(20, 12, 34));
-        d.fill(new Ellipse2D.Double(px - r * 0.62, py - r * 0.62, r * 1.24, r * 1.24));
-        d.setColor(new Color(0x9A, 0x90, 0x30, 210));
-        d.fill(new Ellipse2D.Double(px - r * 0.34, py - r * 0.34, r * 0.68, r * 0.68));
-        d.setColor(Color.BLACK);
-        d.fill(new Ellipse2D.Double(px - r * 0.17, py - r * 0.17, r * 0.34, r * 0.34));
-        d.setColor(new Color(255, 255, 255, 240));
-        d.fill(new Ellipse2D.Double(px - r * 0.3, py - r * 0.42, r * 0.22, r * 0.22));
-        d.setClip(oldClip);
-        d.setStroke(new BasicStroke((float) (r * 0.1)));
-        d.setColor(new Color(255, 70, 190, 130));
-        d.translate(r * 0.05, r * 0.03);
-        d.draw(almond);
-        d.translate(-r * 0.1, -r * 0.06);
-        d.setColor(new Color(60, 230, 255, 130));
-        d.draw(almond);
-        d.translate(r * 0.05, r * 0.03);
-        d.setColor(new Color(12, 6, 24, 240));
-        d.draw(almond);
+        d.scale(sc, sc * Math.max(0.08, open));
+        d.drawImage(sprite, -sprite.getWidth() / 2, -sprite.getHeight() / 2, null);
+        if (lid > 0.5 && closing < 0.6) {
+            double dx = focusX - cx, dy = focusY - cy, len = Math.max(1, Math.hypot(dx, dy));
+            double px = dx / len * 7, py = dy / len * 4;
+            d.setColor(new Color(255, 255, 255, 235));
+            d.fillOval((int) (px - 11), (int) (py - 11), 22, 22);
+            d.setColor(new Color(0x9A, 0x90, 0x30, 200));
+            d.fillOval((int) (px - 13), (int) (py - 5), 10, 10);
+        }
+        if (missed) {
+            d.setColor(new Color(255, 60, 90, 70));
+            d.fillOval(-90, -45, 180, 90);
+        }
         d.dispose();
         if (dt > 0 && !missed) {
             double ar = r * (1 + 2.6 * dt / approachMs);
