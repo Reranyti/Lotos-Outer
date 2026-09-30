@@ -267,7 +267,7 @@ final class Interlude {
                 }
             }
             // The right hand: a gesture, then held out for Honcho, then at his throat.
-            double[] prepPt = {-3.6, 23.0, 8.4}, holdPt = {-3.6, 26.0, 8.4};
+            double[] prepPt = {-3.3, 24.5, 9.0}, holdPt = {-3.3, 25.5, 9.5};   // arm raised: he is held up off the floor, at arm's length
             double wr = sumR + prep * 0.8 + hold * 3;
             double[] rt = new double[3];
             for (int k = 0; k < 3; k++) rt[k] = (tr[k] + prepPt[k] * prep * 0.8 + holdPt[k] * hold * 3) / Math.max(1e-6, wr);
@@ -278,7 +278,7 @@ final class Interlude {
             p.turn(Rig15.Joint.L_LOWER_ARM, -8 * (1 - hold) - (24 + 8 * Math.sin(t * 5 + 1)) * hold, 0, 0);
             p.turn(Rig15.Joint.R_LOWER_ARM, -8, 0, 0);
             double nod = gw[3] * 22 + gw[1] * 10 + gw[0] * -2 + gw[2] * -4;
-            p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath + 6 * gw[3] + (5 + 4 * hold + 2 * Math.sin(t * 6) * hold) * turn, 10 * hold, 0);
+            p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath + 6 * gw[3] + (3 + 1.5 * Math.sin(t * 6) * hold) * turn, 10 * hold, 0);
             p.turn(Rig15.Joint.HEAD, -1 + nod * (1 - turn) + (9 - 14 * freed) * turn, (12 * Math.sin(t * 5) * gw[4]) * (1 - turn) - 6 * hold, 7 * gw[0] - 6 * gw[2]);
             a.fistR = Math.max(0.3 * gw[1], grab * (1 - freed));
             a.fistL = 0.25 * hold;
@@ -288,11 +288,12 @@ final class Interlude {
         glitcherActor.draw(glitcherRender, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
         double gDrawX = gx - glitcherRender.width / 2.0;
         double gDrawY = ground - glitcherRender.height + 6 * unit;
-        b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);
         hitBox.setRect(gx - 10 * unit, ground - 36 * unit, 20 * unit, 38 * unit);
 
         // ---- Honcho: pushed out of the portal, tumbling, caught by the throat, then hanging and fighting for air.
-        double hxN = gx - 7.7 * unit, hyN = ground - 32.3 * unit;            // where his neck is when he is held
+        // Where his neck is when he is held: at the fist (seen from the side it is about 10 units ahead of the Glitcher and 25.5 up: the arm stretched out level),
+        // a little beyond it, and he hangs in profile, so that the two bodies stay well clear of each other.
+        double hxN = gx - 10.6 * unit, hyN = ground - 25.3 * unit;
         if (c >= EXIT_FROM) {
             double flightMs = GRAB_FROM + 500 - EXIT_FROM, tArrive = GRAB_FROM + 500;
             double ex = Math.min(1, (c - EXIT_FROM) / flightMs);
@@ -307,7 +308,7 @@ final class Interlude {
             Actor a = honchoActor;
             Pose15 p = a.begin();
             double fe = 1 - Math.pow(1 - ex, 2.0);
-            a.viewYaw = 0.8 + (1 - fe) * (1 - fe) * Math.PI * 3.2;                // turning in the air, settling facing the Glitcher
+            a.viewYaw = 1.45 + (1 - fe) * (1 - fe) * Math.PI * 3.2;                // turning in the air, settling facing the Glitcher
             a.viewPitch = -0.25 * (1 - fe) * Math.sin(ex * 9) + 0.2 * impact;
             double fl1 = Math.sin(ex * 19 - 0.3), fl2 = Math.sin(ex * 19 - 0.9), fl3 = Math.sin(ex * 23 + 1.2), fl4 = Math.sin(ex * 17 + 2.3);
             double limpW = 1 - arrive;                                       // in the air: the limbs are loose and trail behind
@@ -326,8 +327,8 @@ final class Interlude {
             double whip = -55 * impact;
             p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6 * arrive + (-45 + 30 * fl2) * limpW + whip, 0, 4)
                     .turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6 * arrive + (20 + 30 * fl3) * limpW + whip * 0.7, 0, -4);
-            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick) + (20 + 25 * fl1) * limpW + 25 * impact, 0, 0)
-                    .turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2) + (15 + 25 * fl2) * limpW + 25 * impact, 0, 0);
+            p.turn(Rig15.Joint.R_LOWER_LEG, 48 + 34 * Math.max(0, -kick) + (20 + 25 * fl1) * limpW + 25 * impact, 0, 0)
+                    .turn(Rig15.Joint.L_LOWER_LEG, 55 + 34 * Math.max(0, kick2) + (15 + 25 * fl2) * limpW + 25 * impact, 0, 0);
             p.turn(Rig15.Joint.R_FOOT, 25 - 10 * Math.max(0, kick), 0, 0).turn(Rig15.Joint.L_FOOT, 25 - 10 * Math.max(0, -kick2), 0, 0);
             // the body: arches in the air, snaps when caught, heaves with every gasp, then sags
             p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick - 10 * limpW * fl2 - 16 * impact - 7 * gasp, 6 * kick2 + 10 * limpW * fl3, 3 * Math.sin(t * 9) * flail);
@@ -349,9 +350,11 @@ final class Interlude {
             }
             double sx = 1 - 0.45 * smooth(1 - ex / 0.12) * (ex < 0.12 ? 1 : 0), sy = 1 + 0.3 * (ex < 0.12 ? smooth(1 - ex / 0.12) : 0) - 0.07 * impact;
             double shakeX = (Math.random() - 0.5) * h * 0.012 * impact, shakeY = (Math.random() - 0.5) * h * 0.012 * impact;
-            drawHoncho(b, unit, flight[0] + shakeX, flight[1] + drop + shakeY, flight[2] + pend + 0.3 * freed + Math.sin(t * 8) * 0.03 * flail, flight[3], sx, sy, 1, true);
+            drawHoncho(b, unit, flight[0] + shakeX, flight[1] + drop + shakeY, flight[2] + pend + 0.36 * arrive * (1 - freed) + 0.3 * freed + Math.sin(t * 8) * 0.03 * flail, flight[3], sx, sy, 1, true);
             b.setClip(keepClip);
         }
+
+        b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);       // on top, so his arm and fist are in front of Honcho
 
         // The dark closing in as the time runs out, red at its edge.
         double left = Math.max(0, RIFT_END + CHOKE_MS - c);

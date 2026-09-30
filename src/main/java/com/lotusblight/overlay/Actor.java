@@ -24,6 +24,9 @@ final class Actor {
     private boolean primed;
     private long lastNano;
 
+    /** The solved skeleton of the frame last drawn (for reading where a hand or foot ended up). */
+    Rig15.Skel lastSkel;
+
     Actor(int[] skin, boolean honcho) {
         this.rig = honcho ? Rig15.honcho() : Rig15.standard();
         this.skin = skin;
@@ -61,12 +64,19 @@ final class Actor {
         return this;
     }
 
+    /** Where a point of the body (a joint's pivot or the end of a limb) is on the picture, in units to the right of and above the feet. */
+    double[] onScreen(double[] stagePoint) {
+        double[] p = SoftRenderer.project(stagePoint, viewYaw, viewPitch, 1, 0, 0);
+        return new double[]{p[0], -p[1]};
+    }
+
     /** Ends the frame: the hands are shaped, the trailing parts follow, and the figure is drawn with its feet at the origin given. */
     void draw(SoftRenderer r, double scale, double originX, double originY) {
         pose.hand(true, fistR, spread);
         pose.hand(false, fistL, spread);
         followThrough();
         Rig15.Skel sk = rig.solve(pose);
+        lastSkel = sk;
         r.drawRig(rig, sk, skin, viewYaw, viewPitch, scale, originX, originY);
     }
 
