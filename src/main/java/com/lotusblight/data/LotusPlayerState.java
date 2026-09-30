@@ -102,6 +102,65 @@ public final class LotusPlayerState {
         return root(player, false).getBoolean(NORMAL_BRANCH_ENTERED_KEY);
     }
 
+    // --- The horn -----------------------------------------------------------------------------------
+    // Given once (at the end of the fight on the desktop). Its three uses are told by the hotbar slot it is held in:
+    // 1 brings Honcho, 2 cleanses the block at the crosshair, 3 is blown for health and golden hearts.
+    private static final String HORN_GIVEN_KEY = "HornGiven";
+    private static final String HORN_USES_KEY = "HornUses";
+    private static final String HORN_USES_DAY_KEY = "HornUsesDay";
+    private static final String HORN_HONCHO_READY_KEY = "HornHonchoReady";
+    private static final String HORN_BLOW_READY_KEY = "HornBlowReady";
+    /** How many blocks the horn can cleanse in one in-game day. */
+    public static final int HORN_DAILY_USES = 160;
+
+    public static boolean isHornGiven(Player player) {
+        return root(player, false).getBoolean(HORN_GIVEN_KEY);
+    }
+
+    public static void markHornGiven(Player player) {
+        CompoundTag root = root(player, true);
+        root.putBoolean(HORN_GIVEN_KEY, true);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    /** Cleansing uses left today; a new in-game day (the number given) fills it again. */
+    public static int hornUsesLeft(Player player, long day) {
+        CompoundTag root = root(player, true);
+        if (!root.contains(HORN_USES_DAY_KEY) || root.getLong(HORN_USES_DAY_KEY) != day) {
+            root.putLong(HORN_USES_DAY_KEY, day);
+            root.putInt(HORN_USES_KEY, HORN_DAILY_USES);
+            player.getPersistentData().put(ROOT_TAG, root);
+        }
+        return root.getInt(HORN_USES_KEY);
+    }
+
+    public static void hornSpendUse(Player player, long day) {
+        int left = hornUsesLeft(player, day);
+        CompoundTag root = root(player, true);
+        root.putInt(HORN_USES_KEY, Math.max(0, left - 1));
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static long hornHonchoReadyAt(Player player) {
+        return root(player, false).getLong(HORN_HONCHO_READY_KEY);
+    }
+
+    public static void setHornHonchoReadyAt(Player player, long gameTime) {
+        CompoundTag root = root(player, true);
+        root.putLong(HORN_HONCHO_READY_KEY, gameTime);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
+    public static long hornBlowReadyAt(Player player) {
+        return root(player, false).getLong(HORN_BLOW_READY_KEY);
+    }
+
+    public static void setHornBlowReadyAt(Player player, long gameTime) {
+        CompoundTag root = root(player, true);
+        root.putLong(HORN_BLOW_READY_KEY, gameTime);
+        player.getPersistentData().put(ROOT_TAG, root);
+    }
+
     public static void markNormalBranchEntered(Player player) {
         CompoundTag root = root(player, true);
         root.putBoolean(NORMAL_BRANCH_ENTERED_KEY, true);

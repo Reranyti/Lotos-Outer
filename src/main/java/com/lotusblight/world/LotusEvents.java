@@ -367,7 +367,7 @@ public class LotusEvents {
     }
 
     /** The real clean counterpart of an infected block, or null if this block isn't something cleansing powder touches. */
-    private net.minecraft.world.level.block.state.BlockState cleanReplacementFor(net.minecraft.world.level.block.state.BlockState infected) {
+    private static net.minecraft.world.level.block.state.BlockState cleanReplacementFor(net.minecraft.world.level.block.state.BlockState infected) {
         // Used to send every infected ground block back to one fixed hardcoded vanilla block
         // (lotus_stone -> plain STONE, lotus_terracotta -> plain TERRACOTTA, ...) regardless of
         // what was actually there before - cleansing a granite mountain or orange-terracotta
@@ -397,6 +397,31 @@ public class LotusEvents {
     private static boolean countsTowardOutbreak(net.minecraft.world.level.block.state.BlockState state) {
         if (state.is(ModBlocks.LOTUS_ROOTS.get())) {
             return state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED);
+        }
+        return true;
+    }
+
+    /**
+     * Cleanses the one block at {@code target} the way the powder does: the infected block goes back to what it was, the
+     * nearest outbreak's count goes down. Returns whether there was anything to cleanse. (Shoots can't be dusted away.)
+     */
+    public static boolean cleanseOne(ServerLevel level, BlockPos target) {
+        net.minecraft.world.level.block.state.BlockState infectedState = level.getBlockState(target);
+        if (infectedState.is(ModBlocks.LOTUS_SHOOT.get())) return false;
+        net.minecraft.world.level.block.state.BlockState cleanState = cleanReplacementFor(infectedState);
+        if (cleanState == null) return false;
+        OutbreakSavedData data = OutbreakSavedData.get(level);
+        level.setBlock(target, cleanState, 3);
+        level.sendParticles(GREEN, target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 10, 0.3, 0.3, 0.3, 0.01);
+        if (countsTowardOutbreak(infectedState)) {
+            data.incrementChunkCount(new ChunkPos(target), -1);
+            OutbreakRecord nearest = data.nearestOutbreak(target, 128.0, false);
+            if (nearest != null) {
+                int newCount = Math.max(0, nearest.infectedBlockCount() - 1);
+                int newPhase = InfectionPhases.phaseForBlockCount(newCount);
+                float progress = InfectionPhases.progressWithinPhase(newPhase, newCount);
+                data.updateOutbreak(nearest.withInfectedBlockCount(newCount).withPhase(newPhase).withProgress(progress));
+            }
         }
         return true;
     }

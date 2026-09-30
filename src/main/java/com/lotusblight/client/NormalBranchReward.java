@@ -1,5 +1,6 @@
 package com.lotusblight.client;
 
+import com.lotusblight.data.LotusPlayerState;
 import com.lotusblight.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,9 +23,11 @@ public final class NormalBranchReward {
         UUID id = mc.player.getUUID();
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(id);
-            if (player == null || player.getInventory().contains(new ItemStack(ModItems.HORN.get()))) return;
+            if (player == null || LotusPlayerState.isHornGiven(player) || player.getInventory().contains(new ItemStack(ModItems.HORN.get()))) return;
             ItemStack horn = new ItemStack(ModItems.HORN.get());
             if (!player.getInventory().add(horn)) player.drop(horn, false);
+            LotusPlayerState.markHornGiven(player);
+            com.lotusblight.item.HornHandler.sync(player);
         });
     }
 }
