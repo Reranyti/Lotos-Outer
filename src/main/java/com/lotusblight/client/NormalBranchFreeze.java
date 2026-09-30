@@ -126,6 +126,16 @@ public final class NormalBranchFreeze {
             command.add("--contact");
             command.add(NormalBranchTracks.contact().toString());
         }
+        // The third song, if this jar carries it.
+        if (NormalBranchTracks.hasSong3()) {
+            command.add("--song3");
+            command.add(NormalBranchTracks.song3().toString());
+        }
+        // The music of the cutscene before it.
+        if (NormalBranchTracks.hasInterlude()) {
+            command.add("--interlude");
+            command.add(NormalBranchTracks.interlude().toString());
+        }
         // The video is read straight out of the jar by the fight - no copy on disk.
         command.add("--video-resource");
         command.add("/assets/" + LotusBlight.MODID + "/overlay/finale.mp4");

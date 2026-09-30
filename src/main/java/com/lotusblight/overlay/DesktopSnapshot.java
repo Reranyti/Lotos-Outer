@@ -44,6 +44,8 @@ final class DesktopSnapshot {
     final List<Icon> icons = new ArrayList<>();
     /** What the search found or why it gave up - printed by --debug. */
     String report = "not looked";
+    /** The picture of the whole screen as it was before the fight - the desktop that later comes down. */
+    BufferedImage shot;
 
     static DesktopSnapshot capture(Rectangle screen, int floorY) {
         DesktopSnapshot snapshot = new DesktopSnapshot();
@@ -53,6 +55,7 @@ final class DesktopSnapshot {
                 return snapshot;
             }
             BufferedImage shot = new Robot().createScreenCapture(screen);
+            snapshot.shot = shot;
             BufferedImage wallpaper = loadWallpaper(shot);
             if (wallpaper == null) {
                 snapshot.report = "wallpaper not readable";

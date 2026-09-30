@@ -103,12 +103,14 @@ final class SoftRenderer {
 
         int uMin = Math.min(face.u0(), face.u1()), uMax = Math.max(face.u0(), face.u1()) - 1;
         int vMin = Math.min(face.v0(), face.v1()), vMax = Math.max(face.v0(), face.v1()) - 1;
-        for (int y = minY; y <= maxY; y++) {
-            double py = y + 0.5;
-            for (int x = minX; x <= maxX; x++) {
-                double px = x + 0.5;
-                double w0 = edge(b, c, px, py) / area;
-                double w1 = edge(c, a, px, py) / area;
+        // The barycentric weights change by a fixed step per pixel, so they are stepped rather than recomputed.
+        double invArea = 1 / area;
+        double dx0 = -(c[1] - b[1]) * invArea, dy0 = (c[0] - b[0]) * invArea;
+        double dx1 = -(a[1] - c[1]) * invArea, dy1 = (a[0] - c[0]) * invArea;
+        double w0row = edge(b, c, minX + 0.5, minY + 0.5) * invArea, w1row = edge(c, a, minX + 0.5, minY + 0.5) * invArea;
+        for (int y = minY; y <= maxY; y++, w0row += dy0, w1row += dy1) {
+            double w0 = w0row, w1 = w1row;
+            for (int x = minX; x <= maxX; x++, w0 += dx0, w1 += dx1) {
                 double w2 = 1 - w0 - w1;
                 if (w0 < 0 || w1 < 0 || w2 < 0) continue;
                 double z = w0 * a[2] + w1 * b[2] + w2 * c[2];

@@ -33,7 +33,7 @@ public final class GameMain {
     private static final int FPS = 60;
     private static final Color CATCH_INPUT = new Color(0, 0, 0, 1);
 
-    private enum Phase { SONG1, SONG2, RESULTS, DEFEAT }
+    private enum Phase { SONG1, SONG2, INTERLUDE, SONG3, RESULTS, DEFEAT }
 
     /** Icons taken off the desktop before the fight (by the exit scene), kept covered while it runs. */
     private static volatile DesktopSnapshot hiddenIcons;
@@ -70,13 +70,45 @@ public final class GameMain {
     private static File recordFile;
     // Set with --contact WAV: the track that plays while the eye mechanic runs (the song itself is stopped then).
     private static String contactWav;
+    // Set with --interlude WAV: the music of the cutscene between the second and third songs.
+    private static String interludeWav;
+    // A picture of the desktop for the shattering when the fight was started on its own (no exit scene took one).
+    private static java.awt.image.BufferedImage testShot;
+
+    static java.awt.image.BufferedImage desktopShot() {
+        DesktopSnapshot d = hiddenIcons;
+        return d != null && d.shot != null ? d.shot : testShot;
+    }
+
+    private static void shellCall(String call) {
+        try {
+            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+                    "(New-Object -ComObject Shell.Application)." + call)
+                    .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+            p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception ignored) { }
+    }
+
+    private static int[] loadSkinFile(String resource) {
+        try (InputStream in = GameMain.class.getResourceAsStream(resource)) {
+            if (in == null) return null;
+            BufferedImage img = javax.imageio.ImageIO.read(in);
+            return img.getRGB(0, 0, 64, 64, null, 0, 64);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     public static void main(String[] args) throws Exception {
-        String song1Wav = null, song2Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
-        double animFps = 30, startSong2 = -1;
+        String song1Wav = null, song2Wav = null, song3Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
+        double animFps = 30, startSong2 = -1, startSong3 = -1, cutsceneAt = -1;
+        boolean minimize = false;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
+            if (args[i].equals("--song3")) song3Wav = args[i + 1];
+            if (args[i].equals("--start3")) startSong3 = Double.parseDouble(args[i + 1]);
+            if (args[i].equals("--cutscene")) cutsceneAt = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--frames")) framesDir = args[i + 1];
             if (args[i].equals("--video")) video = args[i + 1];
             if (args[i].equals("--video-resource")) videoResource = args[i + 1];
@@ -85,6 +117,14 @@ public final class GameMain {
             if (args[i].equals("--start2")) startSong2 = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--record")) recordFile = new File(args[i + 1]);
             if (args[i].equals("--contact")) contactWav = args[i + 1];
+            if (args[i].equals("--interlude")) interludeWav = args[i + 1];
+        }
+        for (String arg : args) if (arg.equals("--minimize")) minimize = true;
+        if (minimize && System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            // Windows out of the way for a test run started on its own (the exit scene does this in the real chain).
+            shellCall("MinimizeAll()");
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shellCall("UndoMinimizeALL()")));
+            Thread.sleep(900);
         }
         if (recordFile != null) java.nio.file.Files.deleteIfExists(recordFile.toPath());
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
@@ -98,6 +138,11 @@ public final class GameMain {
         OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2.osu");
         RhythmGame g1 = new RhythmGame(map1, 48);
         RhythmGame g2 = new RhythmGame(map2, 260);
+        RhythmGame g3 = null;
+        if (song3Wav != null && OsuMap.class.getResource("/assets/lotusblight/overlay/map_3.osu") != null) {
+            g3 = new RhythmGame(OsuMap.load("/assets/lotusblight/overlay/map_3.osu"), 300);
+            g3.fullHud();
+        }
         Hazards hazards = new Hazards(skin, screen.height);
         // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
         FinaleVideo anim = video != null || videoResource != null ? openVideo(video, videoResource)
@@ -109,8 +154,15 @@ public final class GameMain {
         g2.mute(ContactBreak.START, ContactBreak.END);          // the eyes take over from the circles
         ContactBreak contact = new ContactBreak(contactBeats, g2::hurt,
                 () -> g2.contactHit(1.0 / Math.max(1, contactBeats.length)));
-        Engine engine = new Engine(g1, g2, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, animWav);
+        if (cutsceneAt >= 0 && desktopShot() == null) {
+            try { testShot = new java.awt.Robot().createScreenCapture(screen); } catch (Exception ignored) { }
+        }
+        int[] honchoSkin = loadSkinFile("/assets/lotusblight/textures/entity/honcho.png");
+        Engine engine = new Engine(g1, g2, g3, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, song3Wav, animWav);
+        engine.setup(skin, honchoSkin != null ? honchoSkin : skin, screen.height);
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
+        if (startSong3 >= 0 && g3 != null) engine.jumpToSong3(startSong3);
+        if (cutsceneAt >= 0 && g3 != null) engine.jumpToInterlude(cutsceneAt);
 
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
@@ -119,7 +171,16 @@ public final class GameMain {
         frame.setAlwaysOnTop(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.addKeyListener(new KeyAdapter() {
-            @Override public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_ESCAPE) System.exit(0); if (e.getKeyCode() == KeyEvent.VK_SPACE) engine.space(); }
+            // Space, and Enter / Z / X as stand-ins for when the space bar is out of order; a held key counts once.
+            private final java.util.Set<Integer> down = new java.util.HashSet<>();
+
+            @Override public void keyPressed(KeyEvent e) {
+                int k = e.getKeyCode();
+                if (k == KeyEvent.VK_ESCAPE) System.exit(0);
+                if ((k == KeyEvent.VK_SPACE || k == KeyEvent.VK_ENTER || k == KeyEvent.VK_Z || k == KeyEvent.VK_X) && down.add(k)) engine.space();
+            }
+
+            @Override public void keyReleased(KeyEvent e) { down.remove(e.getKeyCode()); }
         });
         JComponent canvas = new JComponent() {
             @Override protected void paintComponent(Graphics graphics) {
@@ -139,12 +200,30 @@ public final class GameMain {
         };
         canvas.addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
+                if (!frame.isFocused()) frame.requestFocus();       // a click is also a chance to get the keyboard
                 if (e.getButton() == MouseEvent.BUTTON1) engine.click(e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight());
             }
         });
         frame.setContentPane(canvas);
         frame.setVisible(true);
+        frame.toFront();
         frame.requestFocus();
+        // The fight starts right after the exit scene's window is gone, from a process that is not in front, and
+        // Windows then won't give the new window the keyboard (the mouse still works). Keep asking until it has
+        // it; a tap of Alt is what lets such a request through.
+        int[] tries = {0};
+        Timer focusTimer = new Timer(300, null);
+        focusTimer.addActionListener(ev -> {
+            if (frame.isFocused() || ++tries[0] > 16) { focusTimer.stop(); return; }
+            try {
+                java.awt.Robot robot = new java.awt.Robot();
+                robot.keyPress(KeyEvent.VK_ALT);
+                robot.keyRelease(KeyEvent.VK_ALT);
+            } catch (Exception | Error ignored) { }
+            frame.toFront();
+            frame.requestFocus();
+        });
+        focusTimer.start();
         new Timer(1000 / FPS, e -> frame.repaint()).start();
     }
 
@@ -155,6 +234,46 @@ public final class GameMain {
         private final FakeWindows fakeWindows;
         private final Karaoke karaoke;
         private final ContactBreak contact;
+        private final RhythmGame g3;
+        private final String song3Wav;
+        private final GlitchBackdrop backdrop3 = new GlitchBackdrop();
+        private final FallScene fall = new FallScene();
+        private final Song3Show show = new Song3Show();
+        private FightScene fight;
+        private Interlude interlude;
+        private Clip interludeClip;
+        private int[] glitcherSkin, honchoSkin;
+
+        void setup(int[] glitcherSkin, int[] honchoSkin, int screenH) {
+            this.glitcherSkin = glitcherSkin;
+            this.honchoSkin = honchoSkin;
+            this.fight = new FightScene(honchoSkin, glitcherSkin, screenH);
+        }
+
+        private void startInterludeMusic(double seconds) {
+            if (interludeClip == null) return;
+            gain(interludeClip, 0);
+            interludeClip.setMicrosecondPosition((long) (seconds * 1_000_000));
+            interludeClip.start();
+        }
+
+        private void stopInterludeMusic() {
+            if (interludeClip != null) interludeClip.stop();
+        }
+
+        /** Straight into the cutscene between the second and third songs (for trying it out). */
+        void jumpToInterlude(double seconds) {
+            phase = Phase.INTERLUDE;
+            tutorialDone = true;
+            interlude = new Interlude(glitcherSkin, honchoSkin, desktopShot(), fall);
+            interlude.seek(seconds);
+            startInterludeMusic(seconds);
+        }
+        // The third song opens with a lead-in of silence, its clock running below zero, so the first circles
+        // (the map starts almost at once) are already on their way when the music begins.
+        private static final double LEAD_MS = 2200;
+        private boolean leadIn;
+        private long leadStartNano;
         // The lesson: at 1:19 the song is paused, Honcho's track plays, and when it's done the song goes on.
         private boolean tutorial, tutorialDone;
         private long tutorialStartNano;
@@ -168,7 +287,8 @@ public final class GameMain {
         private Clip clip;
         private long phaseStartNano = System.nanoTime();
 
-        Engine(RhythmGame g1, RhythmGame g2, FinaleVideo anim, FakeWindows fw, Karaoke k, ContactBreak contact, String s1, String s2, String aw) {
+        Engine(RhythmGame g1, RhythmGame g2, RhythmGame g3, FinaleVideo anim, FakeWindows fw, Karaoke k, ContactBreak contact, String s1, String s2, String s3, String aw) {
+            this.g3 = g3; this.song3Wav = s3; this.backdrop3.setNoWall(true); this.backdrop3.setNoWindows(true);
             this.g1 = g1; this.g2 = g2; this.anim = anim; this.fakeWindows = fw; this.karaoke = k; this.contact = contact;
             this.song1Wav = s1; this.song2Wav = s2; this.animWav = aw;
             play(song1Wav);
@@ -177,6 +297,12 @@ public final class GameMain {
                     briefClip = AudioSystem.getClip();
                     briefClip.open(in);
                 } catch (Exception e) { briefClip = null; }
+            }
+            if (interludeWav != null) {
+                try (AudioInputStream in = AudioSystem.getAudioInputStream(new File(interludeWav))) {
+                    interludeClip = AudioSystem.getClip();
+                    interludeClip.open(in);
+                } catch (Exception e) { interludeClip = null; }
             }
         }
 
@@ -223,6 +349,16 @@ public final class GameMain {
             g2.skipTo(seconds * 1000);
         }
 
+        /** Straight into the third song at a given track time (for previewing it). */
+        void jumpToSong3(double seconds) {
+            phase = Phase.SONG3;
+            leadIn = false;
+            tutorialDone = true;
+            play(song3Wav);
+            if (clip != null) clip.setMicrosecondPosition((long) (seconds * 1_000_000));
+            g3.skipTo(seconds * 1000);
+        }
+
         private void play(String wav) {
             // Only the song itself: Honcho's track, opened at the start, has to survive the change of song.
             if (clip != null) { clip.stop(); clip.close(); clip = null; }
@@ -240,6 +376,7 @@ public final class GameMain {
         private void stop() {
             if (clip != null) { clip.stop(); clip.close(); clip = null; }
             if (briefClip != null) { briefClip.stop(); briefClip.close(); briefClip = null; }
+            if (interludeClip != null) { interludeClip.stop(); interludeClip.close(); interludeClip = null; }
         }
 
         /**
@@ -266,6 +403,7 @@ public final class GameMain {
         }
 
         private double clockMs() {
+            if (leadIn) return (System.nanoTime() - leadStartNano) / 1e6 - LEAD_MS;
             return clip != null ? clip.getMicrosecondPosition() / 1000.0
                     : (System.nanoTime() - phaseStartNano) / 1e6;
         }
@@ -274,6 +412,7 @@ public final class GameMain {
         private double lastTapMs = -1e9;
 
         void space() {
+            if (phase == Phase.INTERLUDE) { interlude.press(); return; }
             if (phase != Phase.SONG2) return;
             double t = clockMs();
             if (recordFile != null) {
@@ -310,14 +449,23 @@ public final class GameMain {
 
         void click(int x, int y, int w, int h) {
             double t = clockMs();
-            if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
+            if (phase == Phase.INTERLUDE) interlude.click(x, y);
+            else if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
+            else if (phase == Phase.SONG3 && g3 != null) {
+                double[] held = Song3Show.screenRect(t, w, h);
+                if (held == null) g3.click(x, y, t, w, h);
+                else g3.click(x - held[0], y - held[1], t, (int) held[2], (int) held[3]);
+            }
             else if (phase == Phase.SONG2) {
                 fakeWindows.close(x, y);        // a click also clears a fake window it lands on
                 g2.click(x, y, t, w, h);
             }
         }
 
+        private Hazards hazards;
+
         void render(Graphics2D g, int w, int h, Hazards hazards) {
+            this.hazards = hazards;
             double t = clockMs();
             switch (phase) {
                 case SONG1 -> {
@@ -367,7 +515,60 @@ public final class GameMain {
                         if (recordFile != null) recordHud(g, w, h, t);
                     }
                     if (!g2.alive()) end(Phase.DEFEAT);
-                    else if (g2.finished(t) || trackOver()) end(Phase.RESULTS);
+                    else if (g2.finished(t) || trackOver()) {
+                        if (g3 != null && song3Wav != null) {
+                            if (clip != null) { clip.stop(); clip.close(); clip = null; }
+                            interlude = new Interlude(glitcherSkin, honchoSkin, desktopShot(), fall);
+                            phase = Phase.INTERLUDE;
+                            startInterludeMusic(0);
+                        }
+                        else end(Phase.RESULTS);
+                    }
+                }
+                case INTERLUDE -> {
+                    interlude.render(g, w, h);
+                    if (interludeClip != null) {
+                        double left = interlude.doneIn();                     // the music thins out with the last second and a half
+                        gain(interludeClip, left < 1500 ? -60 * (1 - Math.max(0, left) / 1500.0) : 0);
+                    }
+                    if (interlude.failed()) end(Phase.DEFEAT);
+                    else if (interlude.done()) {
+                        stopInterludeMusic();
+                        phase = Phase.SONG3;
+                        leadIn = true;
+                        leadStartNano = System.nanoTime();
+                    }
+                }
+                case SONG3 -> {
+                    if (leadIn && clockMs() >= 0) {                       // the lead-in is over: now the music
+                        leadIn = false;
+                        play(song3Wav);
+                    }
+                    t = clockMs();
+                    g3.update(t);
+                    final double tt = t;
+                    show.setGlitcher(glitcherSkin);
+                    show.render(g, w, h, tt, (gg, sky) -> {
+                        fall.render(gg, w, h, tt + LEAD_MS + 8000, 1.2, sky);
+                        if (fight != null) fight.render(gg, w, h, tt, g3.lastHitAt(), g3.lastMissAt(), g3.combo());
+                    });
+                    double[] held = Song3Show.screenRect(t, w, h);
+                    if (held == null) g3.render(g, w, h, t);
+                    else {                                                 // the circles play inside the screen in the hands
+                        Graphics2D cg = (Graphics2D) g.create();
+                        cg.translate(held[0], held[1]);
+                        cg.clipRect(0, 0, (int) held[2], (int) held[3]);
+                        g3.render(cg, (int) held[2], (int) held[3], t, false);
+                        cg.dispose();
+                        g3.renderHud(g, w, h, t);
+                    }
+                    double coming = (t + LEAD_MS) / 1800.0;               // out of the dark, during the lead-in
+                    if (coming < 1) {
+                        g.setColor(new Color(0, 0, 0, (int) (255 * (1 - Math.max(0, coming)))));
+                        g.fillRect(0, 0, w, h);
+                    }
+                    if (!g3.alive()) end(Phase.DEFEAT);
+                    else if (!leadIn && (g3.finished(t) || trackOver())) end(Phase.RESULTS);
                 }
                 case RESULTS -> { results(g, w, h); closeWhenShown(); }
                 case DEFEAT -> { defeat(g, w, h); closeWhenShown(); }
@@ -390,20 +591,22 @@ public final class GameMain {
                 if (t >= ANIM_START_MS) karaoke.render(g, w, h, t / 1000.0);
                 g2.render(g, w, h, t);
             } else {
+                if (hazards != null) hazards.renderCarryover(g, w, h, t);
                 g2.render(g, w, h, t);
                 // The torn-up backdrop is the Glitcher's windows while the eyes are on; no extra ones on top.
                 if (t < ContactBreak.START || t >= ANIM_START_MS - 1500) fakeWindows.render(g, w, h, t);
+                if (hazards != null) hazards.renderSong2(g, w, h, t);
             }
         }
 
         private void results(Graphics2D g, int w, int h) {
             g.setColor(new Color(0, 0, 0, 210));
             g.fillRect(0, 0, w, h);
-            int hits = g1.hits() + g2.hits();
-            int total = g1.total() + g2.total();
+            int hits = g1.hits() + g2.hits() + (g3 != null ? g3.hits() : 0);
+            int total = g1.total() + g2.total() + (g3 != null ? g3.total() : 0);
             double acc = total == 0 ? 0 : hits / (double) total;
             String grade = RhythmGame.grade(acc);
-            int combo = Math.max(g1.maxCombo(), g2.maxCombo());
+            int combo = Math.max(Math.max(g1.maxCombo(), g2.maxCombo()), g3 != null ? g3.maxCombo() : 0);
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             center(g, "РАНГ  " + grade, h * 0.20, h * 0.14, gradeColor(grade), w);
             center(g, String.format("Точность  %.1f%%", acc * 100), h * 0.42, h * 0.05, new Color(0xE0C0FF), w);

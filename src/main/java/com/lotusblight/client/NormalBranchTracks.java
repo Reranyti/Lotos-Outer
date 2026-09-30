@@ -36,8 +36,9 @@ import java.util.Optional;
  */
 final class NormalBranchTracks {
     private static final Logger LOG = LogUtils.getLogger();
-    private static final String[] SOURCES = {"overlay/map_1.ogg", "overlay/map_2.ogg", "overlay/honcho_briefing.ogg"};
-    private static volatile boolean hasContact;
+    private static final String[] SOURCES = {"overlay/map_1.ogg", "overlay/map_2.ogg", "overlay/honcho_briefing.ogg", "overlay/song3.ogg", "overlay/interlude.ogg"};
+    private static final String[] OUTPUTS = {"song1.wav", "song2.wav", "contact.wav", "song3.wav", "interlude.wav"};
+    private static volatile boolean hasContact, hasSong3, hasInterlude;
     /** The exit process's libraries, shipped as plain files in the jar - keep in step with build.gradle. */
     private static final String[] LIBS = {"jcodec-0.2.5.jar", "jcodec-javase-0.2.5.jar"};
 
@@ -54,7 +55,25 @@ final class NormalBranchTracks {
 
     /** Honcho's track for the lesson (the third one); only there if the jar was built with it. */
     static Path contact() {
-        return song(3);
+        return folder().resolve("contact.wav");
+    }
+
+    /** The third song (only there if the jar was built with it). */
+    static Path song3() {
+        return folder().resolve("song3.wav");
+    }
+
+    /** The music of the cutscene between the second and third songs (only there if the jar carries it). */
+    static Path interlude() {
+        return folder().resolve("interlude.wav");
+    }
+
+    static boolean hasInterlude() {
+        return hasInterlude;
+    }
+
+    static boolean hasSong3() {
+        return hasSong3;
     }
 
     static boolean hasContact() {
@@ -98,6 +117,8 @@ final class NormalBranchTracks {
             try (InputStream in = res.get().open()) {
                 ogg[i] = in.readAllBytes();
                 if (i == 2) hasContact = true;
+                if (i == 3) hasSong3 = true;
+                if (i == 4) hasInterlude = true;
             } catch (IOException e) {
                 LOG.warn("Нормальная_ветка: can't read {}: {}", SOURCES[i], e.toString());
             }
@@ -106,7 +127,7 @@ final class NormalBranchTracks {
             for (int i = 0; i < ogg.length; i++) {
                 if (ogg[i] == null) continue;
                 try {
-                    writeWav(ogg[i], song(i + 1));
+                    writeWav(ogg[i], folder().resolve(OUTPUTS[i]));
                 } catch (Exception e) {
                     LOG.warn("Нормальная_ветка: can't decode {}: {}", SOURCES[i], e.toString());
                 }

@@ -92,6 +92,12 @@ final class Hazards {
     /** Glitching only while it is being torn away or put back; the slow fade in at 0:30 is smooth. */
     private static double aeroGlitch(double ms) {
         if (ms >= RETURN_MS && ms < RETURN_MS + 2000) return 1 - (ms - RETURN_MS) / 2000.0;
+        if (ms >= RETURN_MS + 2000) {
+            // Afterwards the picture rots: it tears more often, and harder, as the end of the song comes.
+            double grow = smooth((ms - 108_000) / 14_000.0);
+            java.util.Random r = new java.util.Random((long) (ms / 110));
+            return r.nextDouble() < 0.2 + 0.4 * grow ? 0.12 + 0.55 * grow : 0;
+        }
         return 0;
     }
 
@@ -99,9 +105,11 @@ final class Hazards {
     private final BufferedImage[] aeroPics = new BufferedImage[2];
 
     private void drawAero(Graphics2D g, int w, int h, double ms) {
-        double a = aeroAmount(ms);
+        drawAeroPicture(g, w, h, ms, aeroAmount(ms), ms >= RETURN_MS ? 1 : 0, aeroGlitch(ms));
+    }
+
+    private void drawAeroPicture(Graphics2D g, int w, int h, double ms, double a, int variant, double glitch) {
         if (a <= 0) return;
-        int variant = ms >= RETURN_MS ? 1 : 0;
         BufferedImage aero = aeroPics[variant];
         if (aero == null || aero.getWidth() != w || aero.getHeight() != h) {
             aero = AeroWallpaper.paint(w, h, variant);
@@ -110,7 +118,6 @@ final class Hazards {
         double t = ms / 1000.0;
         Graphics2D b = (Graphics2D) g.create();
         b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) a));
-        double glitch = aeroGlitch(ms);
         if (glitch <= 0) {
             b.drawImage(aero, 0, 0, null);
         } else {
@@ -130,12 +137,84 @@ final class Hazards {
     }
 
     /**
+     * The first seconds of the second song still show what the first one ended on - the rotting wallpaper and
+     * its eyes - and let them melt away, tearing more and more, into the desktop.
+     */
+    void renderCarryover(Graphics2D g, int w, int h, double t2) {
+        if (t2 > 7_000) return;
+        double a = 1 - smooth((t2 - 1_500) / 5_000.0);
+        if (a <= 0) return;
+        double glitch = 0.35 + 0.5 * smooth(t2 / 6_000.0);
+        drawAeroPicture(g, w, h, 125_000 + t2, a, 1, glitch);
+        drawWatchers(g, w, h, 125_000 + t2, a);
+    }
+
+    /** The Glitcher in the second song's first minute: forms again, throws error windows, falls apart at 1:17. */
+    void renderSong2(Graphics2D g, int w, int h, double t2) {
+        actor.renderSong2(g, w, h, t2);
+    }
+
+    private static final double WATCH_FROM_MS = 108_500;
+
+    /** After the eyes, more of them open on the wallpaper, one after another, all looking at the middle. */
+    private void drawWatchers(Graphics2D g, int w, int h, double ms) {
+        drawWatchers(g, w, h, ms, 1.0);
+    }
+
+    private void drawWatchers(Graphics2D g, int w, int h, double ms, double fade) {
+        if (ms < WATCH_FROM_MS || fade <= 0) return;
+        Graphics2D b = (Graphics2D) g.create();
+        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        java.util.Random rnd = new java.util.Random(1976);
+        double cx = w / 2.0, cy = h / 2.0;
+        for (int i = 0; i < 16; i++) {
+            double ang = rnd.nextDouble() * Math.PI * 2, rad = 0.3 + 0.2 * rnd.nextDouble();
+            double size = h * (0.045 + 0.07 * rnd.nextDouble()), phase = rnd.nextDouble() * 7;
+            double a = smooth((ms - (WATCH_FROM_MS + i * 750)) / 600.0) * fade;
+            if (a <= 0) continue;
+            double ex = cx + Math.cos(ang) * w * rad, ey = cy + Math.sin(ang) * h * rad * 1.05;
+            boolean blinking = ((ms / 1000.0) * 0.4 + phase) % 1.0 < 0.05;
+            double hw = size * 1.1, hh = size * (blinking ? 0.08 : 0.5);
+            java.awt.geom.Path2D.Double almond = new java.awt.geom.Path2D.Double();
+            almond.moveTo(ex - hw, ey);
+            almond.quadTo(ex, ey - hh * 1.7, ex + hw, ey);
+            almond.quadTo(ex, ey + hh * 1.7, ex - hw, ey);
+            almond.closePath();
+            b.setColor(new Color(246, 240, 246, (int) (232 * a)));
+            b.fill(almond);
+            if (!blinking) {
+                double dx = cx - ex, dy = cy - ey, len = Math.max(1, Math.hypot(dx, dy));
+                double ix = ex + dx / len * hw * 0.28, iy = ey + dy / len * hh * 0.25, ir = Math.min(hh * 0.95, hw * 0.4);
+                java.awt.Shape old = b.getClip();
+                b.clip(almond);
+                b.setColor(new Color(20, 12, 34, (int) (245 * a)));
+                b.fill(new java.awt.geom.Ellipse2D.Double(ix - ir, iy - ir, ir * 2, ir * 2));
+                b.setColor(new Color(255, 255, 255, (int) (230 * a)));
+                b.fill(new java.awt.geom.Ellipse2D.Double(ix - ir * 0.5, iy - ir * 0.55, ir * 0.35, ir * 0.35));
+                b.setClip(old);
+            }
+            b.setStroke(new BasicStroke((float) (size * 0.09)));
+            b.translate(size * 0.04, size * 0.02);
+            b.setColor(new Color(255, 70, 190, (int) (140 * a)));
+            b.draw(almond);
+            b.translate(-size * 0.08, -size * 0.04);
+            b.setColor(new Color(60, 230, 255, (int) (140 * a)));
+            b.draw(almond);
+            b.translate(size * 0.04, size * 0.02);
+            b.setColor(new Color(12, 6, 24, (int) (240 * a)));
+            b.draw(almond);
+        }
+        b.dispose();
+    }
+
+    /**
      * The part that lies behind everything, including the circles, so they stay in reach: while the field
      * has drawn away, the screen goes to a starry dark with a black disc and a single eye in it, streaks
      * winding into it, watching the game - and the cursor.
      */
     void renderBack(Graphics2D g, int w, int h, double timeMs) {
         drawAero(g, w, h, timeMs);
+        drawWatchers(g, w, h, timeMs);
         actor.renderAnger(g, w, h, timeMs);
         double dark = GlitcherActor.blackout(timeMs);
         if (dark > 0) {
@@ -151,6 +230,11 @@ final class Hazards {
             if (icons == null) icons = loadIcons();
             actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
         }
+    }
+
+    /** Just the field of eyes of 1:21, full strength, for other scenes; {@code timeMs} steers how far it has turned. */
+    void renderEyeField(Graphics2D g, int w, int h, double timeMs) {
+        drawEyes(g, w, h, timeMs, 1.0, h * 0.5, 1.0);
     }
 
     /** While the eyes are open he floats behind the circles, so he never hides a note. */
@@ -300,7 +384,7 @@ final class Hazards {
     }
 
     /** One eye outline, doubled with a pink and an olive ghost like a badly printed page. */
-    private static BufferedImage makeEyeSprite() {
+    static BufferedImage makeEyeSprite() {
         int sw = 200, sh = 100;
         BufferedImage img = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();

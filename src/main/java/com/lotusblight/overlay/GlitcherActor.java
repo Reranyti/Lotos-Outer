@@ -19,6 +19,9 @@ final class GlitcherActor {
     static final double THROW_FROM_MS = 40_000;
     static final double THROW_EVERY_MS = 3_500;
     static final double THROW_TO_MS = 73_500;
+    // After the eyes he throws again, faster and in a short burst.
+    private static final double[] WAVE2 = {106_400, 108_000, 109_600, 111_200};
+    private static final double[] STARTS = throwStarts();
     static final double ANGER_MS = 70_000;         // he starts to seethe
     static final double GATHER_MS = 74_000;        // and comes to the middle to stand there
     static final double STOMP_MS = 80_000;         // the foot comes down
@@ -355,40 +358,56 @@ final class GlitcherActor {
         return inCycle < len ? 1 : 0;
     }
 
+    private static double[] throwStarts() {
+        int first = (int) ((THROW_TO_MS - THROW_FROM_MS) / THROW_EVERY_MS) + 1;
+        double[] out = new double[first + WAVE2.length];
+        for (int i = 0; i < first; i++) out[i] = THROW_FROM_MS + i * THROW_EVERY_MS;
+        System.arraycopy(WAVE2, 0, out, first, WAVE2.length);
+        return out;
+    }
+
     /** Milliseconds since the current throw began, or -1 when he isn't throwing. */
     private static double throwProgress(double ms) {
-        if (ms < THROW_FROM_MS || ms > THROW_TO_MS + 2000) return -1;
-        double since = (ms - THROW_FROM_MS) % THROW_EVERY_MS;
-        return since < 1500 ? since : -1;
+        for (double start : STARTS) {
+            double d = ms - start;
+            if (d >= 0 && d < 1500) return d;
+        }
+        return -1;
     }
 
     /** The icons in flight: from his hand to somewhere in the playfield, tumbling, staying a moment. */
     private void drawThrown(Graphics2D g, int w, int h, double ms, double gx, double groundY, double scale, List<BufferedImage> icons) {
-        if (icons == null || icons.isEmpty() || ms < THROW_FROM_MS) return;
-        int last = (int) Math.min((THROW_TO_MS - THROW_FROM_MS) / THROW_EVERY_MS, (ms - THROW_FROM_MS) / THROW_EVERY_MS);
+        drawThrownGeneric(g, w, h, ms, STARTS, icons, 0.11, r -> throwerX(r, w), groundY - unit * 22);
+    }
+
+    /** Things thrown at the given moments (each starts a wind-up), flying from where he stood to somewhere on the screen. */
+    private void drawThrownGeneric(Graphics2D g, int w, int h, double ms, double[] starts, List<BufferedImage> sprites,
+                                   double sizeK, java.util.function.DoubleUnaryOperator fromX, double fromY) {
+        if (sprites == null || sprites.isEmpty() || starts.length == 0 || ms < starts[0]) return;
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        for (int k = Math.max(0, last - 2); k <= last; k++) {
-            double release = THROW_FROM_MS + k * THROW_EVERY_MS + 640;
+        for (int k = 0; k < starts.length; k++) {
+            double release = starts[k] + 640;
+            if (release > ms) break;
             double age = ms - release;
-            if (age < 0 || age > 3400) continue;
+            if (age > 3400) continue;
             Random rnd = new Random(k * 7919L + 13);
-            BufferedImage icon = icons.get(rnd.nextInt(icons.size()));
+            BufferedImage icon = sprites.get(rnd.nextInt(sprites.size()));
             double tx = w * (0.15 + 0.7 * rnd.nextDouble());
             double ty = h * (0.22 + 0.45 * rnd.nextDouble());
-            double sx = throwerX(release, w);
-            double sy = groundY - unit * 22;
+            double sx = fromX.applyAsDouble(release);
+            double sy = fromY;
             double f = Math.min(1, age / 1500.0);
             double ease = 1 - (1 - f) * (1 - f);
             double x = sx + (tx - sx) * ease;
             double y = sy + (ty - sy) * ease - Math.sin(Math.PI * f) * h * 0.22;
             double grow = 0.55 + 0.75 * ease;
             double alpha = age < 2600 ? 1 : 1 - (age - 2600) / 800.0;
-            double size = h * 0.11 * grow;
+            double size = h * sizeK * grow;
             double sc = size / Math.max(icon.getWidth(), icon.getHeight());
             AffineTransform old = b.getTransform();
             b.translate(x, y);
-            b.rotate(age / 1000.0 * (rnd.nextBoolean() ? 5 : -5) * (1 - f * 0.8));
+            b.rotate(age / 1000.0 * (rnd.nextBoolean() ? 5 : -5) * (1 - f * 0.8) * (sizeK > 0.15 ? 0.25 : 1));
             b.scale(sc, sc);
             b.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, (float) Math.max(0, alpha) * 0.3f));
             b.setColor(Color.BLACK);
@@ -398,6 +417,139 @@ final class GlitcherActor {
             b.setTransform(old);
         }
         b.dispose();
+    }
+
+    // -------- the second song's first minute --------
+    private static final double[] STARTS2 = songTwoStarts();
+    private List<BufferedImage> errorWindows;
+
+    private static double[] songTwoStarts() {
+        int n = (int) ((72_000 - 8_000) / 2_400) + 1;
+        double[] out = new double[n];
+        for (int i = 0; i < n; i++) out[i] = 8_000 + i * 2_400.0;
+        return out;
+    }
+
+    /** How much he walks (0: stands in the middle where he formed, 1: paces the bottom of the screen). */
+    private static double walking2(double ms) {
+        return smooth((ms - 5_800) / 1_500.0) * (1 - smooth((ms - 73_500) / 2_000.0));
+    }
+
+    private static double songTwoX(double ms, int w) {
+        double cx = w * 0.5;
+        return cx + (pathX(ms, w) - cx) * walking2(ms);
+    }
+
+    /**
+     * From the very start of the second song to 1:17: he forms again out of pixels where he fell apart, then
+     * paces the bottom of the screen throwing error windows into the playfield, and comes apart once more as
+     * the screen tears.
+     */
+    void renderSong2(Graphics2D g, int w, int h, double ms) {
+        if (ms < 0 || ms > 77_500) return;
+        if (errorWindows == null) errorWindows = errorWindowSprites();
+        double t = ms / 1000.0;
+        double reform = smooth((ms - 800) / 5_000.0);
+        double leave = smooth((ms - 73_500) / 3_500.0);
+        double whole = Math.min(reform, 1 - leave);
+        if (whole <= 0) return;
+        double walking = walking2(ms);
+        double scale = 0.85;
+        double groundY = h * 0.9;
+        double heading = Math.cos(t * 0.55) >= 0 ? 1 : -1;
+        double x = songTwoX(ms, w);
+
+        pose.reset();
+        pose.yaw = heading * 1.15 * walking;
+        double phase = t * 2.6 * Math.PI;
+        double sw = Math.sin(phase) * walking * 0.7;
+        pose.partPitch[RIGHT_LEG] = sw;
+        pose.partPitch[LEFT_LEG] = -sw;
+        pose.partPitch[RIGHT_ARM] = -sw * 0.75;
+        pose.partPitch[LEFT_ARM] = sw * 0.75;
+        pose.partYaw[BODY] = Math.sin(phase) * 0.1 * walking;
+        for (double start : STARTS2) {
+            double d = ms - start;
+            if (d >= 0 && d < 1500) {
+                double windUp = smooth(d / 500.0), swing = smooth((d - 600.0) / 140.0), back = smooth((d - 900.0) / 500.0);
+                pose.partPitch[RIGHT_ARM] = 2.5 * windUp * (1 - swing) + (-1.3) * swing * (1 - back);
+                break;
+            }
+        }
+        if (walking < 0.2) pose.partPitch[HEAD] = 0.1;              // just formed: a little dazed
+        renderer.clear();
+        renderer.draw(model, skin, pose, unit * SS, ox, oy);
+
+        Graphics2D b = (Graphics2D) g.create();
+        b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        b.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        AffineTransform base = b.getTransform();
+        b.translate(x, groundY);
+        b.scale(scale / SS, scale / SS);
+        if (whole < 1) drawDissolving(b, 1 - whole);
+        else b.drawImage(renderer.image, (int) -ox, (int) -oy, null);
+        b.setTransform(base);
+        b.dispose();
+
+        drawThrownGeneric(g, w, h, ms, STARTS2, errorWindows, 0.22, r -> songTwoX(r, w), groundY - unit * 22 * scale);
+    }
+
+    /** Error windows to throw: pale body, blue title bar, red button, a line of text and a button. */
+    static List<BufferedImage> errorWindowSprites() {
+        String[][] texts = {
+                {"Error", "Click Fix to fix error", "Fix"},
+                {"Windows error", "Click OK to continue", "OK"},
+                {"Warning", "Critical process died", "OK"},
+                {"System", "Your files are being seen", "Fix"}};
+        java.util.List<BufferedImage> out = new java.util.ArrayList<>();
+        for (int i = 0; i < texts.length; i++) {
+            int w = 330, h = 168;
+            BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = img.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setColor(new Color(0xEDE4F6));
+            g.fillRect(0, 0, w, h);
+            g.setPaint(new java.awt.GradientPaint(0, 0, new Color(0x2E5CE0), 0, 30, new Color(0x1B3FB8)));
+            g.fillRect(0, 0, w, 30);
+            g.setColor(Color.WHITE);
+            g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 17));
+            g.drawString(texts[i][0], 10, 21);
+            g.setColor(new Color(0xD83030));
+            g.fillRect(w - 30, 5, 22, 20);
+            g.setColor(Color.WHITE);
+            g.setStroke(new BasicStroke(2f));
+            g.drawLine(w - 25, 9, w - 13, 21);
+            g.drawLine(w - 13, 9, w - 25, 21);
+            if (i % 2 == 0) {
+                g.setColor(new Color(0xD82828));
+                g.fillOval(18, 56, 44, 44);
+                g.setColor(Color.WHITE);
+                g.drawLine(29, 67, 51, 89);
+                g.drawLine(51, 67, 29, 89);
+            } else {
+                g.setColor(new Color(0xF0C010));
+                g.fillPolygon(new int[]{16, 66, 41}, new int[]{102, 102, 54}, 3);
+                g.setColor(new Color(0x402000));
+                g.fillRect(38, 66, 6, 20);
+                g.fillRect(38, 90, 6, 6);
+            }
+            g.setColor(new Color(0x2A2A50));
+            g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 18));
+            g.drawString(texts[i][1], 80, 84);
+            g.setColor(new Color(0xC6BCD8));
+            g.fillRect(w / 2 - 44, h - 46, 88, 32);
+            g.setColor(new Color(0x30304C));
+            g.setStroke(new BasicStroke(2f));
+            g.drawRect(w / 2 - 44, h - 46, 88, 32);
+            g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 17));
+            g.drawString(texts[i][2], w / 2 - g.getFontMetrics().stringWidth(texts[i][2]) / 2, h - 24);
+            g.setColor(new Color(0x30304C));
+            g.drawRect(0, 0, w - 1, h - 1);
+            g.dispose();
+            out.add(img);
+        }
+        return out;
     }
 
     /** Where he stood when a given throw let go. */
