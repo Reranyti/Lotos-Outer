@@ -33,7 +33,7 @@ public final class GameMain {
     private static final int FPS = 60;
     private static final Color CATCH_INPUT = new Color(0, 0, 0, 1);
 
-    private enum Phase { SONG1, SONG2, INTERLUDE, SONG3, RESULTS, FINALE, DEFEAT }
+    private enum Phase { SONG1, LESSON, SONG2, INTERLUDE, SONG3, RESULTS, FINALE, DEFEAT }
 
     /** Icons taken off the desktop before the fight (by the exit scene), kept covered while it runs. */
     private static volatile DesktopSnapshot hiddenIcons;
@@ -128,7 +128,7 @@ public final class GameMain {
     public static void main(String[] args) throws Exception {
         String song1Wav = null, song2Wav = null, song3Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
         double animFps = 30, startSong2 = -1, startSong3 = -1, cutsceneAt = -1, finaleAt = -1;
-        boolean minimize = false;
+        boolean minimize = false, lessonOnly = false;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
@@ -149,6 +149,7 @@ public final class GameMain {
         for (String arg : args) {
             if (arg.equals("--minimize")) minimize = true;
             if (arg.equals("--from-game")) fromGame = true;
+            if (arg.equals("--lesson")) lessonOnly = true;
         }
         if (minimize && System.getProperty("os.name", "").toLowerCase().contains("win")) {
             // Windows out of the way for a test run started on its own (the exit scene does this in the real chain).
@@ -193,6 +194,7 @@ public final class GameMain {
         int[] honchoSkin = loadSkinFile("/assets/lotusblight/textures/entity/honcho.png");
         Engine engine = new Engine(g1, g2, g3, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, song3Wav, animWav);
         engine.setup(skin, honchoSkin != null ? honchoSkin : skin, screen.height);
+        if (lessonOnly) engine.jumpToLesson();
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
         if (startSong3 >= 0 && g3 != null) engine.jumpToSong3(startSong3);
         if (cutsceneAt >= 0 && g3 != null) engine.jumpToInterlude(cutsceneAt);
@@ -303,6 +305,7 @@ public final class GameMain {
         /** Straight into the closing cutscene (for trying it out). */
         void jumpToFinale(double seconds) {
             tutorialDone = true;
+            if (clip != null) { clip.stop(); clip.close(); clip = null; }
             startFinale();
             finale.seek(seconds);
         }
@@ -313,6 +316,7 @@ public final class GameMain {
         }
 
         void jumpToInterlude(double seconds) {
+            if (clip != null) { clip.stop(); clip.close(); clip = null; }   // the engine starts on the first song; it must not play under the cutscene
             phase = Phase.INTERLUDE;
             tutorialDone = true;
             interlude = new Interlude(glitcherSkin, honchoSkin, desktopShot(), fall);
@@ -324,7 +328,7 @@ public final class GameMain {
         private static final double LEAD_MS = 2200;
         private boolean leadIn;
         private long leadStartNano;
-        // The lesson: at 1:19 the song is paused, Honcho's track plays, and when it's done the song goes on.
+        // The lesson, between the first and second songs: Honcho's track plays over a scene of its own.
         private boolean tutorial, tutorialDone;
         private long tutorialStartNano;
         private Clip briefClip;
@@ -382,18 +386,28 @@ public final class GameMain {
                 tutorial = false;
                 tutorialDone = true;
                 if (briefClip != null) briefClip.stop();
-                if (clip != null) {
-                    gain(clip, -50);
-                    clip.start();                                          // from where it stopped
-                    resumeNano = System.nanoTime();
-                }
+                phase = Phase.SONG2;                                       // and now the song itself
+                play(song2Wav);
             }
+        }
+
+        /** Straight into the lesson between the first and second songs (for trying it out). */
+        void jumpToLesson() {
+            startLesson();
+        }
+
+        /** Between the songs: Honcho's window, his track, and the eye to practise on. The second song begins when it ends. */
+        private void startLesson() {
+            if (clip != null) { clip.stop(); clip.close(); clip = null; }
+            phase = Phase.LESSON;
+            tutorialDone = false;
+            enterTutorial();
         }
 
         /** Jump straight into song 2 at a given track time (for previewing phase two). */
         void jumpToSong2(double seconds) {
             phase = Phase.SONG2;
-            if (seconds * 1000 >= ContactBreak.START) tutorialDone = true;
+            tutorialDone = true;
             play(song2Wav);
             if (clip != null) clip.setMicrosecondPosition((long) (seconds * 1_000_000));
             g2.skipTo(seconds * 1000);
@@ -470,6 +484,7 @@ public final class GameMain {
 
         void space() {
             if (phase == Phase.INTERLUDE) { interlude.press(); return; }
+            if (phase == Phase.LESSON) { tutor.press(ContactBreak.START + tutorialMs()); return; }
             if (phase == Phase.RESULTS && song3Played) { if (resultsShownFor() > 1.2) startFinale(); return; }      // on from the results to the closing scene
             if (phase != Phase.SONG2) return;
             double t = clockMs();
@@ -482,7 +497,6 @@ public final class GameMain {
                 } catch (java.io.IOException ignored) { }
                 return;
             }
-            if (tutorial) { tutor.press(ContactBreak.START + tutorialMs()); return; }
             contact.press(t);
         }
 
@@ -531,18 +545,20 @@ public final class GameMain {
                     g1.render(g, w, h, t);
                     hazards.render(g, w, h, t);
                     if (!g1.alive()) end(Phase.DEFEAT);
-                    else if (g1.finished(t) || trackOver()) { phase = Phase.SONG2; play(song2Wav); }
+                    else if (g1.finished(t) || trackOver()) startLesson();
+                }
+                case LESSON -> {
+                    stepTutorial(tutorialMs());
+                    if (phase == Phase.LESSON) {
+                        double vt = ContactBreak.START + tutorialMs();
+                        contact.renderBackdrop(g, w, h, vt);
+                        tutor.update(vt);
+                        tutor.renderEye(g, w, h, vt);
+                    }
                 }
                 case SONG2 -> {
-                    if (!tutorial && !tutorialDone && recordFile == null && t >= ContactBreak.START) enterTutorial();
-                    if (tutorial) stepTutorial(tutorialMs());
-                    if (resumeNano > 0 && clip != null) {
-                        double f = (System.nanoTime() - resumeNano) / 1.5e9;
-                        gain(clip, -50 * (1 - Math.min(1, f)));
-                        if (f >= 1) resumeNano = -1;
-                    }
                     g2.update(t);
-                    if (recordFile == null && !tutorial) contact.update(t);
+                    if (recordFile == null) contact.update(t);
                     double gl = ContactBreak.glitchAmount(t);
                     if (gl > 0) {
                         // 1:17: the whole picture - circles, windows, bars - is drawn aside, then torn.
@@ -558,16 +574,8 @@ public final class GameMain {
                         bg.dispose();
                         ContactBreak.blit(g, glitchBuf, w, h, gl, t);
                     } else {
-                        if (tutorial) {
-                            // The lesson is a scene of its own; the song's clock stands still meanwhile.
-                            double vt = ContactBreak.START + tutorialMs();
-                            contact.renderBackdrop(g, w, h, vt);
-                            tutor.update(vt);
-                            tutor.renderEye(g, w, h, vt);
-                        } else {
-                            contact.renderBackdrop(g, w, h, t);
-                            if (recordFile == null) contact.renderEye(g, w, h, t);
-                        }
+                        contact.renderBackdrop(g, w, h, t);
+                        if (recordFile == null) contact.renderEye(g, w, h, t);
                         drawSong2(g, w, h, t);
                         if (recordFile != null) recordHud(g, w, h, t);
                     }
