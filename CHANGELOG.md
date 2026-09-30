@@ -16,6 +16,28 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 2.0000 — Анимации на 15 суставах, финал, круги по событиям / R15 animation, the finale, circles that follow the events
+
+### Русский
+- **Анимация на 15 суставах.** Все фигуры боя, катсцен и финала теперь на скелете из 15 суставов (плечи, локти, запястья, бёдра, колени, лодыжки, пояс, шея) с решателем IK для рук и ног. Драка в падении, душение и финальный бросок поставлены на нём напрямую, остальные сцены идут через переходник с пружинным сглаживанием и сгибами по движению.
+- **Пальцы.** У каждой руки по пять пальцев с двумя косточками; рука расслаблена, сжимается в кулак при ударе и раскрывается.
+- **Катсцена перед битвой переделана.** Глитчер говорит с игроком прямо на рабочем столе; открывается портал, Хончо вылетает из него, Глитчер берёт его за горло и спрашивает, кто он; дальше — спасение кликами. Портал стал детальнее (воронки, рваный край, молнии, искры); рабочий стол бьётся как стекло.
+- **Финал после 3 песни.** Результаты ждут пробела; затем портал, бросок Глитчера, две реплики, «SIGNAL LOST». Игроку выдаётся рог (пока предмет-заглушка), окно Minecraft возвращается на передний план, а если игры нет — приложение закрывается.
+- **Круги по событиям.** Пузыри в Aero-части 1 песни, глаза из поля глаз, окна «Изображение не найдено» с кнопкой OK во 2 песне, куски рабочего стола в 3 песне. События двигают и поле, и интерфейс: поворот мира, экран в руках твари (полосы HP и комбо внутри него), тряска от страха, глитч, сжатие с полем.
+- **Обучение** про пробел и глаз теперь отдельная сцена между 1 и 2 песней; во 2 песне на 1:19 музыка больше не прерывается.
+- **Быстрее:** туннель, небо, глитч и бойцы отрисовываются заметно дешевле.
+- Инструменты для разработки: набор для анимации с проверками и контактными листами (в игру не входит).
+
+### English
+- **15-joint animation.** Every figure of the fight, the cutscenes and the finale is now on a 15-joint skeleton (shoulders, elbows, wrists, hips, knees, ankles, waist, neck) with IK for hands and feet. The falling fight, the choke and the finale's throw are posed on it directly; the other scenes go through an adapter with spring smoothing and bends that follow the motion.
+- **Fingers.** Every hand has five fingers of two bones; the hand is loose, closes into a fist on a blow and opens again.
+- **The cutscene before the fight is redone.** The Glitcher speaks to the player on the desktop itself; a portal opens, Honcho is thrown out of it, the Glitcher takes him by the throat and asks who he is; then the rescue by clicking. The portal is more detailed (vortices, torn rim, lightning, sparks); the desktop breaks like glass.
+- **The finale after the third song.** The results wait for the space bar; then the portal, the Glitcher's throw, two lines, "SIGNAL LOST". The player is given a horn (a placeholder item for now), the Minecraft window is brought back to the front, and if the game is gone the program just closes.
+- **Circles that follow the events.** Bubbles in the Aero part of the first song, the eyes of the field of eyes, "Image not found" boxes with an OK button in the second, pieces of the broken desktop in the third. The events move both the playfield and the interface: the world's turn, the screen held in the thing's hands (the HP and combo bars inside it), shaking with fear, glitching, shrinking with the field.
+- **The lesson** on the space bar and the eye is now a scene of its own between the first and second songs; the second song's music is no longer interrupted at 1:19.
+- **Faster:** the tunnel, sky, glitch and fighters are much cheaper to draw.
+- Development tools: an animation toolkit with checks and contact sheets (not part of the game).
+
 ## 1.9000 — Третья песня / The third song
 
 ### Русский
