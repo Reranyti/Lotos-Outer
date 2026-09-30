@@ -235,7 +235,8 @@ final class Interlude {
         double gx = w * (0.5 + 0.13 * turnPos + 0.14 * m + 0.13 * freed);
         double px = w * 0.2, py = h * 0.5;                                   // the portal stands on the left
         double portalA = smooth((c - PORTAL_FROM) / 1800.0) * (1 - smooth((c - 20_600) / 1000.0));
-        if (c >= PORTAL_FROM && winAt < 0) PortalFx.draw(b, px, py, h * 0.12, h * 0.25, portalA, t, h);
+        double burst = Math.sin(Math.PI * Math.max(0, Math.min(1, (c - (EXIT_FROM - 200)) / 1100.0)));
+        if (c >= PORTAL_FROM && winAt < 0) PortalFx.draw(b, px, py, h * 0.12, h * 0.25, portalA, t, h, burst);
 
         // ---- the Glitcher
         double turn = smooth((c - 14_300) / 1300.0);                         // from facing us to facing the portal
@@ -290,43 +291,66 @@ final class Interlude {
         b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);
         hitBox.setRect(gx - 10 * unit, ground - 36 * unit, 20 * unit, 38 * unit);
 
-        // ---- Honcho: out of the portal, through the air, into the hand that takes him by the throat; then he hangs there.
+        // ---- Honcho: pushed out of the portal, tumbling, caught by the throat, then hanging and fighting for air.
         double hxN = gx - 7.7 * unit, hyN = ground - 32.3 * unit;            // where his neck is when he is held
         if (c >= EXIT_FROM) {
-            double ex = Math.min(1, (c - EXIT_FROM) / (GRAB_FROM + 500 - EXIT_FROM));
-            double fe = smooth(ex);
-            double arrive = smooth((ex - 0.75) / 0.25);
-            double nx = px + (hxN - px) * fe, ny = py + (hyN - py) * fe - Math.sin(Math.PI * fe) * h * 0.14;
+            double flightMs = GRAB_FROM + 500 - EXIT_FROM, tArrive = GRAB_FROM + 500;
+            double ex = Math.min(1, (c - EXIT_FROM) / flightMs);
+            double hitAge = c - tArrive;                                     // ms since he was caught
+            double impact = hitAge >= 0 ? Math.exp(-hitAge / 150.0) : 0;
+            double pend = hitAge >= 0 ? 0.3 * Math.exp(-hitAge / 1200.0) * Math.cos(hitAge * 0.0058) : 0;
             double fatigue = limp ? 1 : Math.min(1, Math.max(0, (c - RIFT_END) / CHOKE_MS) * (1 - 0.6 * m));
+            double[] flight = honchoFlight(ex, px, py, hxN, hyN, h);         // {x, y, turn, scale}
+            double arrive = smooth((ex - 0.75) / 0.25);
             double flail = (1 - 0.9 * fatigue) * (1 - freed) * arrive;
-            double fl = Math.sin(ex * 19), fl2 = Math.sin(ex * 23 + 1.2), fl3 = Math.sin(ex * 17 + 2.3);
-            double kick = Math.sin(t * 15) * flail, kick2 = Math.sin(t * 15 + 2.2) * flail;
+            double gasp = Math.pow(Math.max(0, Math.sin(t * 6.0)), 4) * (0.3 + 0.7 * (1 - fatigue)) * arrive;
             Actor a = honchoActor;
             Pose15 p = a.begin();
-            a.viewYaw = 0.8;
-            double grabIk = Math.min(1, 1.3 * flail);
-            a.reach(Rig15.Limb.R_ARM, -2.2 + 1.2 * Math.sin(t * 17) * flail, 26.5 + 1.0 * Math.cos(t * 13) * flail, 3.6, grabIk);
-            a.reach(Rig15.Limb.L_ARM, 2.2 + 1.2 * Math.cos(t * 19) * flail, 26.0 + 1.0 * Math.sin(t * 14) * flail, 3.8, grabIk);
-            double limpW = 1 - arrive;                                       // thrown: the limbs go loose and trail
-            p.turn(Rig15.Joint.R_UPPER_ARM, 8 * arrive + (-140 + 40 * fl) * limpW, 0, -8 - 30 * limpW).turn(Rig15.Joint.L_UPPER_ARM, 10 * arrive + (-120 + 40 * fl2) * limpW, 0, 8 + 30 * limpW);
-            p.turn(Rig15.Joint.R_LOWER_ARM, (-35 - 20 * fl3) * limpW, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, (-45 - 20 * fl) * limpW, 0, 0);
-            p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6 * arrive + (-40 + 30 * fl2) * limpW, 0, 4).turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6 * arrive + (25 + 30 * fl3) * limpW, 0, -4);
-            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick) + 20 * limpW, 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2) + 15 * limpW, 0, 0);
-            p.turn(Rig15.Joint.R_FOOT, 25, 0, 0).turn(Rig15.Joint.L_FOOT, 25, 0, 0);
-            p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick - 8 * limpW * fl2, 6 * kick2 + 8 * limpW * fl3, 0);
-            p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue - 10 * limpW * fl, 8 * Math.sin(t * 11) * flail + 10 * limpW * fl2, 6 * Math.sin(t * 9) * flail);
-            a.fistR = a.fistL = 0.8 * flail + 0.15 * limpW;
-            a.spread = 0.4;
+            double fe = 1 - Math.pow(1 - ex, 2.0);
+            a.viewYaw = 0.8 + (1 - fe) * (1 - fe) * Math.PI * 3.2;                // turning in the air, settling facing the Glitcher
+            a.viewPitch = -0.25 * (1 - fe) * Math.sin(ex * 9) + 0.2 * impact;
+            double fl1 = Math.sin(ex * 19 - 0.3), fl2 = Math.sin(ex * 19 - 0.9), fl3 = Math.sin(ex * 23 + 1.2), fl4 = Math.sin(ex * 17 + 2.3);
+            double limpW = 1 - arrive;                                       // in the air: the limbs are loose and trail behind
+            double emerge = 1 - smooth(ex / 0.25);                           // at the mouth of the portal the arms are still flung ahead
+            double kick = Math.sin(t * 15) * flail, kick2 = Math.sin(t * 15 + 2.2) * flail;
+            // the arms: flung ahead, trailing, then up to the fist at his throat
+            double armUp = -160 * emerge + (-135 + 45 * fl1) * (1 - emerge);
+            double grabIk = Math.min(1, 1.3 * flail + 0.25 * impact);
+            double clutch = 0.6 + 0.3 * Math.sin(t * 13);
+            a.reach(Rig15.Limb.R_ARM, -2.2 + 1.2 * Math.sin(t * 17) * flail - 0.6 * gasp, 26.5 + 1.0 * Math.cos(t * 13) * flail + 0.8 * gasp, 3.6, grabIk);
+            a.reach(Rig15.Limb.L_ARM, 2.2 + 1.2 * Math.cos(t * 19) * flail + 0.6 * gasp, 26.0 + 1.0 * Math.sin(t * 14) * flail + 0.8 * gasp, 3.8, grabIk);
+            p.turn(Rig15.Joint.R_UPPER_ARM, 8 * arrive + armUp * limpW, 0, -8 - (30 + 10 * fl2) * limpW)
+                    .turn(Rig15.Joint.L_UPPER_ARM, 10 * arrive + ((-115 + 45 * fl2) * (1 - emerge) - 160 * emerge) * limpW, 0, 8 + (30 + 10 * fl3) * limpW);
+            p.turn(Rig15.Joint.R_LOWER_ARM, (-30 - 25 * fl3) * limpW, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, (-40 - 25 * fl1) * limpW, 0, 0);
+            // the legs: scrabbling in the air once he hangs, loose in flight, whipped forward when he is caught
+            double whip = -55 * impact;
+            p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6 * arrive + (-45 + 30 * fl2) * limpW + whip, 0, 4)
+                    .turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6 * arrive + (20 + 30 * fl3) * limpW + whip * 0.7, 0, -4);
+            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick) + (20 + 25 * fl1) * limpW + 25 * impact, 0, 0)
+                    .turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2) + (15 + 25 * fl2) * limpW + 25 * impact, 0, 0);
+            p.turn(Rig15.Joint.R_FOOT, 25 - 10 * Math.max(0, kick), 0, 0).turn(Rig15.Joint.L_FOOT, 25 - 10 * Math.max(0, -kick2), 0, 0);
+            // the body: arches in the air, snaps when caught, heaves with every gasp, then sags
+            p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick - 10 * limpW * fl2 - 16 * impact - 7 * gasp, 6 * kick2 + 10 * limpW * fl3, 3 * Math.sin(t * 9) * flail);
+            p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue - 12 * limpW * fl4 - 34 * impact - 14 * gasp, 8 * Math.sin(t * 11) * flail + 12 * limpW * fl2, 6 * Math.sin(t * 9) * flail + 5 * gasp * Math.sin(t * 40));
+            p.rootPos[1] = -0.6 * gasp - 0.5 * impact;
+            a.fistR = a.fistL = limpW * 0.15 + arrive * (flail * clutch + 0.05);
+            a.spread = 0.4 + 0.6 * limpW;
             honchoRender.clear();
             honchoActor.draw(honchoRender, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
             double drop = freed * freed * h * 0.9;
-            double scale = 0.35 + 0.65 * fe;
-            AffineTransform old = b.getTransform();
-            b.translate(nx, ny + 24 * unit * scale + drop);
-            b.rotate((1 - fe) * -Math.PI * 2.4 * (1 - fe) + 0.3 * freed + Math.sin(t * 8) * 0.03 * flail);
-            b.scale(scale, scale);
-            b.drawImage(honchoRender.image, -honchoRender.width / 2, -honchoRender.height + (int) (6 * unit), null);
-            b.setTransform(old);
+            java.awt.Shape keepClip = b.getClip();
+            if (ex < 0.22) b.clip(new java.awt.geom.Rectangle2D.Double(px, 0, w, h));   // he is still coming through the portal
+            // the air leaves streaks behind him
+            if (ex > 0.05 && ex < 0.97) {
+                for (int g = 3; g >= 1; g--) {
+                    double[] gp = honchoFlight(Math.max(0, ex - 0.045 * g), px, py, hxN, hyN, h);
+                    drawHoncho(b, unit, gp[0], gp[1], gp[2], gp[3], 1, 1, 0.2 / g, false);
+                }
+            }
+            double sx = 1 - 0.45 * smooth(1 - ex / 0.12) * (ex < 0.12 ? 1 : 0), sy = 1 + 0.3 * (ex < 0.12 ? smooth(1 - ex / 0.12) : 0) - 0.07 * impact;
+            double shakeX = (Math.random() - 0.5) * h * 0.012 * impact, shakeY = (Math.random() - 0.5) * h * 0.012 * impact;
+            drawHoncho(b, unit, flight[0] + shakeX, flight[1] + drop + shakeY, flight[2] + pend + 0.3 * freed + Math.sin(t * 8) * 0.03 * flail, flight[3], sx, sy, 1, true);
+            b.setClip(keepClip);
         }
 
         // The dark closing in as the time runs out, red at its edge.
@@ -349,6 +373,28 @@ final class Interlude {
             b.setColor(new Color(255, 255, 255, (int) (60 * (1 - since / 140.0))));
             b.fillRect(0, 0, w, h);
         }
+    }
+
+    /** Honcho's neck on the way from the portal to the fist: {x, y, turn (rad), scale}. Fast off the mark, slowing as he arrives. */
+    private double[] honchoFlight(double ex, double px, double py, double hxN, double hyN, int h) {
+        double fe = 1 - Math.pow(1 - ex, 2.0);
+        double x = px + (hxN - px) * fe;
+        double y = py + (hyN - py) * fe - Math.sin(Math.PI * fe) * h * 0.14;
+        double turn = -(1 - fe) * (1 - fe) * Math.PI * 2.4;
+        double scale = 0.35 + 0.65 * smooth(ex / 0.6);
+        return new double[]{x, y, turn, scale};
+    }
+
+    /** Draws his sprite with the neck at (x, y), turned about the neck. {@code pivotNeck} true for the real figure. */
+    private void drawHoncho(Graphics2D b, double unit, double x, double y, double turn, double scale, double sx, double sy, double alpha, boolean real) {
+        Graphics2D d = (Graphics2D) b.create();
+        if (alpha < 1) d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) alpha));
+        d.translate(x, y);
+        d.rotate(turn);
+        d.scale(scale * sx, scale * sy);
+        d.translate(0, 24 * unit);
+        d.drawImage(honchoRender.image, -honchoRender.width / 2, -honchoRender.height + (int) (6 * unit), null);
+        d.dispose();
     }
 
     private void drawChokeHud(Graphics2D b, int w, int h, double c) {
