@@ -16,7 +16,7 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
-## 1.8000.1 — Третья песня / The third song
+## 1.9000 — Третья песня / The third song
 
 ### Русский
 - **Третья песня боя.** После второй песни идёт катсцена (Глитчер, Хончо, душение — жмите по Глитчеру,
