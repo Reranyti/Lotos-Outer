@@ -15,8 +15,8 @@ import java.awt.image.BufferedImage;
 import java.util.Random;
 
 /**
- * The closing cutscene, after the results of the third song: a portal opens into Minecraft, Honcho throws
- * the Glitcher into it, two last lines are said, and the signal is lost. When it has played out the process
+ * The closing cutscene, after the results of the third song: a portal opens into Minecraft, the Glitcher takes Honcho by the
+ * throat and throws him into it, two last lines are written, and the signal is lost. When it has played out the process
  * ends with {@link #EXIT_CODE}, which tells the game to put the horn in the player's hands; the game's own
  * window is brought back if it was hidden.
  *
@@ -91,8 +91,8 @@ final class Finale3 {
         return x * x * (3 - 2 * x);
     }
 
-    // The portal stands to the right of the two of them.
-    private static double portalX(int w) { return w * 0.80; }
+    // The portal stands to the left of the two of them: the Glitcher throws Honcho into it.
+    private static double portalX(int w) { return w * 0.18; }
 
     private static double portalY(int h) { return h * 0.46; }
 
@@ -147,13 +147,18 @@ final class Finale3 {
         return unit / 0.6;
     }
 
-    /** Honcho's place on the floor: where he starts, and where he has walked to when he takes hold. */
-    private double honchoX(double c, int w) {
-        double grabX = w * 0.60 - 12 * upx();
-        return w * 0.40 + (grabX - w * 0.40) * smooth((c - T_STEP) / 1100.0);
+    /** Honcho stands here to begin with (and is taken hold of here). */
+    private double victimX0(int w) {
+        return w * 0.44;
     }
 
-    /** Where Honcho's right fist is meant to be (in his own space) and how much it counts: reach, hold, lift, wind back, sweep. */
+    /** The Glitcher's place on the floor: where he starts, and where he has walked to when he takes hold. */
+    private double throwerX(double c, int w) {
+        double start = w * 0.70, grabX = victimX0(w) + 12 * upx();
+        return start + (grabX - start) * smooth((c - T_STEP) / 1100.0);
+    }
+
+    /** Where the Glitcher's right fist is meant to be (in his own space) and how much it counts: reach, hold, lift, wind back, sweep. */
     private static double[] fistTarget(double c) {
         double lift = smooth((c - T_LIFT) / 600.0);
         double[] hold = {-3.3, 25.5 + 2.5 * lift, 9.4};
@@ -168,22 +173,21 @@ final class Finale3 {
         return out;
     }
 
-    /** Where that fist is on the picture, given Honcho stands at {@code x}; he faces right, nearly side-on. */
+    /** Where that fist is on the picture, given the Glitcher stands at {@code x}; he faces left, nearly side-on. */
     private double[] fistOnScreen(double[] target, double x, double feetY) {
-        double yaw = 1.4;
+        double yaw = -1.4;
         double sx = target[2] * Math.sin(yaw) + target[0] * Math.cos(yaw);
         return new double[]{x + sx * upx(), feetY - target[1] * upx()};
     }
 
-    /** The Glitcher's neck on the picture before he is thrown: standing, taken hold of, lifted, swung. */
-    private double[] glitcherNeck(double c, int w, double feetY) {
+    /** Honcho's neck on the picture before he is thrown: standing, taken hold of, lifted, swung. */
+    private double[] victimNeck(double c, int w, double feetY) {
         double up = upx();
-        double[] standing = {w * 0.60, feetY - 24 * up};
-        double[] ft = fistTarget(c);
-        double[] fist = fistOnScreen(ft, honchoX(c, w), feetY);
+        double[] standing = {victimX0(w), feetY - 24 * up};
+        double[] fist = fistOnScreen(fistTarget(c), throwerX(c, w), feetY);
         double gb = smooth((c - (T_GRAB - 300)) / 350.0);
-        // The throat is at the back of the fist; he faces the other way, so his neck is a little beyond it.
-        return new double[]{standing[0] + (fist[0] + 1.6 * up - standing[0]) * gb, standing[1] + (fist[1] - standing[1]) * gb};
+        // The throat is in the fist; he faces the Glitcher, so his neck is a little beyond it.
+        return new double[]{standing[0] + (fist[0] - 1.6 * up - standing[0]) * gb, standing[1] + (fist[1] - standing[1]) * gb};
     }
 
     private void drawFigure(Graphics2D g, int w, int h, double c, int who) {
@@ -192,13 +196,13 @@ final class Finale3 {
         Actor a = rigs[who];
         Pose15 p = a.begin();
         double px = 0, py = 0, rot = 0, scale = 1;              // where the neck is, how it turns, how large
-        if (who == 0) {
-            // ---- Honcho: walks up, reaches, holds the Glitcher by the neck, lifts him, swings him back, throws.
-            px = honchoX(c, w);
+        if (who == 1) {
+            // ---- The Glitcher: walks up, reaches, holds Honcho by the neck, lifts him, swings him back, throws him into the portal.
+            px = throwerX(c, w);
             py = feetY - 24 * up;
-            a.viewYaw = 1.4;
+            a.viewYaw = -1.4;
             double walkAmt = smooth((c - T_STEP) / 300.0) * (1 - smooth((c - (T_STEP + 1000)) / 250.0));
-            GlitcherPoses.walk(a, c / 1000.0 * 2.2 * Math.PI, walkAmt, 0, t);
+            GlitcherPoses.walk(a, c / 1000.0 * 2.2 * Math.PI, walkAmt, 0.2, t);
             double[] ft = fistTarget(c);
             if (ft[3] > 0.01) {
                 a.reach(Rig15.Limb.R_ARM, ft[0], ft[1], ft[2], ft[3]);
@@ -209,21 +213,20 @@ final class Finale3 {
             }
             boolean released = c >= RELEASE;
             a.shapeR = released ? Actor.Hand.OPEN : Actor.Hand.GRIP;
-            a.fistR = released ? 0 : 0.35;
+            a.fistR = released ? 0 : 0.45;
             a.spread = 0.6;
-            // The other arm swings with the body.
-            a.blendTurn(Rig15.Joint.L_UPPER_ARM, -12 * smooth((c - T_WIND) / 700.0), 0, 6, 1);
+            a.blendTurn(Rig15.Joint.L_UPPER_ARM, -12 * smooth((c - T_WIND) / 700.0), 0, 6, 1);      // the other arm goes with the body
         } else {
             double e = (c - RELEASE) / FLIGHT_MS;
             if (e >= 1) return;                                    // gone through
-            a.viewYaw = -1.4;
+            a.viewYaw = 1.4;
             if (e <= 0) {
-                double[] n = glitcherNeck(c, w, feetY);
+                double[] n = victimNeck(c, w, feetY);
                 px = n[0];
                 py = n[1];
                 double lift = smooth((c - T_LIFT) / 500.0);
                 double wind = smooth((c - T_WIND) / 700.0), sweep = smooth((c - T_SWEEP) / 350.0);
-                // standing: waiting, head down a little
+                // standing: waiting, the head down a little
                 p.reach(Rig15.Limb.R_LEG, -2.4, 3, 0, 1).reach(Rig15.Limb.L_LEG, 2.4, 3, 0, 1);
                 p.rootPos[1] = -0.6;
                 p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath, 0, 0).turn(Rig15.Joint.HEAD, 6, 0, 0);
@@ -231,16 +234,17 @@ final class Finale3 {
                 p.turn(Rig15.Joint.R_LOWER_ARM, -6, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -6, 0, 0);
                 // taken hold of: the struggle comes in as he leaves the floor
                 if (lift > 0.02) GlitcherPoses.hanging(a, t, lift * (1 - 0.4 * sweep), 1.3);
-                // hangs from the fist, swinging away from Honcho, trailing as the arm goes back and whips forward
-                rot = -0.3 * smooth((c - T_GRAB) / 400.0) + 0.5 * wind - 0.8 * sweep + 0.25 * Math.exp(-Math.max(0, c - T_GRAB) / 900.0) * Math.cos(Math.max(0, c - T_GRAB) * 0.006);
+                // hangs from the fist, swinging away from the Glitcher, trailing as the arm goes back and whips forward
+                double since = Math.max(0, c - T_GRAB);
+                rot = 0.3 * smooth((c - T_GRAB) / 400.0) - 0.5 * wind + 0.8 * sweep - 0.25 * Math.exp(-since / 900.0) * Math.cos(since * 0.006);
             } else {
                 // Thrown: over in an arc, turning, growing small as it goes into the portal; the body goes limp, the limbs trailing.
-                double[] n0 = glitcherNeck(RELEASE, w, feetY);
+                double[] n0 = victimNeck(RELEASE, w, feetY);
                 double ee = e * e * (3 - 2 * e);
                 double ptX = portalX(w), ptY = portalY(h);
                 px = n0[0] + (ptX - n0[0]) * ee;
                 py = n0[1] + (ptY - n0[1]) * ee - Math.sin(Math.PI * ee) * h * 0.16;
-                double rot0 = -0.3 + 0.5 - 0.8;
+                double rot0 = 0.3 - 0.5 + 0.8;
                 rot = rot0 + ee * Math.PI * 3.5;
                 scale = 1 - 0.85 * ee * ee;
                 double fl = Math.sin(e * 23), fl2 = Math.sin(e * 19 + 1.3), fl3 = Math.sin(e * 27 + 2.1);
@@ -268,7 +272,7 @@ final class Finale3 {
         d.dispose();
     }
 
-    /** The portal, to the right of the two of them. */
+    /** The portal, to the left of the two of them. */
     private void drawPortal(Graphics2D g, int w, int h, double c) {
         double a = smooth((c - PORTAL_FROM_MS) / PORTAL_OPEN_MS) * (1 - smooth((c - PORTAL_CLOSE_FROM) / PORTAL_CLOSE_MS));
         PortalFx.draw(g, portalX(w), portalY(h), h * 0.13, h * 0.27, a, c / 1000.0, h);
