@@ -27,6 +27,8 @@ final class Figure {
     private final Quat[] cur = new Quat[LEGACY.length];
     private final double[][] vel = new double[LEGACY.length][3];
     private final Pose15 pose = new Pose15();
+    /** How closed each hand is wanted (0 open .. 1 fist), right then left; the hands follow it smoothly. */
+    private final double[] fistWant = new double[2], fistCur = new double[2], fistVel = new double[2];
     private boolean primed;
     private long lastNano;
 
@@ -47,6 +49,12 @@ final class Figure {
     void draw(SoftRenderer r, SoftRenderer.Pose legacy, double scale, double originX, double originY, double dt) {
         Rig15.Skel sk = rig.solve(follow(legacy, dt));
         r.drawRig(rig, sk, skin, 0, 0, scale, originX, originY);
+    }
+
+    /** Asks for the hands to close (1) or open (0); the scene calls it each frame it wants a fist. */
+    void fists(double right, double left) {
+        fistWant[0] = right;
+        fistWant[1] = left;
     }
 
     /** Forgets the smoothing: the next frame is taken as it is. */
@@ -82,6 +90,19 @@ final class Figure {
         for (int i = 0; i < LEGACY.length; i++) {
             pose.rot[LEGACY[i]] = cur[i];
             System.arraycopy(legacy.partOffset[i], 0, pose.offset[LEGACY[i]], 0, 3);
+        }
+        // The hands: loose by default, tighter the faster the arm moves, closed when the scene wants a fist.
+        for (int side = 0; side < 2; side++) {
+            double want = Math.max(fistWant[side], Math.min(0.35, speed(2 + side) * 0.03));
+            if (snap) {
+                fistCur[side] = want;
+                fistVel[side] = 0;
+            } else if (dt > 0) {
+                double w0 = 34, d = want - fistCur[side];
+                fistVel[side] += (w0 * w0 * d - 2 * 0.85 * w0 * fistVel[side]) * Math.min(dt, 0.05);
+                fistCur[side] = Math.max(0, Math.min(1, fistCur[side] + fistVel[side] * Math.min(dt, 0.05)));
+            }
+            pose.hand(side == 0, fistCur[side], 0.3);
         }
         // Bends that follow the swing.
         arm(Rig15.Joint.R_LOWER_ARM, Rig15.Joint.R_HAND, speed(2));

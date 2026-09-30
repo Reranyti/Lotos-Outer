@@ -47,9 +47,8 @@ final class Finale3 {
 
     private final BufferedImage desktop;
     private final int[] glitcherSkin, honchoSkin;
-    private final Figure[] rigs;
+    private final Actor[] rigs;
     private final SoftRenderer[] figures = new SoftRenderer[2];
-    private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private final double unit;
     private final long startNano = System.nanoTime();
     private double seekMs;
@@ -59,7 +58,7 @@ final class Finale3 {
         this.honchoSkin = honchoSkin;
         this.desktop = desktop;
         this.unit = screenH * 0.36 / 32.0 * 0.6;
-        this.rigs = new Figure[]{new Figure(honchoSkin, true), new Figure(glitcherSkin, false)};
+        this.rigs = new Actor[]{new Actor(honchoSkin, true), new Actor(glitcherSkin, false)};
         for (int i = 0; i < 2; i++) figures[i] = new SoftRenderer((int) (30 * unit), (int) (36 * unit));
     }
 
@@ -144,37 +143,72 @@ final class Finale3 {
     private void drawFigure(Graphics2D g, int w, int h, double c, int who) {
         double feetY = h * 0.86;
         double x = w * (who == 0 ? 0.40 : 0.60);
-        double sway = Math.sin(c / 1000.0 * 1.1 + who * 1.7);
+        double t = c / 1000.0;
+        double sway = Math.sin(t * 1.1 + who * 1.7), breath = Math.sin(t * 1.6 + who);
         double tumble = 0, scale = 1;
-        pose.reset();
-        pose.yaw = who == 0 ? 0.55 : -0.55;                              // turned a little towards each other
-        pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = 0.04 * sway;
-        pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = -0.04 * sway;
+        Actor a = rigs[who];
+        Pose15 p = a.begin();
+        Rig15.Joint torso = Rig15.Joint.UPPER_TORSO, head = Rig15.Joint.HEAD;
         if (who == 0) {
-            // Honcho steps in and throws: both arms forward, a lunge towards the Glitcher, then he watches the portal.
+            // Honcho: he crouches and draws his hands back, sweeps them forward as the Glitcher goes, follows
+            // through with open hands, then lets his arms fall and watches the portal.
+            double rel = c - THROW_FROM;                                 // ms from the moment of the throw
+            double wind = smooth((rel + 900) / 600.0) * (1 - smooth((rel + 300) / 300.0));
+            double sweep = smooth((rel + 300) / 300.0) * (1 - smooth((rel - 200) / 500.0));
+            double hold = smooth((rel - 100) / 300.0) * (1 - smooth((rel - 700) / 700.0));
+            double act = Math.max(wind, Math.max(sweep, hold));
             double lunge = smooth((c - (THROW_FROM - 600)) / 500.0) * (1 - smooth((c - (THROW_FROM + 900)) / 900.0));
             x += w * 0.06 * lunge;
-            pose.yaw = 0.35;
-            double arms = -1.55 * lunge;
-            if (lunge > 0.01) {
-                pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = arms;
-                pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = arms;
-            }
+            a.viewYaw = 0.55 - 0.2 * lunge;
+            // Feet planted, the hips dropping into the crouch and coming up with the throw.
+            p.reach(Rig15.Limb.R_LEG, -2.6, 3, -1.5, 1).reach(Rig15.Limb.L_LEG, 2.6, 3, 2.0, 1);
+            p.rootPos[1] = -0.8 - 1.4 * wind + 0.4 * sweep;
+            p.rootPos[2] = 0.8 * sweep;
+            double[] back = {2.8, 16.5, -2.5}, fwd = {2.5, 23, 8.8}, through = {2.4, 25, 9.0}, rest = {5.4, 14, 1.0};
+            double gx = rest[0] + (back[0] - rest[0]) * wind + (fwd[0] - rest[0]) * sweep + (through[0] - rest[0]) * hold;
+            double gy = rest[1] + (back[1] - rest[1]) * wind + (fwd[1] - rest[1]) * sweep + (through[1] - rest[1]) * hold;
+            double gz = rest[2] + (back[2] - rest[2]) * wind + (fwd[2] - rest[2]) * sweep + (through[2] - rest[2]) * hold;
+            double weight = Math.min(1, act * 1.2);
+            p.reach(Rig15.Limb.R_ARM, -gx, gy, gz, weight).reach(Rig15.Limb.L_ARM, gx, gy, gz, weight);
+            p.turn(torso, 3 + 1.2 * breath - 10 * wind + 20 * sweep - 4 * hold, 10 * wind - 14 * sweep, 0);
+            p.turn(head, -2 + 6 * wind - 12 * sweep, 0, 0);
+            p.turn(Rig15.Joint.R_UPPER_ARM, 3 * sway, 0, -6).turn(Rig15.Joint.L_UPPER_ARM, -3 * sway, 0, 6);
+            p.turn(Rig15.Joint.R_LOWER_ARM, -8, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -8, 0, 0);
+            a.fistR = a.fistL = 0.85 * wind + 0.6 * sweep;               // the fists close as he draws back, open on the release
+            a.spread = 0.3 + 0.7 * hold;
         } else {
             double e = (c - THROW_FROM) / (THROW_TO - THROW_FROM);
             if (e >= 1) return;                                          // gone through
-            if (e > 0) {
-                // Thrown: over in an arc, turning, growing small as it goes into the portal.
+            a.viewYaw = -0.55;
+            if (e <= 0) {
+                // Waiting: standing, arms loose, the head down a little.
+                p.reach(Rig15.Limb.R_LEG, -2.4, 3, 0, 1).reach(Rig15.Limb.L_LEG, 2.4, 3, 0, 1);
+                p.rootPos[1] = -0.6;
+                p.turn(torso, 2 + breath, 0, 0).turn(head, 6, 0, 0);
+                p.turn(Rig15.Joint.R_UPPER_ARM, 4 * sway, 0, -5).turn(Rig15.Joint.L_UPPER_ARM, -4 * sway, 0, 5);
+                p.turn(Rig15.Joint.R_LOWER_ARM, -6, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -6, 0, 0);
+            } else {
+                // Thrown: over in an arc, turning, growing small as it goes into the portal; the body goes limp, the limbs trailing.
                 double ee = e * e * (3 - 2 * e);
                 x = w * 0.60 + (portalX(w) - w * 0.60) * ee;
                 feetY = h * 0.86 + (portalY(h) + h * 0.12 - h * 0.86) * ee - Math.sin(Math.PI * ee) * h * 0.16;
                 tumble = ee * Math.PI * 3.5;
                 scale = 1 - 0.85 * ee * ee;
+                double fl = Math.sin(e * 23), fl2 = Math.sin(e * 19 + 1.3), fl3 = Math.sin(e * 27 + 2.1);
+                p.turn(torso, -8 + 6 * fl2, 8 * fl3, 5 * fl);
+                p.turn(head, -25 + 14 * fl, 12 * fl2, 8 * fl3);
+                p.turn(Rig15.Joint.R_UPPER_ARM, -150 + 40 * fl, 0, -40 + 25 * fl2).turn(Rig15.Joint.L_UPPER_ARM, -130 + 40 * fl2, 0, 40 + 25 * fl3);
+                p.turn(Rig15.Joint.R_LOWER_ARM, -40 - 25 * fl3, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -55 - 25 * fl, 0, 0);
+                p.turn(Rig15.Joint.R_UPPER_LEG, -45 + 35 * fl2, 0, 6).turn(Rig15.Joint.L_UPPER_LEG, 25 + 35 * fl3, 0, -6);
+                p.turn(Rig15.Joint.R_LOWER_LEG, 55 + 25 * fl, 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 35 + 25 * fl2, 0, 0);
+                p.turn(Rig15.Joint.R_FOOT, 25, 0, 0).turn(Rig15.Joint.L_FOOT, 35, 0, 0);
+                a.fistR = a.fistL = 0.1;
+                a.spread = 1;
             }
         }
         SoftRenderer r = figures[who];
         r.clear();
-        rigs[who].draw(r, pose, unit, r.width / 2.0, r.height - 2 * unit);
+        a.draw(r, unit, r.width / 2.0, r.height - 2 * unit);
         Graphics2D d = (Graphics2D) g.create();
         double sc = scale / 0.6;
         d.translate(x, feetY);

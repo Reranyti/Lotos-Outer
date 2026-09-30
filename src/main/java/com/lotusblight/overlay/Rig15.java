@@ -13,14 +13,18 @@ import java.util.List;
  * turns, then two-bone IK for the limbs that have a target, and a look-at for the head.
  */
 final class Rig15 {
-    static final int N = 15;
+    /** The 15 joints of the body, then five fingers of two bones on each hand (the right hand's first). */
+    static final int N = 35;
+    static final int BODY_JOINTS = 15;
 
     enum Joint {
         LOWER_TORSO, UPPER_TORSO, HEAD,
         R_UPPER_ARM, R_LOWER_ARM, R_HAND,
         L_UPPER_ARM, L_LOWER_ARM, L_HAND,
         R_UPPER_LEG, R_LOWER_LEG, R_FOOT,
-        L_UPPER_LEG, L_LOWER_LEG, L_FOOT;
+        L_UPPER_LEG, L_LOWER_LEG, L_FOOT,
+        R_THUMB_1, R_THUMB_2, R_INDEX_1, R_INDEX_2, R_MIDDLE_1, R_MIDDLE_2, R_RING_1, R_RING_2, R_PINKY_1, R_PINKY_2,
+        L_THUMB_1, L_THUMB_2, L_INDEX_1, L_INDEX_2, L_MIDDLE_1, L_MIDDLE_2, L_RING_1, L_RING_2, L_PINKY_1, L_PINKY_2;
 
         /** Channel-name form: {@code r_upper_arm}. */
         String key() {
@@ -68,7 +72,11 @@ final class Rig15 {
             1, 3, 4,
             1, 6, 7,
             0, 9, 10,
-            0, 12, 13};
+            0, 12, 13,
+            // right hand's fingers: the first bone on the hand (5), the second on the first
+            5, 15, 5, 17, 5, 19, 5, 21, 5, 23,
+            // left hand's (8)
+            8, 25, 8, 27, 8, 29, 8, 31, 8, 33};
 
     /** Length of a hand from the wrist to the fist's tip, and a foot's height from the ankle to the sole. */
     static final double HAND_LENGTH = 3, ANKLE_HEIGHT = 3;
@@ -94,6 +102,16 @@ final class Rig15 {
             pivot[leg] = new double[]{s * 2, 12, 0};
             pivot[leg + 1] = new double[]{s * 2, 7, 0};
             pivot[leg + 2] = new double[]{s * 2, 3, 0};
+        }
+        for (int side = 0; side < 2; side++) {
+            double s = side == 0 ? -1 : 1, medial = -s;              // towards the body
+            double cx = s * armC;
+            int first = Joint.R_THUMB_1.ordinal() + side * 10;
+            for (int f = 0; f < 5; f++) {
+                double[] a = fingerPivot(f, cx, medial, honcho), b = fingerTip(f, cx, medial, honcho);
+                pivot[first + f * 2] = a;
+                pivot[first + f * 2 + 1] = b;
+            }
         }
         for (Limb l : Limb.values()) {
             double[] a = pivot[l.upper.ordinal()], b = pivot[l.lower.ordinal()], c = pivot[l.end.ordinal()];
@@ -138,12 +156,13 @@ final class Rig15 {
             int v = grow == 0 ? 16 : 32, lv = grow == 0 ? 48 : 48, lu = grow == 0 ? 32 : 48;
             Joint[] r = {Joint.R_UPPER_ARM, Joint.R_LOWER_ARM, Joint.R_HAND};
             Joint[] l = {Joint.L_UPPER_ARM, Joint.L_LOWER_ARM, Joint.L_HAND};
-            double[][] cuts = {{18, 24}, {15, 18}, {12, 15}};
+            double[][] cuts = {{18, 24}, {15, 18}, {13.8, 15}};                  // the hand is the palm; the fingers hang from it
             for (int i = 0; i < 3; i++) {
                 slab(r[i], -armX, 12, -2, armW, 12, 4, 40, v, grow, cuts[i][0], cuts[i][1]);
                 slab(l[i], 4, 12, -2, armW, 12, 4, lu, lv, grow, cuts[i][0], cuts[i][1]);
             }
         }
+        for (int side = 0; side < 2; side++) fingers(side, armC, armW);
         // Legs: thigh, shin, foot.
         for (double grow : honcho ? new double[]{0} : new double[]{0, 0.25}) {
             int rv = grow == 0 ? 16 : 32, lu = grow == 0 ? 16 : 0, lv = 48;
@@ -173,6 +192,62 @@ final class Rig15 {
         faces.add(new Face(j, new double[][]{{x0, yb, z1}, {x1, yb, z1}, {x1, ya, z1}, {x0, ya, z1}}, u + d, r1, u + d + w, r0));
         faces.add(new Face(j, new double[][]{{x1, yb, z1}, {x1, yb, z0}, {x1, ya, z0}, {x1, ya, z1}}, u + d + w, r1, u + 2 * d + w, r0));
         faces.add(new Face(j, new double[][]{{x1, yb, z0}, {x0, yb, z0}, {x0, ya, z0}, {x1, ya, z0}}, u + 2 * d + w, r1, u + 2 * d + 2 * w, r0));
+    }
+
+    // ------------------------------------------------------------ fingers
+
+    /** Finger 0 = thumb, 1 = index, 2 = middle, 3 = ring, 4 = pinky. */
+    static Joint finger(boolean right, int finger, int bone) {
+        return Joint.values()[Joint.R_THUMB_1.ordinal() + (right ? 0 : 10) + finger * 2 + bone];
+    }
+
+    /** z of a finger's slot on the palm (the index at the front), its bone lengths, and its thickness. */
+    private static final double[] FINGER_Z = {1.45, 1.5, 0.5, -0.5, -1.5};
+    private static final double[][] FINGER_LEN = {{0.9, 0.8}, {0.9, 0.9}, {1.0, 0.95}, {0.9, 0.85}, {0.75, 0.7}};
+    private static final double KNUCKLE_Y = 13.8;
+
+    private static double[] fingerPivot(int f, double cx, double medial, boolean honcho) {
+        double w = honcho ? 4 : 3;
+        double x = f == 0 ? cx + medial * (w / 2 + 0.05) : cx + medial * 0.1;
+        double y = f == 0 ? 14.4 : KNUCKLE_Y;
+        return new double[]{x, y, FINGER_Z[f]};
+    }
+
+    private static double[] fingerTip(int f, double cx, double medial, boolean honcho) {
+        double[] a = fingerPivot(f, cx, medial, honcho);
+        return new double[]{a[0], a[1] - FINGER_LEN[f][0], a[2]};
+    }
+
+    /** The two bones of each of a hand's five fingers: little boxes coloured from the hand's own part of the skin. */
+    private void fingers(int side, double armC, int armW) {
+        boolean right = side == 0;
+        double s = right ? -1 : 1, medial = -s, cx = s * armC;
+        int u = right ? 40 : 32, v = right ? 16 : 48, d = 4;
+        for (int f = 0; f < 5; f++) {
+            double[] a = fingerPivot(f, cx, medial, honcho);
+            double thick = f == 0 ? 1.0 : 1.35, slot = f == 0 ? 0.95 : 0.94;
+            double y = a[1];
+            for (int bone = 0; bone < 2; bone++) {
+                double len = FINGER_LEN[f][bone];
+                double ya = y - len, yb = y;
+                double hw = thick / 2, hz = slot / 2;
+                Joint j = finger(right, f, bone);
+                int row = v + d + Math.max(9, Math.min(11, (int) (24 - (ya + yb) / 2)));
+                fingerBox(j, a[0] - hw, a[0] + hw, ya, yb, a[2] - hz, a[2] + hz, u, v, armW, d, row);
+                y = ya;
+            }
+        }
+    }
+
+    /** A box of one skin pixel per face, sampled from the arm's own side faces at row {@code row}. */
+    private void fingerBox(Joint j, double x0, double x1, double ya, double yb, double z0, double z1, int u, int v, int w, int d, int row) {
+        int capU = u + d + w + w / 2, capV = v + d / 2;                      // the bottom of the arm: skin colour
+        faces.add(new Face(j, new double[][]{{x0, yb, z0}, {x1, yb, z0}, {x1, yb, z1}, {x0, yb, z1}}, capU, capV, capU + 1, capV + 1));
+        faces.add(new Face(j, new double[][]{{x0, ya, z1}, {x1, ya, z1}, {x1, ya, z0}, {x0, ya, z0}}, capU, capV, capU + 1, capV + 1));
+        faces.add(new Face(j, new double[][]{{x0, yb, z0}, {x0, yb, z1}, {x0, ya, z1}, {x0, ya, z0}}, u + d / 2, row, u + d / 2 + 1, row + 1));
+        faces.add(new Face(j, new double[][]{{x0, yb, z1}, {x1, yb, z1}, {x1, ya, z1}, {x0, ya, z1}}, u + d + w / 2, row, u + d + w / 2 + 1, row + 1));
+        faces.add(new Face(j, new double[][]{{x1, yb, z1}, {x1, yb, z0}, {x1, ya, z0}, {x1, ya, z1}}, u + d + w + d / 2, row, u + d + w + d / 2 + 1, row + 1));
+        faces.add(new Face(j, new double[][]{{x1, yb, z0}, {x0, yb, z0}, {x0, ya, z0}, {x1, ya, z0}}, u + 2 * d + w + w / 2, row, u + 2 * d + w + w / 2 + 1, row + 1));
     }
 
     // ------------------------------------------------------------ the solver

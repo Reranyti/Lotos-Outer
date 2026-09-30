@@ -445,10 +445,15 @@ public final class GameMain {
             endedAt = System.nanoTime();
         }
 
+        /** Seconds the results have been up (a key still held from the song must not skip them). */
+        private double resultsShownFor() {
+            return (System.nanoTime() - endedAt) / 1e9;
+        }
+
         private void closeWhenShown() {
+            if (phase == Phase.RESULTS && song3Played) return;              // after the third song the results wait for the space bar
             if ((System.nanoTime() - endedAt) / 1e9 < END_SCREEN_SECONDS) return;
-            if (phase == Phase.RESULTS && song3Played) startFinale();      // after the results of the third song: the finale
-            else System.exit(0);
+            System.exit(0);
         }
 
         private double clockMs() {
@@ -462,6 +467,7 @@ public final class GameMain {
 
         void space() {
             if (phase == Phase.INTERLUDE) { interlude.press(); return; }
+            if (phase == Phase.RESULTS && song3Played) { if (resultsShownFor() > 1.2) startFinale(); return; }      // on from the results to the closing scene
             if (phase != Phase.SONG2) return;
             double t = clockMs();
             if (recordFile != null) {
@@ -499,6 +505,7 @@ public final class GameMain {
         void click(int x, int y, int w, int h) {
             double t = clockMs();
             if (phase == Phase.INTERLUDE) interlude.click(x, y);
+            else if (phase == Phase.RESULTS && song3Played) { if (resultsShownFor() > 1.2) startFinale(); }
             else if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
             else if (phase == Phase.SONG3 && g3 != null) {
                 double[] held = Song3Show.screenRect(t, w, h);
@@ -665,7 +672,7 @@ public final class GameMain {
             center(g, String.format("Точность  %.1f%%", acc * 100), h * 0.42, h * 0.05, new Color(0xE0C0FF), w);
             center(g, "Попаданий  " + hits + " / " + total, h * 0.52, h * 0.05, new Color(0xE0C0FF), w);
             center(g, "Макс. комбо  " + combo, h * 0.60, h * 0.05, new Color(0xE0C0FF), w);
-            center(g, "Esc — выход", h * 0.85, h * 0.035, new Color(0x9070B0), w);
+            center(g, song3Played ? "Пробел — продолжить" : "Esc — выход", h * 0.85, h * 0.035, new Color(0x9070B0), w);
         }
 
         private void defeat(Graphics2D g, int w, int h) {

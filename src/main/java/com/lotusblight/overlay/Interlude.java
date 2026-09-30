@@ -256,8 +256,7 @@ final class Interlude {
     private static final int LEFT_LEG = SkinModel.Part.LEFT_LEG.ordinal();
     private static final int HEAD = SkinModel.Part.HEAD.ordinal();
 
-    private Figure glitcherFigure, honchoFigure;
-    private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
+    private Actor glitcherActor, honchoActor;
     private SoftRenderer glitcherRender, honchoRender;
     private double figureUnit;
     private java.awt.geom.Rectangle2D.Double hitBox = new java.awt.geom.Rectangle2D.Double();
@@ -273,8 +272,8 @@ final class Interlude {
         double unit = h * 0.62 / 32.0;
         if (glitcherRender == null || figureUnit != unit) {
             figureUnit = unit;
-            glitcherFigure = new Figure(glitcherSkin, false);
-            honchoFigure = new Figure(honchoSkin, true);
+            glitcherActor = new Actor(glitcherSkin, false);
+            honchoActor = new Actor(honchoSkin, true);
             glitcherRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
             honchoRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
         }
@@ -290,16 +289,27 @@ final class Interlude {
         double ground = h * 0.92;
         double gx = w * (0.63 + 0.14 * m + 0.13 * freed);
         // The Glitcher: facing left, his right arm out at Honcho's throat.
-        pose.reset();
-        pose.yaw = -1.15;
-        pose.partPitch[RIGHT_ARM] = -2.6 * (1 - freed) + 0.4 * freed;
-        pose.partPitch[LEFT_ARM] = -0.3 + 0.2 * Math.sin(t * 5);
-        pose.partPitch[RIGHT_LEG] = 0.15 + 0.1 * Math.sin(t * 3);
-        pose.partPitch[LEFT_LEG] = -0.15;
-        pose.pitch = -0.32 * freed + 0.05 * Math.sin(t * 9) * (1 - freed);
-        pose.partPitch[HEAD] = 0.15;
+        {
+            // The Glitcher: feet set apart, the right arm out at the height of Honcho's throat with the fist closed,
+            // the body leaning into it; when he lets go the arm drops and the body heaves back.
+            Actor a = glitcherActor;
+            Pose15 p = a.begin();
+            double hold = 1 - freed;
+            a.viewYaw = -1.15;
+            a.viewPitch = -0.32 * freed + 0.05 * Math.sin(t * 9) * (1 - freed);
+            p.reach(Rig15.Limb.R_LEG, -2.9, 3, -1.8, 1).reach(Rig15.Limb.L_LEG, 2.9, 3, 2.6, 1);
+            p.rootPos[1] = -0.9 - 0.5 * Math.sin(t * 3.1) * hold;
+            a.reach(Rig15.Limb.R_ARM, -3.6, 26.0, 8.4, hold);
+            p.turn(Rig15.Joint.R_UPPER_ARM, 4 * freed, 0, -10 * freed);
+            p.turn(Rig15.Joint.L_UPPER_ARM, -17 + 11 * Math.sin(t * 5), 0, 14).turn(Rig15.Joint.L_LOWER_ARM, -24 - 8 * Math.sin(t * 5 + 1), 0, 0);
+            p.turn(Rig15.Joint.UPPER_TORSO, 5 + 4 * hold + 2 * Math.sin(t * 6) * hold, 10 * hold, 0);
+            p.turn(Rig15.Joint.HEAD, 9 - 14 * freed, -6 * hold, 0);
+            a.fistR = hold;
+            a.fistL = 0.25;
+            a.spread = 0.3;
+        }
         glitcherRender.clear();
-        glitcherFigure.draw(glitcherRender, pose, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
+        glitcherActor.draw(glitcherRender, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
         double gDrawX = gx - glitcherRender.width / 2.0;
         double gDrawY = ground - glitcherRender.height + 6 * unit;
         b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);
@@ -309,17 +319,27 @@ final class Interlude {
         double hx = gx - 7.7 * unit, hy = ground - 32.3 * unit;            // where his raised hand is
         double fatigue = limp ? 1 : Math.min(1, Math.max(0, (c - RIFT_END) / CHOKE_MS) * (1 - 0.6 * m));
         double flail = (1 - 0.9 * fatigue) * (1 - freed);
-        pose.reset();
-        pose.yaw = 0.8;
-        pose.partPitch[RIGHT_ARM] = Math.sin(t * 17) * 0.9 * flail - 0.4;
-        pose.partPitch[LEFT_ARM] = Math.cos(t * 19) * 0.9 * flail - 0.2;
-        pose.partRoll[RIGHT_ARM] = -0.5 - 0.4 * flail;
-        pose.partRoll[LEFT_ARM] = 0.5 + 0.4 * flail;
-        pose.partPitch[RIGHT_LEG] = Math.sin(t * 15) * 0.8 * flail;
-        pose.partPitch[LEFT_LEG] = -Math.sin(t * 15) * 0.8 * flail;
-        pose.partPitch[HEAD] = -0.25 - 0.5 * fatigue;
+        {
+            // Honcho: hanging by the throat. Both hands go up to the fist that holds him, pulling; the legs kick wildly;
+            // as he tires it all slows and the arms fall.
+            Actor a = honchoActor;
+            Pose15 p = a.begin();
+            a.viewYaw = 0.8;
+            double kick = Math.sin(t * 15) * flail, kick2 = Math.sin(t * 15 + 2.2) * flail;
+            double grab = Math.min(1, 1.3 * flail);
+            a.reach(Rig15.Limb.R_ARM, -2.2 + 1.2 * Math.sin(t * 17) * flail, 26.5 + 1.0 * Math.cos(t * 13) * flail, 3.6, grab);
+            a.reach(Rig15.Limb.L_ARM, 2.2 + 1.2 * Math.cos(t * 19) * flail, 26.0 + 1.0 * Math.sin(t * 14) * flail, 3.8, grab);
+            p.turn(Rig15.Joint.R_UPPER_ARM, 8, 0, -8).turn(Rig15.Joint.L_UPPER_ARM, 10, 0, 8);
+            p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6, 0, 4).turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6, 0, -4);
+            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick), 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2), 0, 0);
+            p.turn(Rig15.Joint.R_FOOT, 25, 0, 0).turn(Rig15.Joint.L_FOOT, 25, 0, 0);
+            p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick, 6 * kick2, 0);
+            p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue, 8 * Math.sin(t * 11) * flail, 6 * Math.sin(t * 9) * flail);
+            a.fistR = a.fistL = 0.8 * flail;
+            a.spread = 0.4;
+        }
         honchoRender.clear();
-        honchoFigure.draw(honchoRender, pose, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
+        honchoActor.draw(honchoRender, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
         double drop = freed * freed * h * 0.9;
         AffineTransform old = b.getTransform();
         b.translate(hx, hy + 24 * unit + drop);

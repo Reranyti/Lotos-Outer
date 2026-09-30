@@ -86,6 +86,24 @@ final class Pose15 {
         return this;
     }
 
+    /**
+     * Shapes a hand: 0 = open and loose, 1 = a closed fist. The fingers curl towards the palm; the thumb comes
+     * across. {@code spread} (0..1) fans the open fingers a little.
+     */
+    Pose15 hand(boolean right, double curl, double spread) {
+        double sign = right ? 1 : -1;                              // the palm faces the body: right hand curls towards +x
+        double[][] amount = {{38, 52}, {78, 88}, {86, 92}, {90, 94}, {92, 96}};
+        double[] relax = {6, 14, 20, 26, 32};
+        for (int f = 0; f < 5; f++) {
+            double c = Math.max(0, Math.min(1, curl));
+            double a = relax[f] * (1 - c) * 0.6 + amount[f][0] * c, b = relax[f] * 0.9 * (1 - c) + amount[f][1] * c;
+            double fan = f == 0 ? 0 : (f - 2.5) * 5 * spread * (1 - c);
+            rot[Rig15.finger(right, f, 0).ordinal()] = Quat.euler(fan, f == 0 ? -sign * 12 * c : 0, sign * a);
+            rot[Rig15.finger(right, f, 1).ordinal()] = Quat.euler(0, 0, sign * b);
+        }
+        return this;
+    }
+
     /** Puts a limb's end at a stage-space point and switches the solver on for it. */
     Pose15 reach(Rig15.Limb limb, double x, double y, double z, double weight) {
         Ik k = ik[limb.ordinal()];
