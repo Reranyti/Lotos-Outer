@@ -95,6 +95,11 @@ public final class LotusCommands {
                     com.lotusblight.branch.NormalBranchExit.start(ctx.getSource().getPlayerOrException());
                     return 1;
                 }))
+                .then(Commands.literal("return").executes(ctx -> {
+                    // The scene after the fight: the portal, Honcho thrown out of it, the hand, going along.
+                    com.lotusblight.entity.HonchoReturnScene.begin(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }))
                 .then(Commands.literal("lock").executes(ctx -> {
                     com.lotusblight.branch.NormalBranchLock.engage();
                     ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(

@@ -28,6 +28,7 @@ public class HonchoMeetingChoicePacket {
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
             if (player == null) return;
+            if (com.lotusblight.entity.HonchoReturnScene.handleChoice(player)) return;      // the scene after the fight on the desktop
             HonchoMeetingManager.handleChoice(player, packet.accept ? HonchoMeetingManager.CHOICE_ACCEPT : HonchoMeetingManager.CHOICE_DECLINE);
         });
         ctx.setPacketHandled(true);
