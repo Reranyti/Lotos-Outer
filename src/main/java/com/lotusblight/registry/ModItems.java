@@ -69,6 +69,9 @@ public final class ModItems {
     public static final RegistryObject<Item> VITAMIN = ITEMS.register("vitamin", () -> new VitaminItem(new Item.Properties().stacksTo(16)
             .food(new FoodProperties.Builder().nutrition(1).saturationMod(0.1f).alwaysEat().build())));
 
+    // --- The horn: given at the end of the fight on the desktop (the first part of something bigger) ---
+    public static final RegistryObject<Item> HORN = ITEMS.register("horn", () -> new Item(new Item.Properties().stacksTo(1).rarity(net.minecraft.world.item.Rarity.EPIC)));
+
     // --- Lotus alloy tools (same tier/material as the pickaxe) ---
     public static final RegistryObject<Item> LOTUS_AXE = ITEMS.register("lotus_axe", () -> new AxeItem(Tiers.DIAMOND, 5.0f, -3.0f, new Item.Properties().durability(900)));
     public static final RegistryObject<Item> LOTUS_SWORD = ITEMS.register("lotus_sword", () -> new SwordItem(Tiers.DIAMOND, 3, -2.4f, new Item.Properties().durability(900)));

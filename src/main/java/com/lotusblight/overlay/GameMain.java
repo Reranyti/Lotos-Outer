@@ -70,6 +70,8 @@ public final class GameMain {
     private static File recordFile;
     // Set with --contact WAV: the track that plays while the eye mechanic runs (the song itself is stopped then).
     private static String contactWav;
+    // Set with --from-game: the process was started by the game itself, whose window is ours to give back.
+    private static boolean fromGame;
     // Set with --interlude WAV: the music of the cutscene between the second and third songs.
     private static String interludeWav;
     // A picture of the desktop for the shattering when the fight was started on its own (no exit scene took one).
@@ -78,6 +80,30 @@ public final class GameMain {
     static java.awt.image.BufferedImage desktopShot() {
         DesktopSnapshot d = hiddenIcons;
         return d != null && d.shot != null ? d.shot : testShot;
+    }
+
+    /**
+     * The end of the closing scene. The windows come back, and the game's own window is brought to the front
+     * if it was hidden; if the game is not there any more, the process simply ends. The exit code tells the
+     * game the scene played out (it then hands over the horn).
+     */
+    private static void leaveAfterFinale() {
+        if (fromGame && System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            shellCall("UndoMinimizeALL()");
+            ProcessHandle.current().parent().filter(ProcessHandle::isAlive).ifPresent(parent -> {
+                String script = "$s='[DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr h,int c);"
+                        + "[DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr h);';"
+                        + "Add-Type -MemberDefinition $s -Name W -Namespace N;"
+                        + "$p=Get-Process -Id " + parent.pid() + " -ErrorAction SilentlyContinue;"
+                        + "if($p -and $p.MainWindowHandle -ne 0){[N.W]::ShowWindow($p.MainWindowHandle,9)|Out-Null;[N.W]::SetForegroundWindow($p.MainWindowHandle)|Out-Null}";
+                try {
+                    Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+                            .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+                    p.waitFor(6, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception ignored) { }
+            });
+        }
+        System.exit(Finale3.EXIT_CODE);
     }
 
     private static void shellCall(String call) {
@@ -120,7 +146,10 @@ public final class GameMain {
             if (args[i].equals("--contact")) contactWav = args[i + 1];
             if (args[i].equals("--interlude")) interludeWav = args[i + 1];
         }
-        for (String arg : args) if (arg.equals("--minimize")) minimize = true;
+        for (String arg : args) {
+            if (arg.equals("--minimize")) minimize = true;
+            if (arg.equals("--from-game")) fromGame = true;
+        }
         if (minimize && System.getProperty("os.name", "").toLowerCase().contains("win")) {
             // Windows out of the way for a test run started on its own (the exit scene does this in the real chain).
             shellCall("MinimizeAll()");
@@ -593,7 +622,7 @@ public final class GameMain {
                 case RESULTS -> { results(g, w, h); closeWhenShown(); }
                 case FINALE -> {
                     finale.render(g, w, h);
-                    if (finale.done()) System.exit(0);
+                    if (finale.done()) leaveAfterFinale();
                 }
                 case DEFEAT -> { defeat(g, w, h); closeWhenShown(); }
             }

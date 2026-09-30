@@ -148,7 +148,10 @@ public final class NormalBranchFreeze {
                         .redirectErrorStream(true)
                         .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                         .start();
-                process.onExit().thenRun(() -> mc.execute(() -> release(gen)));
+                process.onExit().thenAccept(done -> mc.execute(() -> {
+                    release(gen);
+                    if (done.exitValue() == NormalBranchReward.FINALE_EXIT_CODE) NormalBranchReward.grantHorn(mc);
+                }));
             } catch (Exception e) {
                 LOG.warn("Нормальная_ветка: the exit didn't start: {}", e.toString());
                 mc.execute(() -> release(gen));

@@ -104,6 +104,7 @@ public final class ExitMain {
         if (video != null) fightArgs.addAll(List.of("--video", video));
 
         if (cleanup) {
+            fightArgs.add("--from-game");          // started by the game: the closing scene gives its window back
             // Run from the mod: our own temporary files go once the process ends, whichever way.
             List<File> ours = new ArrayList<>();
             for (String path : new String[]{song1, song2, song3, contact, interlude}) if (path != null) ours.add(new File(path));
