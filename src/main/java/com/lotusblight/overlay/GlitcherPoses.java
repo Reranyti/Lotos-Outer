@@ -122,6 +122,29 @@ final class GlitcherPoses {
         a.viewPitch += 0.12 * slam * (1 - smooth((ms - stompMs - 80) / 170.0)) - 0.06 * up;
     }
 
+    /**
+     * Held up by the throat: both hands go to the fist that holds the neck and pull at it, the legs kick, the head is
+     * thrown back with every gasp. {@code flail} 1 is a full struggle, 0 is hanging limp.
+     */
+    static void hanging(Actor a, double t, double flail, double phase) {
+        double kick = Math.sin(t * 15 + phase) * flail, kick2 = Math.sin(t * 15 + phase + 2.2) * flail;
+        double gasp = Math.pow(Math.max(0, Math.sin(t * 6.0 + phase)), 4) * (0.3 + 0.7 * flail);
+        for (Rig15.Limb l : new Rig15.Limb[]{R_LEG, L_LEG}) a.pose.ik[l.ordinal()].w = 0;
+        double grab = Math.min(1, 1.3 * flail);
+        a.reach(R_ARM, -2.2 + 1.2 * Math.sin(t * 17 + phase) * flail - 0.6 * gasp, 26.5 + 1.0 * Math.cos(t * 13) * flail + 0.8 * gasp, 3.6, grab);
+        a.reach(L_ARM, 2.2 + 1.2 * Math.cos(t * 19 + phase) * flail + 0.6 * gasp, 26.0 + 1.0 * Math.sin(t * 14) * flail + 0.8 * gasp, 3.8, grab);
+        a.pose.turn(Rig15.Joint.R_UPPER_ARM, 8, 0, -8).turn(Rig15.Joint.L_UPPER_ARM, 10, 0, 8);
+        a.pose.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6, 0, 4).turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6, 0, -4);
+        a.pose.turn(Rig15.Joint.R_LOWER_LEG, 48 + 34 * Math.max(0, -kick), 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 55 + 34 * Math.max(0, kick2), 0, 0);
+        a.pose.turn(Rig15.Joint.R_FOOT, 25 - 10 * Math.max(0, kick), 0, 0).turn(Rig15.Joint.L_FOOT, 25 - 10 * Math.max(0, -kick2), 0, 0);
+        a.pose.turn(TORSO, -4 + 5 * kick - 7 * gasp, 6 * kick2, 3 * Math.sin(t * 9) * flail);
+        a.pose.turn(HEAD, -14 - 14 * gasp - 12 * (1 - flail), 8 * Math.sin(t * 11) * flail, 6 * Math.sin(t * 9) * flail);
+        a.hands(Hand.GRIP, Hand.GRIP);
+        a.fistR = a.fistL = 0.3 * flail * (0.6 + 0.3 * Math.sin(t * 13));
+        a.spread = 0.4;
+        a.pose.rootPos[1] = -0.6 * gasp;
+    }
+
     /** Hanging in the air over the eyes: arms out, hands open and fanned, legs loose, toes pointed. */
     static void hover(Actor a, double lev, double t) {
         if (lev <= 0) return;

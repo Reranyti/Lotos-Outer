@@ -16,6 +16,16 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 2.0001 — Финал: Хончо берёт за шею / The finale: Honcho takes him by the throat
+
+### Русский
+- **Финал.** Хончо подходит, берёт Глитчера за шею, поднимает над полом (тот бьётся и хватается за руку), замахивается и закидывает в портал. Реплики Глитчера теперь пишутся по буквам через весь экран, как в сцене выхода (с мигающим курсором), а не подписями.
+- Пальцы: отдельные формы кисти (открытая, кулак, щепотка, указательный, коготь, хват), у каждого пальца своя пружина; Глитчер на рабочем столе и сцена выхода перед боем переведены на 15 суставов.
+
+### English
+- **The finale.** Honcho walks up, takes the Glitcher by the throat, lifts him off the floor (he struggles and claws at the arm), swings him back and throws him into the portal. The Glitcher's lines are now written across the screen letter by letter with a blinking cursor, as in the exit scene, instead of captions.
+- Fingers: separate hand shapes (open, fist, pinch, pointing, claw, grip), each finger on its own spring; the Glitcher on the desktop and the scene before the fight now run on the 15-joint rig.
+
 ## 2.0000 — Анимации на 15 суставах, финал, круги по событиям / R15 animation, the finale, circles that follow the events
 
 ### Русский

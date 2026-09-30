@@ -27,21 +27,24 @@ final class Finale3 {
     /** The process ends with this when the scene has played out (the game checks for it: NormalBranchReward). */
     static final int EXIT_CODE = 77;
 
-    /** {from ms, to ms, Japanese, English, speaker (0 nobody, 1 Honcho, 2 the Glitcher)} - the captions. */
+    /** {from ms, to ms, text} - what the Glitcher writes across the screen, letter by letter. */
     private static final Object[][] LINES = {
-            {5_600.0, 8_300.0, "お前はまだ十分に強くない", "You're still not strong enough", 2},
-            {9_000.0, 12_400.0, "最初の一つはお前のものだ。失せろ", "You have the first part. Get lost", 2},
+            {5_000.0, 9_000.0, "Ты всё ещё не достаточно силён"},
+            {9_400.0, 12_700.0, "Первая часть у тебя. Проваливай"},
     };
 
     /** {from ms, to ms, kind} - what happens besides the words; drawBeat paints each kind. */
     private static final Object[][] BEATS = {
-            {2_000.0, 12_000.0, "portal"},
+            {2_000.0, 12_700.0, "portal"},
             {13_200.0, 16_200.0, "signal"},
     };
 
     private static final double PORTAL_FROM_MS = 2_000;
-    private static final double PORTAL_OPEN_MS = 2_600, PORTAL_CLOSE_FROM = 10_500, PORTAL_CLOSE_MS = 1_500;
-    private static final double THROW_FROM = 4_800, THROW_TO = 7_000;
+    private static final double PORTAL_OPEN_MS = 2_600, PORTAL_CLOSE_FROM = 10_800, PORTAL_CLOSE_MS = 1_500;
+    // Honcho walks up, takes the Glitcher by the throat, lifts him, swings him back and throws him into the portal.
+    private static final double T_STEP = 3_200, T_REACH = 3_700, T_GRAB = 4_300, T_LIFT = 4_400, T_WIND = 5_100, T_SWEEP = 5_900;
+    private static final double RELEASE = 6_250, FLIGHT_MS = 2_200;
+    private static final double TYPE_CHAR = 40;
     private static final double FADE_IN_MS = 1_800, FADE_OUT_MS = 500, LEAD_OUT_MS = 300;
     private static final double SIGNAL_FROM = 13_200, SIGNAL_TO = 16_200;
 
@@ -122,7 +125,7 @@ final class Finale3 {
             drawFigure(b, w, h, c, 0);
             drawFigure(b, w, h, c, 1);
             for (Object[] line : LINES) {
-                if (c >= (Double) line[0] && c < (Double) line[1]) caption(b, w, h, c, line);
+                if (c >= (Double) line[0] && c < (Double) line[1]) typed(b, w, h, c, line);
             }
         }
         for (Object[] beat : BEATS) {
@@ -140,69 +143,115 @@ final class Finale3 {
         b.dispose();
     }
 
+    private double upx() {
+        return unit / 0.6;
+    }
+
+    /** Honcho's place on the floor: where he starts, and where he has walked to when he takes hold. */
+    private double honchoX(double c, int w) {
+        double grabX = w * 0.60 - 12 * upx();
+        return w * 0.40 + (grabX - w * 0.40) * smooth((c - T_STEP) / 1100.0);
+    }
+
+    /** Where Honcho's right fist is meant to be (in his own space) and how much it counts: reach, hold, lift, wind back, sweep. */
+    private static double[] fistTarget(double c) {
+        double lift = smooth((c - T_LIFT) / 600.0);
+        double[] hold = {-3.3, 25.5 + 2.5 * lift, 9.4};
+        double wind = smooth((c - T_WIND) / 700.0), sweep = smooth((c - T_SWEEP) / 350.0);
+        double[] windPt = {-3.2, 29, -0.5}, sweepPt = {-3.0, 24.5, 11.2};
+        double[] out = new double[4];
+        for (int k = 0; k < 3; k++) {
+            double v = hold[k] + (windPt[k] - hold[k]) * wind;
+            out[k] = v + (sweepPt[k] - v) * sweep;
+        }
+        out[3] = smooth((c - T_REACH) / 600.0) * (1 - smooth((c - (RELEASE + 350)) / 700.0));
+        return out;
+    }
+
+    /** Where that fist is on the picture, given Honcho stands at {@code x}; he faces right, nearly side-on. */
+    private double[] fistOnScreen(double[] target, double x, double feetY) {
+        double yaw = 1.4;
+        double sx = target[2] * Math.sin(yaw) + target[0] * Math.cos(yaw);
+        return new double[]{x + sx * upx(), feetY - target[1] * upx()};
+    }
+
+    /** The Glitcher's neck on the picture before he is thrown: standing, taken hold of, lifted, swung. */
+    private double[] glitcherNeck(double c, int w, double feetY) {
+        double up = upx();
+        double[] standing = {w * 0.60, feetY - 24 * up};
+        double[] ft = fistTarget(c);
+        double[] fist = fistOnScreen(ft, honchoX(c, w), feetY);
+        double gb = smooth((c - (T_GRAB - 300)) / 350.0);
+        // The throat is at the back of the fist; he faces the other way, so his neck is a little beyond it.
+        return new double[]{standing[0] + (fist[0] + 1.6 * up - standing[0]) * gb, standing[1] + (fist[1] - standing[1]) * gb};
+    }
+
     private void drawFigure(Graphics2D g, int w, int h, double c, int who) {
-        double feetY = h * 0.86;
-        double x = w * (who == 0 ? 0.40 : 0.60);
-        double t = c / 1000.0;
-        double sway = Math.sin(t * 1.1 + who * 1.7), breath = Math.sin(t * 1.6 + who);
-        double tumble = 0, scale = 1;
+        double feetY = h * 0.86, t = c / 1000.0, up = upx();
+        double breath = Math.sin(t * 1.6 + who);
         Actor a = rigs[who];
         Pose15 p = a.begin();
-        Rig15.Joint torso = Rig15.Joint.UPPER_TORSO, head = Rig15.Joint.HEAD;
+        double px = 0, py = 0, rot = 0, scale = 1;              // where the neck is, how it turns, how large
         if (who == 0) {
-            // Honcho: he crouches and draws his hands back, sweeps them forward as the Glitcher goes, follows
-            // through with open hands, then lets his arms fall and watches the portal.
-            double rel = c - THROW_FROM;                                 // ms from the moment of the throw
-            double wind = smooth((rel + 900) / 600.0) * (1 - smooth((rel + 300) / 300.0));
-            double sweep = smooth((rel + 300) / 300.0) * (1 - smooth((rel - 200) / 500.0));
-            double hold = smooth((rel - 100) / 300.0) * (1 - smooth((rel - 700) / 700.0));
-            double act = Math.max(wind, Math.max(sweep, hold));
-            double lunge = smooth((c - (THROW_FROM - 600)) / 500.0) * (1 - smooth((c - (THROW_FROM + 900)) / 900.0));
-            x += w * 0.06 * lunge;
-            a.viewYaw = 0.55 - 0.2 * lunge;
-            // Feet planted, the hips dropping into the crouch and coming up with the throw.
-            p.reach(Rig15.Limb.R_LEG, -2.6, 3, -1.5, 1).reach(Rig15.Limb.L_LEG, 2.6, 3, 2.0, 1);
-            p.rootPos[1] = -0.8 - 1.4 * wind + 0.4 * sweep;
-            p.rootPos[2] = 0.8 * sweep;
-            double[] back = {2.8, 16.5, -2.5}, fwd = {2.5, 23, 8.8}, through = {2.4, 25, 9.0}, rest = {5.4, 14, 1.0};
-            double gx = rest[0] + (back[0] - rest[0]) * wind + (fwd[0] - rest[0]) * sweep + (through[0] - rest[0]) * hold;
-            double gy = rest[1] + (back[1] - rest[1]) * wind + (fwd[1] - rest[1]) * sweep + (through[1] - rest[1]) * hold;
-            double gz = rest[2] + (back[2] - rest[2]) * wind + (fwd[2] - rest[2]) * sweep + (through[2] - rest[2]) * hold;
-            double weight = Math.min(1, act * 1.2);
-            p.reach(Rig15.Limb.R_ARM, -gx, gy, gz, weight).reach(Rig15.Limb.L_ARM, gx, gy, gz, weight);
-            p.turn(torso, 3 + 1.2 * breath - 10 * wind + 20 * sweep - 4 * hold, 10 * wind - 14 * sweep, 0);
-            p.turn(head, -2 + 6 * wind - 12 * sweep, 0, 0);
-            p.turn(Rig15.Joint.R_UPPER_ARM, 3 * sway, 0, -6).turn(Rig15.Joint.L_UPPER_ARM, -3 * sway, 0, 6);
-            p.turn(Rig15.Joint.R_LOWER_ARM, -8, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -8, 0, 0);
-            a.fistR = a.fistL = 0.85 * wind + 0.6 * sweep;               // the fists close as he draws back, open on the release
-            a.spread = 0.3 + 0.7 * hold;
+            // ---- Honcho: walks up, reaches, holds the Glitcher by the neck, lifts him, swings him back, throws.
+            px = honchoX(c, w);
+            py = feetY - 24 * up;
+            a.viewYaw = 1.4;
+            double walkAmt = smooth((c - T_STEP) / 300.0) * (1 - smooth((c - (T_STEP + 1000)) / 250.0));
+            GlitcherPoses.walk(a, c / 1000.0 * 2.2 * Math.PI, walkAmt, 0, t);
+            double[] ft = fistTarget(c);
+            if (ft[3] > 0.01) {
+                a.reach(Rig15.Limb.R_ARM, ft[0], ft[1], ft[2], ft[3]);
+                a.pole(Rig15.Limb.R_ARM, -0.3, -1, -0.3);
+                double wind = smooth((c - T_WIND) / 700.0), sweep = smooth((c - T_SWEEP) / 350.0);
+                a.blendTurn(Rig15.Joint.UPPER_TORSO, 6 - 10 * wind + 14 * sweep, -22 * wind + 28 * sweep, 0, ft[3]);
+                a.blendTurn(Rig15.Joint.HEAD, -4, 0, 0, ft[3]);
+            }
+            boolean released = c >= RELEASE;
+            a.shapeR = released ? Actor.Hand.OPEN : Actor.Hand.GRIP;
+            a.fistR = released ? 0 : 0.35;
+            a.spread = 0.6;
+            // The other arm swings with the body.
+            a.blendTurn(Rig15.Joint.L_UPPER_ARM, -12 * smooth((c - T_WIND) / 700.0), 0, 6, 1);
         } else {
-            double e = (c - THROW_FROM) / (THROW_TO - THROW_FROM);
-            if (e >= 1) return;                                          // gone through
-            a.viewYaw = -0.55;
+            double e = (c - RELEASE) / FLIGHT_MS;
+            if (e >= 1) return;                                    // gone through
+            a.viewYaw = -1.4;
             if (e <= 0) {
-                // Waiting: standing, arms loose, the head down a little.
+                double[] n = glitcherNeck(c, w, feetY);
+                px = n[0];
+                py = n[1];
+                double lift = smooth((c - T_LIFT) / 500.0);
+                double wind = smooth((c - T_WIND) / 700.0), sweep = smooth((c - T_SWEEP) / 350.0);
+                // standing: waiting, head down a little
                 p.reach(Rig15.Limb.R_LEG, -2.4, 3, 0, 1).reach(Rig15.Limb.L_LEG, 2.4, 3, 0, 1);
                 p.rootPos[1] = -0.6;
-                p.turn(torso, 2 + breath, 0, 0).turn(head, 6, 0, 0);
-                p.turn(Rig15.Joint.R_UPPER_ARM, 4 * sway, 0, -5).turn(Rig15.Joint.L_UPPER_ARM, -4 * sway, 0, 5);
+                p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath, 0, 0).turn(Rig15.Joint.HEAD, 6, 0, 0);
+                p.turn(Rig15.Joint.R_UPPER_ARM, 3 * Math.sin(t * 1.1), 0, -5).turn(Rig15.Joint.L_UPPER_ARM, -3 * Math.sin(t * 1.1), 0, 5);
                 p.turn(Rig15.Joint.R_LOWER_ARM, -6, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -6, 0, 0);
+                // taken hold of: the struggle comes in as he leaves the floor
+                if (lift > 0.02) GlitcherPoses.hanging(a, t, lift * (1 - 0.4 * sweep), 1.3);
+                // hangs from the fist, swinging away from Honcho, trailing as the arm goes back and whips forward
+                rot = -0.3 * smooth((c - T_GRAB) / 400.0) + 0.5 * wind - 0.8 * sweep + 0.25 * Math.exp(-Math.max(0, c - T_GRAB) / 900.0) * Math.cos(Math.max(0, c - T_GRAB) * 0.006);
             } else {
                 // Thrown: over in an arc, turning, growing small as it goes into the portal; the body goes limp, the limbs trailing.
+                double[] n0 = glitcherNeck(RELEASE, w, feetY);
                 double ee = e * e * (3 - 2 * e);
-                x = w * 0.60 + (portalX(w) - w * 0.60) * ee;
-                feetY = h * 0.86 + (portalY(h) + h * 0.12 - h * 0.86) * ee - Math.sin(Math.PI * ee) * h * 0.16;
-                tumble = ee * Math.PI * 3.5;
+                double ptX = portalX(w), ptY = portalY(h);
+                px = n0[0] + (ptX - n0[0]) * ee;
+                py = n0[1] + (ptY - n0[1]) * ee - Math.sin(Math.PI * ee) * h * 0.16;
+                double rot0 = -0.3 + 0.5 - 0.8;
+                rot = rot0 + ee * Math.PI * 3.5;
                 scale = 1 - 0.85 * ee * ee;
                 double fl = Math.sin(e * 23), fl2 = Math.sin(e * 19 + 1.3), fl3 = Math.sin(e * 27 + 2.1);
-                p.turn(torso, -8 + 6 * fl2, 8 * fl3, 5 * fl);
-                p.turn(head, -25 + 14 * fl, 12 * fl2, 8 * fl3);
+                p.turn(Rig15.Joint.UPPER_TORSO, -8 + 6 * fl2, 8 * fl3, 5 * fl);
+                p.turn(Rig15.Joint.HEAD, -25 + 14 * fl, 12 * fl2, 8 * fl3);
                 p.turn(Rig15.Joint.R_UPPER_ARM, -150 + 40 * fl, 0, -40 + 25 * fl2).turn(Rig15.Joint.L_UPPER_ARM, -130 + 40 * fl2, 0, 40 + 25 * fl3);
                 p.turn(Rig15.Joint.R_LOWER_ARM, -40 - 25 * fl3, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, -55 - 25 * fl, 0, 0);
                 p.turn(Rig15.Joint.R_UPPER_LEG, -45 + 35 * fl2, 0, 6).turn(Rig15.Joint.L_UPPER_LEG, 25 + 35 * fl3, 0, -6);
                 p.turn(Rig15.Joint.R_LOWER_LEG, 55 + 25 * fl, 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 35 + 25 * fl2, 0, 0);
                 p.turn(Rig15.Joint.R_FOOT, 25, 0, 0).turn(Rig15.Joint.L_FOOT, 35, 0, 0);
-                a.fistR = a.fistL = 0.1;
+                a.hands(Actor.Hand.OPEN, Actor.Hand.OPEN);
                 a.spread = 1;
             }
         }
@@ -211,9 +260,10 @@ final class Finale3 {
         a.draw(r, unit, r.width / 2.0, r.height - 2 * unit);
         Graphics2D d = (Graphics2D) g.create();
         double sc = scale / 0.6;
-        d.translate(x, feetY);
-        d.rotate(tumble, 0, -h * 0.16 * scale);
+        d.translate(px, py);                                        // the neck
+        d.rotate(rot);
         d.scale(sc, sc);
+        d.translate(0, 24 * unit);                                  // and the body hangs from it, down to the feet
         d.drawImage(r.image, -r.width / 2, -r.height + (int) (2 * unit), null);
         d.dispose();
     }
@@ -257,33 +307,27 @@ final class Finale3 {
         d.dispose();
     }
 
-    /** A caption at the bottom: the English line under the Japanese one, tinted by who speaks. */
-    private void caption(Graphics2D g, int w, int h, double c, Object[] line) {
+    /** The Glitcher's words, written across the screen a letter at a time with a blinking cursor, as he writes them on the desktop. */
+    private void typed(Graphics2D g, int w, int h, double c, Object[] line) {
         double from = (Double) line[0], to = (Double) line[1];
-        double a = Math.min(1, Math.min((c - from) / 250.0, (to - c) / 300.0));
+        String full = (String) line[2];
+        int n = Math.min(full.length(), (int) ((c - from) / TYPE_CHAR));
+        if (n <= 0) return;
+        double a = 1 - smooth((c - (to - 450)) / 450.0);
         if (a <= 0) return;
-        String jp = (String) line[2], en = (String) line[3];
-        int speaker = line.length > 4 ? (Integer) line[4] : 0;
-        Color tint = speaker == 1 ? new Color(255, 236, 190) : speaker == 2 ? new Color(230, 170, 255) : new Color(240, 240, 250);
-        Graphics2D d = (Graphics2D) g.create();
-        d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) a));
-        int size = (int) (h * 0.034);
-        d.setFont(new Font(Font.DIALOG, Font.BOLD, size));
-        FontMetrics fm = d.getFontMetrics();
-        int jw = fm.stringWidth(jp);
-        d.setFont(new Font(Font.DIALOG, Font.PLAIN, (int) (size * 0.8)));
-        FontMetrics fe = d.getFontMetrics();
-        int ew = fe.stringWidth(en);
-        int boxW = Math.max(jw, ew) + (int) (h * 0.08), boxH = (int) (h * 0.11);
-        int bx = (w - boxW) / 2, by = (int) (h * 0.86);
-        d.setColor(new Color(0, 0, 0, 150));
-        d.fillRoundRect(bx, by, boxW, boxH, 18, 18);
-        d.setFont(new Font(Font.DIALOG, Font.BOLD, size));
-        d.setColor(tint);
-        d.drawString(jp, (w - jw) / 2, by + (int) (boxH * 0.44));
-        d.setFont(new Font(Font.DIALOG, Font.PLAIN, (int) (size * 0.8)));
-        d.setColor(new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), 210));
-        d.drawString(en, (w - ew) / 2, by + (int) (boxH * 0.85));
-        d.dispose();
+        boolean cursor = ((int) (c / 250)) % 2 == 0;
+        Graphics2D t2 = (Graphics2D) g.create();
+        t2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        t2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) Math.max(0, Math.min(1, a))));
+        t2.setFont(new Font(Font.MONOSPACED, Font.BOLD, (int) (h * 0.052)));
+        int fullW = t2.getFontMetrics().stringWidth(full + "_");
+        int x = (w - fullW) / 2, y = (int) (h * 0.2);
+        String shown = full.substring(0, n) + (cursor || n < full.length() ? "_" : "");
+        t2.setColor(new Color(0x73, 0x00, 0xFF, 120));
+        t2.drawString(shown, x - 3, y);
+        t2.drawString(shown, x + 3, y);
+        t2.setColor(Color.WHITE);
+        t2.drawString(shown, x, y);
+        t2.dispose();
     }
 }
