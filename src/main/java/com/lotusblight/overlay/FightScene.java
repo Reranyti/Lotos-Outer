@@ -36,8 +36,7 @@ final class FightScene {
     // The figures are drawn small by software and stretched, which is plenty for blocky skins and much lighter.
     private static final double RES = 0.5;
 
-    private final SkinModel model = new SkinModel();
-    private final SkinModel honchoModel = SkinModel.honcho();
+    private final Figure[] figures;
     private final int[] honchoSkin, glitcherSkin;
     private final double unit;
     private final SoftRenderer[] renderers = new SoftRenderer[2];
@@ -53,6 +52,7 @@ final class FightScene {
         this.honchoSkin = honchoSkin;
         this.glitcherSkin = glitcherSkin;
         this.unit = screenH * 0.42 / 32.0;
+        this.figures = new Figure[]{new Figure(honchoSkin, true), new Figure(glitcherSkin, false)};
         for (int i = 0; i < 2; i++) renderers[i] = new SoftRenderer((int) (36 * unit * RES), (int) (40 * unit * RES));
     }
 
@@ -210,7 +210,7 @@ final class FightScene {
 
         SoftRenderer r = renderers[who];
         r.clear();
-        r.draw(who == 0 ? honchoModel : model, who == 0 ? honchoSkin : glitcherSkin, pose, unit * RES, r.width / 2.0, r.height - 6 * unit * RES);
+        figures[who].draw(r, pose, unit * RES, r.width / 2.0, r.height - 6 * unit * RES);
         Graphics2D d = (Graphics2D) g.create();
         d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         AffineTransform at = new AffineTransform();

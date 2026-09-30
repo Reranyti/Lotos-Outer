@@ -30,7 +30,7 @@ final class Song3Show {
     private BufferedImage faceCache;
     private int cacheW, cacheH;
     private static final double FIG_RES = 0.6;
-    private final SkinModel figureModel = new SkinModel();
+    private Figure figureRig;
     private SoftRenderer figure;
     private double figureUnit;
     private int[] glitcherSkin;
@@ -451,7 +451,8 @@ final class Song3Show {
             pose.partPitch[SkinModel.Part.RIGHT_ARM.ordinal()] = 0.05 * Math.sin(s * 1.1);
             pose.partPitch[SkinModel.Part.LEFT_ARM.ordinal()] = -0.05 * Math.sin(s * 1.1);
             figure.clear();
-            figure.draw(figureModel, glitcherSkin, pose, unit, figure.width / 2.0, figure.height - 2 * unit);
+            if (figureRig == null) figureRig = new Figure(glitcherSkin, false);
+            figureRig.draw(figure, pose, unit, figure.width / 2.0, figure.height - 2 * unit);
             Graphics2D f = (Graphics2D) g.create();
             f.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
             Random fr = new Random((long) (s * 12));

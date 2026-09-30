@@ -47,7 +47,7 @@ final class Finale3 {
 
     private final BufferedImage desktop;
     private final int[] glitcherSkin, honchoSkin;
-    private final SkinModel model = new SkinModel(), honchoModel = SkinModel.honcho();
+    private final Figure[] rigs;
     private final SoftRenderer[] figures = new SoftRenderer[2];
     private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private final double unit;
@@ -59,6 +59,7 @@ final class Finale3 {
         this.honchoSkin = honchoSkin;
         this.desktop = desktop;
         this.unit = screenH * 0.36 / 32.0 * 0.6;
+        this.rigs = new Figure[]{new Figure(honchoSkin, true), new Figure(glitcherSkin, false)};
         for (int i = 0; i < 2; i++) figures[i] = new SoftRenderer((int) (30 * unit), (int) (36 * unit));
     }
 
@@ -173,7 +174,7 @@ final class Finale3 {
         }
         SoftRenderer r = figures[who];
         r.clear();
-        r.draw(who == 0 ? honchoModel : model, who == 0 ? honchoSkin : glitcherSkin, pose, unit, r.width / 2.0, r.height - 2 * unit);
+        rigs[who].draw(r, pose, unit, r.width / 2.0, r.height - 2 * unit);
         Graphics2D d = (Graphics2D) g.create();
         double sc = scale / 0.6;
         d.translate(x, feetY);

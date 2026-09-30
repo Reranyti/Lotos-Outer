@@ -256,8 +256,7 @@ final class Interlude {
     private static final int LEFT_LEG = SkinModel.Part.LEFT_LEG.ordinal();
     private static final int HEAD = SkinModel.Part.HEAD.ordinal();
 
-    private final SkinModel glitcherModel = new SkinModel();
-    private final SkinModel honchoModel = SkinModel.honcho();
+    private Figure glitcherFigure, honchoFigure;
     private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private SoftRenderer glitcherRender, honchoRender;
     private double figureUnit;
@@ -274,6 +273,8 @@ final class Interlude {
         double unit = h * 0.62 / 32.0;
         if (glitcherRender == null || figureUnit != unit) {
             figureUnit = unit;
+            glitcherFigure = new Figure(glitcherSkin, false);
+            honchoFigure = new Figure(honchoSkin, true);
             glitcherRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
             honchoRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
         }
@@ -298,7 +299,7 @@ final class Interlude {
         pose.pitch = -0.32 * freed + 0.05 * Math.sin(t * 9) * (1 - freed);
         pose.partPitch[HEAD] = 0.15;
         glitcherRender.clear();
-        glitcherRender.draw(glitcherModel, glitcherSkin, pose, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
+        glitcherFigure.draw(glitcherRender, pose, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
         double gDrawX = gx - glitcherRender.width / 2.0;
         double gDrawY = ground - glitcherRender.height + 6 * unit;
         b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);
@@ -318,7 +319,7 @@ final class Interlude {
         pose.partPitch[LEFT_LEG] = -Math.sin(t * 15) * 0.8 * flail;
         pose.partPitch[HEAD] = -0.25 - 0.5 * fatigue;
         honchoRender.clear();
-        honchoRender.draw(honchoModel, honchoSkin, pose, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
+        honchoFigure.draw(honchoRender, pose, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
         double drop = freed * freed * h * 0.9;
         AffineTransform old = b.getTransform();
         b.translate(hx, hy + 24 * unit + drop);

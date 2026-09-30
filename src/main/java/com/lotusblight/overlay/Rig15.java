@@ -238,7 +238,7 @@ final class Rig15 {
                 local[i] = Quat.slerp(local[i], look, pose.lookW);
             }
             if (ikLocal[i] != null) local[i] = Quat.slerp(local[i], ikLocal[i], ikW[i]);
-            Quat.Xf step = Quat.Xf.of(local[i], Quat.sub(pivot[i], pivot[p]));
+            Quat.Xf step = Quat.Xf.of(local[i], Quat.add(Quat.sub(pivot[i], pivot[p]), pose.offset[i]));
             sk.world[i] = sk.world[p].mul(Quat.Xf.of(Quat.IDENTITY, step.t)).mul(Quat.Xf.of(local[i], new double[]{0, 0, 0}));
             sk.worldRot[i] = sk.worldRot[p].mul(local[i]);
         }

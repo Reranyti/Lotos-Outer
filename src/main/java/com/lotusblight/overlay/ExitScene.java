@@ -80,7 +80,7 @@ final class ExitScene {
     private final int barH;
 
     // The Glitcher.
-    private final SkinModel model = new SkinModel();
+    private final Figure figure;
     private final SoftRenderer renderer;
     private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private final GlitchFx glitch = new GlitchFx();
@@ -143,6 +143,7 @@ final class ExitScene {
 
         // About a third of the screen tall, like on the desktop walk.
         this.scale = h * 0.34 / 32.0;
+        this.figure = new Figure(skin, false);
         this.renderer = new SoftRenderer((int) (22 * scale), (int) (36 * scale));
     }
 
@@ -607,7 +608,7 @@ final class ExitScene {
         }
         renderer.clear();
         double originX = renderer.width / 2.0, originY = renderer.height - 2 * scale;
-        renderer.draw(model, skin, pose, scale, originX, originY);
+        figure.draw(renderer, pose, scale, originX, originY);
         glitch.apply(renderer.pixels, renderer.width, renderer.height, glitchLevel());
         Graphics2D gg = (Graphics2D) g.create();
         gg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);

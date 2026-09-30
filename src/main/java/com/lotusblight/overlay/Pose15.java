@@ -36,6 +36,8 @@ final class Pose15 {
     Quat rootRot = Quat.IDENTITY;
     /** Local turn of every joint (the root's own is {@link #rootRot}). */
     final Quat[] rot = new Quat[Rig15.N];
+    /** A move of a joint from where it sits in its parent, in the parent's space (skin pixels). */
+    final double[][] offset = new double[Rig15.N][3];
     final Ik[] ik = new Ik[Rig15.Limb.values().length];
     double lookW;
     final double[] lookPos = new double[3];
@@ -49,6 +51,7 @@ final class Pose15 {
         Arrays.fill(rootPos, 0);
         rootRot = Quat.IDENTITY;
         Arrays.fill(rot, Quat.IDENTITY);
+        for (double[] o : offset) Arrays.fill(o, 0);
         for (Ik k : ik) {
             k.w = 0;
             Arrays.fill(k.pos, 0);
@@ -70,6 +73,7 @@ final class Pose15 {
         System.arraycopy(o.rootPos, 0, rootPos, 0, 3);
         rootRot = o.rootRot;
         System.arraycopy(o.rot, 0, rot, 0, rot.length);
+        for (int i = 0; i < offset.length; i++) System.arraycopy(o.offset[i], 0, offset[i], 0, 3);
         for (int i = 0; i < ik.length; i++) ik[i].copyFrom(o.ik[i]);
         lookW = o.lookW;
         System.arraycopy(o.lookPos, 0, lookPos, 0, 3);

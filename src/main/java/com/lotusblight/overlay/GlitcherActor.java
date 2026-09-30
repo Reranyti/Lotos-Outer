@@ -48,7 +48,7 @@ final class GlitcherActor {
     private static final int BODY = SkinModel.Part.BODY.ordinal();
     private static final int HEAD = SkinModel.Part.HEAD.ordinal();
 
-    private final SkinModel model = new SkinModel();
+    private final Figure figure;
     private final int[] skin;
     private final double unit;                     // screen pixels per skin pixel at scale 1
     private final SoftRenderer renderer;
@@ -59,6 +59,7 @@ final class GlitcherActor {
         this.skin = skin;
         this.unit = screenH * 0.40 / 32.0;
         double u = unit * SS;
+        this.figure = new Figure(skin, false);
         this.renderer = new SoftRenderer((int) (52 * u), (int) (46 * u));
         this.ox = renderer.width / 2.0;
         this.oy = renderer.height - 3 * u;
@@ -223,7 +224,7 @@ final class GlitcherActor {
         }
 
         renderer.clear();
-        renderer.draw(model, skin, pose, unit * SS, ox, oy);
+        figure.draw(renderer, pose, unit * SS, ox, oy);
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
@@ -478,7 +479,7 @@ final class GlitcherActor {
         }
         if (walking < 0.2) pose.partPitch[HEAD] = 0.1;              // just formed: a little dazed
         renderer.clear();
-        renderer.draw(model, skin, pose, unit * SS, ox, oy);
+        figure.draw(renderer, pose, unit * SS, ox, oy);
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
