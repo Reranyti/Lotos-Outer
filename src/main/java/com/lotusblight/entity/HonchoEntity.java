@@ -56,6 +56,8 @@ public class HonchoEntity extends PathfinderMob implements GeoEntity {
     private static final RawAnimation HAPPY = RawAnimation.begin().thenPlayAndHold("happy");
     private static final RawAnimation PAT = RawAnimation.begin().thenLoop("pat");
     private static final RawAnimation PRAY = RawAnimation.begin().thenLoop("pray");
+    private static final RawAnimation DUST = RawAnimation.begin().thenLoop("dust_off");
+    private static final RawAnimation SHAKE = RawAnimation.begin().thenLoop("handshake");
 
     /** What the meeting scene (HonchoMeetingManager) has him doing - synced so the client plays the matching animation. */
     public static final int SCENE_NONE = 0;
@@ -63,6 +65,8 @@ public class HonchoEntity extends PathfinderMob implements GeoEntity {
     public static final int SCENE_HAPPY = 2;
     public static final int SCENE_PAT = 3;
     public static final int SCENE_PRAY = 4;
+    public static final int SCENE_DUST = 5;      // brushing the dust off
+    public static final int SCENE_SHAKE = 6;     // a handshake
     private static final EntityDataAccessor<Integer> DATA_SCENE =
             SynchedEntityData.defineId(HonchoEntity.class, EntityDataSerializers.INT);
 
@@ -295,6 +299,8 @@ public class HonchoEntity extends PathfinderMob implements GeoEntity {
             case SCENE_HAPPY -> HAPPY;
             case SCENE_PAT -> PAT;
             case SCENE_PRAY -> PRAY;
+            case SCENE_DUST -> DUST;
+            case SCENE_SHAKE -> SHAKE;
             default -> state.isMoving() ? WALK : IDLE;
         })));
     }

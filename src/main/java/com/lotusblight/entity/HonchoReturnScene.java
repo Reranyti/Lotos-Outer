@@ -89,11 +89,11 @@ public final class HonchoReturnScene {
         if (honcho == null) return true;
         if (s.stage == Stage.WAIT_HAND) {
             setStage(s, Stage.HAND_TAKEN);
-            honcho.setScene(HonchoEntity.SCENE_HAPPY);
+            honcho.setScene(HonchoEntity.SCENE_DUST);
             HonchoSpeech.say(player, "— Спасибо.");
         } else if (s.stage == Stage.WAIT_YES) {
             setStage(s, Stage.SHAKE);
-            honcho.setScene(HonchoEntity.SCENE_OFFER_HAND);
+            honcho.setScene(HonchoEntity.SCENE_SHAKE);
             HonchoSpeech.say(player, "— Спасибо...");
         }
         return true;

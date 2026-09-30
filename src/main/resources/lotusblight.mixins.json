@@ -9,7 +9,8 @@
     "minecraft.AdvancementIconFormatMixin"
   ],
   "client": [
-    "chatoverhaul.CustomChatComponentSpeakerIconMixin"
+    "chatoverhaul.CustomChatComponentSpeakerIconMixin",
+    "minecraft.PlayerModelFingersMixin"
   ],
   "injectors": {
     "defaultRequire": 1
