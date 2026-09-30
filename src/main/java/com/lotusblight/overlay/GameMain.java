@@ -33,7 +33,7 @@ public final class GameMain {
     private static final int FPS = 60;
     private static final Color CATCH_INPUT = new Color(0, 0, 0, 1);
 
-    private enum Phase { SONG1, SONG2, INTERLUDE, SONG3, RESULTS, DEFEAT }
+    private enum Phase { SONG1, SONG2, INTERLUDE, SONG3, RESULTS, FINALE, DEFEAT }
 
     /** Icons taken off the desktop before the fight (by the exit scene), kept covered while it runs. */
     private static volatile DesktopSnapshot hiddenIcons;
@@ -101,7 +101,7 @@ public final class GameMain {
 
     public static void main(String[] args) throws Exception {
         String song1Wav = null, song2Wav = null, song3Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
-        double animFps = 30, startSong2 = -1, startSong3 = -1, cutsceneAt = -1;
+        double animFps = 30, startSong2 = -1, startSong3 = -1, cutsceneAt = -1, finaleAt = -1;
         boolean minimize = false;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
@@ -109,6 +109,7 @@ public final class GameMain {
             if (args[i].equals("--song3")) song3Wav = args[i + 1];
             if (args[i].equals("--start3")) startSong3 = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--cutscene")) cutsceneAt = Double.parseDouble(args[i + 1]);
+            if (args[i].equals("--finale")) finaleAt = Double.parseDouble(args[i + 1]);
             if (args[i].equals("--frames")) framesDir = args[i + 1];
             if (args[i].equals("--video")) video = args[i + 1];
             if (args[i].equals("--video-resource")) videoResource = args[i + 1];
@@ -154,7 +155,7 @@ public final class GameMain {
         g2.mute(ContactBreak.START, ContactBreak.END);          // the eyes take over from the circles
         ContactBreak contact = new ContactBreak(contactBeats, g2::hurt,
                 () -> g2.contactHit(1.0 / Math.max(1, contactBeats.length)));
-        if (cutsceneAt >= 0 && desktopShot() == null) {
+        if ((cutsceneAt >= 0 || finaleAt >= 0) && desktopShot() == null) {
             try { testShot = new java.awt.Robot().createScreenCapture(screen); } catch (Exception ignored) { }
         }
         int[] honchoSkin = loadSkinFile("/assets/lotusblight/textures/entity/honcho.png");
@@ -163,6 +164,7 @@ public final class GameMain {
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
         if (startSong3 >= 0 && g3 != null) engine.jumpToSong3(startSong3);
         if (cutsceneAt >= 0 && g3 != null) engine.jumpToInterlude(cutsceneAt);
+        if (finaleAt >= 0) engine.jumpToFinale(finaleAt);
 
         JFrame frame = new JFrame("Lotus Blight");
         frame.setUndecorated(true);
@@ -241,6 +243,9 @@ public final class GameMain {
         private final Song3Show show = new Song3Show();
         private FightScene fight;
         private Interlude interlude;
+        private Finale3 finale;
+        private boolean song3Played;         // the results that follow the third song lead on to the closing cutscene
+        private int screenHeight;
         private Clip interludeClip;
         private int[] glitcherSkin, honchoSkin;
 
@@ -248,6 +253,7 @@ public final class GameMain {
             this.glitcherSkin = glitcherSkin;
             this.honchoSkin = honchoSkin;
             this.fight = new FightScene(honchoSkin, glitcherSkin, screenH);
+            this.screenHeight = screenH;
         }
 
         private void startInterludeMusic(double seconds) {
@@ -262,6 +268,18 @@ public final class GameMain {
         }
 
         /** Straight into the cutscene between the second and third songs (for trying it out). */
+        /** Straight into the closing cutscene (for trying it out). */
+        void jumpToFinale(double seconds) {
+            tutorialDone = true;
+            startFinale();
+            finale.seek(seconds);
+        }
+
+        private void startFinale() {
+            finale = new Finale3(glitcherSkin, honchoSkin, desktopShot(), screenHeight);
+            phase = Phase.FINALE;
+        }
+
         void jumpToInterlude(double seconds) {
             phase = Phase.INTERLUDE;
             tutorialDone = true;
@@ -399,7 +417,9 @@ public final class GameMain {
         }
 
         private void closeWhenShown() {
-            if ((System.nanoTime() - endedAt) / 1e9 >= END_SCREEN_SECONDS) System.exit(0);
+            if ((System.nanoTime() - endedAt) / 1e9 < END_SCREEN_SECONDS) return;
+            if (phase == Phase.RESULTS && song3Played) startFinale();      // after the results of the third song: the finale
+            else System.exit(0);
         }
 
         private double clockMs() {
@@ -568,9 +588,13 @@ public final class GameMain {
                         g.fillRect(0, 0, w, h);
                     }
                     if (!g3.alive()) end(Phase.DEFEAT);
-                    else if (!leadIn && (g3.finished(t) || trackOver())) end(Phase.RESULTS);
+                    else if (!leadIn && (g3.finished(t) || trackOver())) { song3Played = true; end(Phase.RESULTS); }
                 }
                 case RESULTS -> { results(g, w, h); closeWhenShown(); }
+                case FINALE -> {
+                    finale.render(g, w, h);
+                    if (finale.done()) System.exit(0);
+                }
                 case DEFEAT -> { defeat(g, w, h); closeWhenShown(); }
             }
         }
