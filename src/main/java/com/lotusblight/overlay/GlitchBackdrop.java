@@ -38,6 +38,13 @@ final class GlitchBackdrop {
     private final BufferedImage work = new BufferedImage(LW, LH, BufferedImage.TYPE_INT_ARGB);
     private final BufferedImage split = new BufferedImage(LW, LH, BufferedImage.TYPE_INT_ARGB);
     private long lastFrame = Long.MIN_VALUE;
+    private boolean noWall, noWindows;
+
+    /** No error windows in the mess (the cutscene and the fall have none). */
+    void setNoWindows(boolean noWindows) { this.noWindows = noWindows; }
+
+    /** For the third song: the mess stays a mess, and never turns into the wall of "error". */
+    void setNoWall(boolean noWall) { this.noWall = noWall; }
     private final Font small = new Font(Font.SANS_SERIF, Font.BOLD, 8);
     private final Font title = new Font(Font.SANS_SERIF, Font.BOLD, 7);
 
@@ -64,7 +71,7 @@ final class GlitchBackdrop {
 
     private void step(long frame) {
         Random rnd = new Random(frame * 104729L + 17);
-        double wall = ContactBreak.wallAmount(frame * 72.0);
+        double wall = noWall ? 0 : ContactBreak.wallAmount(frame * 72.0);
         Graphics2D g = work.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
@@ -111,6 +118,7 @@ final class GlitchBackdrop {
         Random slow = new Random((frame / 9) * 7919L + 3);
         if (wall > 0) drawWall(g, frame, wall, rnd);
         int eyes = (int) Math.round(4 * (1 - 0.75 * wall)), windows = (int) Math.round(7 * (1 - 0.75 * wall));
+        if (noWindows) windows = 0;
         for (int i = 0; i < eyes; i++) {
             eye(g, slow.nextInt(LW), slow.nextInt(LH), 26 + slow.nextInt(38), slow);
         }

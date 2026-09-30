@@ -105,6 +105,11 @@ final class ContactBreak {
 
     /** 0..1: how hard the screen is tearing. Quick in, quick out, over the two seconds before the eye. */
     static double glitchAmount(double ms) {
+        if (ms >= 55_000 && ms < GLITCH_FROM) {
+            // The build-up: from 0:55 the picture starts to twitch, more often and harder as 1:17 nears.
+            double grow = smooth((ms - 55_000) / 22_000.0);
+            return new Random((long) (ms / 90)).nextDouble() < 0.06 + 0.34 * grow ? 0.12 + 0.4 * grow : 0;
+        }
         if (ms < GLITCH_FROM || ms >= START) return 0;
         double f = (ms - GLITCH_FROM) / (START - GLITCH_FROM);
         return Math.min(1, Math.min(f * 5, (1 - f) * 8));

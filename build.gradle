@@ -283,6 +283,18 @@ tasks.named('processResources', ProcessResources).configure {
         include 'honcho_briefing.ogg'
         into 'assets/lotusblight/overlay'
     }
+    // The third song, likewise from a local folder that stays out of git; without it the fight ends after two.
+    from('art/music/third') {
+        include 'you_cant.ogg'
+        rename 'you_cant.ogg', 'song3.ogg'
+        into 'assets/lotusblight/overlay'
+    }
+    // The music of the cutscene between the second and third songs: a track from the finale folder.
+    from('art/music/finale') {
+        include 'world_dialogue_world_lotus_boss.ogg'
+        rename 'world_dialogue_world_lotus_boss.ogg', 'interlude.ogg'
+        into 'assets/lotusblight/overlay'
+    }
 
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,

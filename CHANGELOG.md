@@ -16,6 +16,38 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 1.9000 — Третья песня / The third song
+
+### Русский
+- **Третья песня боя.** После второй песни идёт катсцена (Глитчер, Хончо, душение — жмите по Глитчеру,
+  чтобы оттолкнуть его за 12 секунд, иначе бой проигран), рабочий стол разбивается, и все падают вниз.
+  Дальше — третья песня: Хончо и Глитчер дерутся, вы помогаете кругами. Карта третьей песни сделана
+  командой в osu!lazer.
+- **Драка.** У бойцов разные приёмы (удар, пинок, апперкот, рывок, захват, луч), свои обмены раз в несколько
+  секунд и спецприём Хончо за каждые 25 попаданий подряд.
+- **Ход песни:** мир кружится (0:41), по краям открываются глаза, наблюдающие за Глитчером (1:08), экран
+  сжимается и его держат руки (1:34), Хончо смотрит в туннель из глаз (1:47), а с 2:25 Глитчер рвёт картинку.
+- **Начало второй песни** — гнилые обои и глаза переходят из первой, Глитчер собирается заново и бросает окна.
+- **Быстрее:** туннель, небо, глитч и бойцы отрисовываются заметно дешевле; кадр в тестах вырос по скорости
+  в 1,5–3 раза. Исправлена ошибка, из-за которой туннель мог упасть.
+- Треки третьей песни и катсцены лежат в jar (см. `ASSETS.md`).
+
+### English
+- **The fight's third song.** After the second song a cutscene plays (the Glitcher, Honcho, the choke - click
+  the Glitcher to push it away within 12 seconds, or the fight is lost); the desktop shatters and everyone
+  falls. Then the third song: Honcho and the Glitcher fight and you help with the circles. The third song's
+  beatmap was made by the team in osu!lazer.
+- **The fight.** The fighters have different moves (punch, kick, uppercut, dash, grab, beam), trade blows
+  on their own every few seconds, and Honcho gets a special for every 25 hits in a row.
+- **The song:** the world spins (0:41), eyes open at the sides watching the Glitcher (1:08), the screen
+  shrinks and is held by hands (1:34), Honcho looks into a tunnel of eyes (1:47), and from 2:25 the Glitcher
+  tears the picture up.
+- **The second song's opening** carries the rotting wallpaper and eyes over from the first; the Glitcher
+  re-forms and throws windows.
+- **Faster:** the tunnel, sky, glitch and fighters are much cheaper to draw; frames in tests got 1.5-3 times
+  faster. A crash in the tunnel is fixed.
+- The tracks of the third song and the cutscene are in the jar (see `ASSETS.md`).
+
 ## 1.8000 — Release: «Проклятая» / the Cursed branch
 Открываем скрытую ветку. / The hidden branch is out in the open.
 

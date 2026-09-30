@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  * Alt+F4 end it at any point.
  *
  * Usage: java -cp lotusblight.jar com.lotusblight.overlay.ExitMain [--jar lotusblight-VERSION.jar]
- *        [--song1 a.wav] [--song2 b.wav] [--contact c.wav] [--frames DIR --animAudio a.wav --animFps N]
+ *        [--song1 a.wav] [--song2 b.wav] [--song3 d.wav] [--contact c.wav] [--frames DIR --animAudio a.wav --animFps N]
  *        [--video finale.mp4 | --video-resource /path/in/jar] [--from STAGE] [--no-minimize] [--no-fight]
  *        [--cleanup]
  */
@@ -48,17 +48,19 @@ public final class ExitMain {
 
     public static void main(String[] args) throws Exception {
         String jar = "lotusblight.jar";
-        String song1 = null, song2 = null, contact = null, from = null, video = null;
+        String song1 = null, song2 = null, song3 = null, contact = null, interlude = null, from = null, video = null;
         List<String> animArgs = new ArrayList<>();
         for (int i = 0; i < args.length - 1; i++) {
             switch (args[i]) {
                 case "--jar" -> jar = args[i + 1];
                 case "--song1" -> song1 = args[i + 1];
                 case "--song2" -> song2 = args[i + 1];
+                case "--song3" -> song3 = args[i + 1];
                 case "--from" -> from = args[i + 1];
                 case "--video" -> video = args[i + 1];
                 case "--video-resource" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 case "--contact" -> { contact = args[i + 1]; animArgs.addAll(List.of(args[i], args[i + 1])); }
+                case "--interlude" -> { interlude = args[i + 1]; animArgs.addAll(List.of(args[i], args[i + 1])); }
                 // The finale animation for the fight, passed through as is.
                 case "--frames", "--animAudio", "--animFps" -> animArgs.addAll(List.of(args[i], args[i + 1]));
                 default -> {}
@@ -96,6 +98,7 @@ public final class ExitMain {
         List<String> fightArgs = new ArrayList<>();
         if (song1 != null) fightArgs.addAll(List.of("--song1", song1));
         if (song2 != null) fightArgs.addAll(List.of("--song2", song2));
+        if (song3 != null) fightArgs.addAll(List.of("--song3", song3));
         fightArgs.addAll(animArgs);
         // The finale animation is played straight from the video, in memory, by the fight itself.
         if (video != null) fightArgs.addAll(List.of("--video", video));
@@ -103,7 +106,7 @@ public final class ExitMain {
         if (cleanup) {
             // Run from the mod: our own temporary files go once the process ends, whichever way.
             List<File> ours = new ArrayList<>();
-            for (String path : new String[]{song1, song2, contact}) if (path != null) ours.add(new File(path));
+            for (String path : new String[]{song1, song2, song3, contact, interlude}) if (path != null) ours.add(new File(path));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 for (File f : ours) f.delete();
             }));
@@ -184,7 +187,7 @@ public final class ExitMain {
             try {
                 long until = System.currentTimeMillis() + SONG_WAIT_MS;
                 for (int i = 0; i + 1 < fightArgs.size(); i += 2) {
-                    if (!fightArgs.get(i).startsWith("--song") && !fightArgs.get(i).equals("--video") && !fightArgs.get(i).equals("--contact")) continue;
+                    if (!fightArgs.get(i).startsWith("--song") && !fightArgs.get(i).equals("--video") && !fightArgs.get(i).equals("--contact") && !fightArgs.get(i).equals("--interlude")) continue;
                     File song = new File(fightArgs.get(i + 1));
                     while (!song.isFile() && System.currentTimeMillis() < until) Thread.sleep(100);
                 }

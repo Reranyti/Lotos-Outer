@@ -57,6 +57,9 @@ the repository: they are added at build time from the local `art/music` and `art
 | Файл / File | Что это / What | Источник / Source |
 |---|---|---|
 | `honcho_briefing.ogg` | урок Хончо во второй песне / Honcho's lesson in the second song | Peganex Productions — [«DOORS: OST – Honcho Encounter Briefing \| "YOU'RE HIRED!"»](https://www.youtube.com/watch?v=LWIr4inAsUg), неофициальный саундтрек DOORS / an unofficial DOORS soundtrack |
+| `song3.ogg` | третья песня боя / the fight's third song | justisaac_ — «You Can't.» (Vs. Susie Reprise), из Deltarune: Chapter ??? ([видео / video](https://www.youtube.com/watch?v=L_qwLQpEDpA)); права на музыку — автору и правообладателям Deltarune / the music belongs to its author and the rights holders of Deltarune |
+| `interlude.ogg` | катсцена между второй и третьей песней / the cutscene between the second and third songs | Unlucky Tortol — «World Lotus Boss», The Outdoors OST для DOORS / for DOORS |
+| `map_3.osu` | карта третьей песни / the third song's beatmap | сделана командой в osu!lazer / made by the team in osu!lazer |
 | `map_1.ogg`, `map_2.ogg` | две песни боя / the fight's two songs | **уточнить / to confirm** |
 | `finale.mp4` | анимация финала / the finale animation | **уточнить / to confirm** |
 | `aero.jpg`, `aero2.jpg` | обои в стиле Aero / Aero-style wallpapers | найдены на Pinterest, авторы неизвестны — **уточнить**; уберём или заменим по просьбе автора / found on Pinterest, authors unknown — **to confirm**; will be removed or replaced at the author's request |

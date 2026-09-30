@@ -59,6 +59,16 @@ final class RhythmGame {
     /** One contact beat landed: the Glitcher's bar drops by that beat's share of the circles that were switched off. */
     void contactHit(double share) { bossHp -= muted * share; }
 
+    private double lastHitAt = -1e9, lastMissAt = -1e9;
+    private boolean hudFull;
+
+    double lastHitAt() { return lastHitAt; }
+
+    double lastMissAt() { return lastMissAt; }
+
+    /** The health bars stay unfolded and named, as after the second song's eye scene. */
+    void fullHud() { hudFull = true; }
+
     /** Damage that isn't a missed circle (the eye that wants the space bar). */
     void hurt(double amount) { hp -= amount; }
 
@@ -90,7 +100,7 @@ final class RhythmGame {
         while (nextMiss < map.circles.size()) {
             OsuMap.Circle c = map.circles.get(nextMiss);
             if (timeMs <= c.timeMs() + map.hitWindowMs) break;
-            if (!hit[nextMiss]) { hp -= 1; misses++; combo = 0; }
+            if (!hit[nextMiss]) { hp -= 1; misses++; combo = 0; lastMissAt = timeMs; }
             nextMiss++;
         }
     }
@@ -113,6 +123,7 @@ final class RhythmGame {
                 combo++;
                 maxCombo = Math.max(maxCombo, combo);
                 lastFlash = timeMs;
+                lastHitAt = timeMs;
                 return true;
             }
         }
@@ -158,10 +169,16 @@ final class RhythmGame {
         if (hud) drawHud(g, w, h, timeMs);
     }
 
+    /** Just the bars and the combo (when the circles are drawn somewhere smaller). */
+    void renderHud(Graphics2D g, int w, int h, double timeMs) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        drawHud(g, w, h, timeMs);
+    }
+
     private void drawHud(Graphics2D g, int w, int h, double timeMs) {
         // From 1:19 of the second song the bars unfold to both sides and get their names.
-        double u = ContactBreak.unfold(timeMs);
-        double names = ContactBreak.labelAlpha(timeMs);
+        double u = hudFull ? 1 : ContactBreak.unfold(timeMs);
+        double names = hudFull ? 1 : ContactBreak.labelAlpha(timeMs);
         // The Glitcher (boss) HP along the very top, wide and red-purple.
         int bw = (int) (w * (0.7 + 0.24 * u)), bx = (w - bw) / 2, by = (int) (h * 0.018), bh = (int) (h * (0.022 + 0.006 * u));
         g.setColor(new Color(30, 12, 40));
