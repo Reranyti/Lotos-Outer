@@ -134,3 +134,9 @@ until it gets its own. Minecraft is a trademark of Mojang Studios.
 These textures are left over from removed content (infected water as a fluid, lotus soil, tangled
 roots) and aren't used anywhere in the mod: `block/infected_water`, `block/infected_water_flow`,
 `block/infected_water_still`, `block/lotus_dirt`, `block/tangled_roots`, `item/infected_water_bucket`.
+
+## Сторонние моды / Third-party mods
+
+| Мод / Mod | Автор / Author | Лицензия / Licence |
+|---|---|---|
+| [Ransom In Minecraft](https://github.com/Wentory/Ransom-In-Minecraft) (`ransom_in_minecraft` 1.1.0, Forge 1.20.1), по мотивам «Ransom» из DOORS / after "Ransom" from DOORS | Wentory | MIT |

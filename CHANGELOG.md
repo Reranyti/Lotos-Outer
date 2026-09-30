@@ -16,6 +16,24 @@ number, so that stretch isn't individually reconstructable here — see
 `git log` for the raw history of that range. Everything from `1.68.0` onward
 is transcribed directly from its own commit message.*
 
+## 2.0005 — Новый побег, рог, возвращение Хончо, пальцы в игре / The new escape, the horn, Honcho's return, fingers in the game
+
+### Русский
+- **Побег от лотоса переделан.** Залы теперь 7 на 7 внутри (раньше проход был в один блок). Перед дверью расчищенная площадка на твёрдом основании, деревья и рельеф вход не закрывают; дверь 3 на 3. Дальше длинный зал и перекрёсток: правильная ветка светит жёлтым и ведёт в большую безопасную комнату, ложная светит красным и кончается тупиком. Нормальный свет: потолочные панели и огни в полу вместо одной лампочки.
+- **Препятствия в побеге:** с потолка падают книжные полки (пыль, звук, удар), пятна паутины, а во второй фазе ещё и стеклянные перегородки на всю ширину зала, которые надо пробить. Перед следующим забегом всё убирается. Дверь-печать больше нельзя сломать киркой. `/lotus chase tp` ставит на площадку, а не внутрь блока.
+- **Рог** (даётся один раз после финала): зажми Shift с рогом в 1-й, 2-й или 3-й ячейке хотбара. 1-я зовёт Хончо (перезарядка 30 с), 2-я очищает блок под прицелом до 150 блоков (160 раз за игровые сутки), 3-я лечит и даёт 12 золотых сердец (перезарядка 2 игровых суток). Над хотбаром полоски перезарядки.
+- **Возвращение после финала:** открывается тот же портал, из него выходит Хончо; короткий разговор, рукопожатие, и он идёт с игроком дальше (`/lotus normalbranch return` для проверки).
+- **Пальцы в самой игре.** У Хончо отдельная кисть и пять пальцев с двумя костями, руки живые в ходьбе и покое, новые анимации «отряхнуться» и «рукопожатие». У игрока ладонь и пять пальцев, которые сжимаются по состоянию руки (предмет, замах, покой).
+- Мод Ransom In Minecraft (Wentory, MIT) указан в ASSETS.md; в репозиторий не входит.
+
+### English
+- **The lotus escape is redone.** The halls are 7 by 7 inside now (before, the way through was one block wide). In front of the door there is a cleared apron on a solid base, so trees and hillside no longer bury the entrance; the door is 3 by 3. Past it: a long hall and a T-junction; the real arm is lit yellow and leads to a big safe room, the decoy is lit red and ends in a dead end. Proper light: ceiling panels and lights in the floor instead of a single bulb.
+- **Obstacles in the escape:** shelves fall from the ceiling (dust, sound, a hit), patches of cobweb, and in the second phase glass partitions across the whole hall that have to be broken through. Everything is cleared before the next run. The sealed door can no longer be broken with a pickaxe. `/lotus chase tp` puts you on the apron instead of inside a block.
+- **The horn** (given once after the finale): hold Shift with the horn in hotbar slot 1, 2 or 3. Slot 1 calls Honcho (30 s cooldown), slot 2 cleanses the block at the crosshair up to 150 blocks away (160 uses per in-game day), slot 3 heals and gives 12 golden hearts (2 in-game days cooldown). Cooldown bars sit above the hotbar.
+- **Coming back after the finale:** the same portal opens and Honcho steps out; a short talk, a handshake, and he goes on with the player (`/lotus normalbranch return` to test).
+- **Fingers in the game itself.** Honcho has a separate hand and five two-bone fingers, hands alive when walking and idle, new "dust off" and "handshake" animations. The player has a palm and five fingers that close by what the hand is doing (item, swing, idle).
+- The Ransom In Minecraft mod (Wentory, MIT) is credited in ASSETS.md; it is not part of this repository.
+
 ## 2.0001 — Финал: Глитчер берёт Хончо за шею / The finale: the Glitcher takes Honcho by the throat
 
 ### Русский

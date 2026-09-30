@@ -364,7 +364,7 @@ public final class LotusCommands {
             source.sendFailure(Component.literal("Чанк лаборатории ещё не загружен - попробуй снова, когда кто-нибудь окажется рядом."));
             return 0;
         }
-        source.getPlayerOrException().teleportTo(entrance.getX() + 0.5, entrance.getY(), entrance.getZ() + 0.5);
+        source.getPlayerOrException().teleportTo(entrance.getX() - 6 + 0.5, entrance.getY() + 1, entrance.getZ() + 0.5);
         source.sendSuccess(() -> Component.literal("Телепортирован ко входу в лабораторию: " + entrance.toShortString()), true);
         return 1;
     }

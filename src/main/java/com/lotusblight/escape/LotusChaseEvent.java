@@ -36,7 +36,7 @@ import java.util.UUID;
  *
  * A junction partway in has two branches - the real one lit yellow, a decoy dead end lit red. They
  * have {@link #DURATION_TICKS} to physically reach the exit trigger; obstacles ("упавшие полки" -
- * cobweb) periodically appear along the correct path, escalating partway through per the theme
+ * falling shelves, cobweb, glass partitions) periodically appear ahead of the runner, escalating partway through per the theme
  * track's own structure, and {@link com.lotusblight.item.VitaminItem}'s Speed burst / the
  * crouch+sprint dash are what's meant to carry a player through in time.
  *
@@ -66,7 +66,7 @@ public final class LotusChaseEvent {
     private static final int DASH_COOLDOWN_TICKS = 20 * 3;
     /** "1 фаза более менее лёгкая" / "вторая фаза... сильное усложнение" - obstacles roughly triple in frequency once phase 2 starts. */
     private static final int PHASE1_OBSTACLE_INTERVAL_TICKS = 20 * 6;
-    private static final int PHASE2_OBSTACLE_INTERVAL_TICKS = 20 * 2;
+    private static final int PHASE2_OBSTACLE_INTERVAL_TICKS = 50;
     /** How far from world spawn (X+, same Y as spawn) the lab gets carved - arbitrary but fixed, so it always ends up at the same real spot for a given world. */
     private static final int LAB_OFFSET_FROM_SPAWN = 48;
 
@@ -119,7 +119,7 @@ public final class LotusChaseEvent {
      * or nobody near it yet), Level#setBlock's own getChunk() call would force a synchronous chunk
      * load/generation and deadlock the server tick thread against itself - the exact freeze a
      * player hit after crossing the unlock threshold nowhere near the lab. LotusChaseStructure's
-     * own place()/sealEntrance()/unsealEntrance()/dropObstacle() now also guard individually, since
+     * own place()/sealEntrance()/unsealEntrance()/dropHazard() now also guard individually, since
      * the lab's footprint can span more than one chunk.
      */
     private void ensureLabExists(ServerLevel overworld) {
@@ -234,8 +234,9 @@ public final class LotusChaseEvent {
         }
 
         if (elapsed >= GRACE_END_TICKS && gameTick >= nextObstacleAtTick) {
-            structure.dropObstacle(player.blockPosition().relative(player.getDirection(), 3));
-            int interval = elapsed >= PHASE2_START_TICKS ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
+            boolean phase2 = elapsed >= PHASE2_START_TICKS;
+            structure.dropHazard(player, phase2, player.getRandom());
+            int interval = phase2 ? PHASE2_OBSTACLE_INTERVAL_TICKS : PHASE1_OBSTACLE_INTERVAL_TICKS;
             nextObstacleAtTick = gameTick + interval;
         }
     }
