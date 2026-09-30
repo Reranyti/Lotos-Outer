@@ -202,13 +202,13 @@ final class Rig15 {
     }
 
     /** z of a finger's slot on the palm (the index at the front), its bone lengths, and its thickness. */
-    private static final double[] FINGER_Z = {1.45, 1.5, 0.5, -0.5, -1.5};
-    private static final double[][] FINGER_LEN = {{0.9, 0.8}, {0.9, 0.9}, {1.0, 0.95}, {0.9, 0.85}, {0.75, 0.7}};
+    private static final double[] FINGER_Z = {1.75, 1.5, 0.5, -0.5, -1.5};
+    private static final double[][] FINGER_LEN = {{0.95, 0.85}, {1.05, 0.95}, {1.15, 1.0}, {1.05, 0.9}, {0.85, 0.75}};
     private static final double KNUCKLE_Y = 13.8;
 
     private static double[] fingerPivot(int f, double cx, double medial, boolean honcho) {
         double w = honcho ? 4 : 3;
-        double x = f == 0 ? cx + medial * (w / 2 + 0.05) : cx + medial * 0.1;
+        double x = f == 0 ? cx + medial * (w / 2 + 0.35) : cx + medial * 0.1;
         double y = f == 0 ? 14.4 : KNUCKLE_Y;
         return new double[]{x, y, FINGER_Z[f]};
     }
@@ -225,7 +225,7 @@ final class Rig15 {
         int u = right ? 40 : 32, v = right ? 16 : 48, d = 4;
         for (int f = 0; f < 5; f++) {
             double[] a = fingerPivot(f, cx, medial, honcho);
-            double thick = f == 0 ? 1.0 : 1.35, slot = f == 0 ? 0.95 : 0.94;
+            double thick = f == 0 ? 1.0 : 1.3, slot = f == 0 ? 0.85 : 0.7;          // narrow enough to leave a gap between fingers
             double y = a[1];
             for (int bone = 0; bone < 2; bone++) {
                 double len = FINGER_LEN[f][bone];

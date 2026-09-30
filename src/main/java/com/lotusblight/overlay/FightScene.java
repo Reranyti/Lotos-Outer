@@ -304,6 +304,7 @@ final class FightScene {
                     a.reach(R_ARM, -3.0, 21 - pull, z, reach);
                     a.reach(L_ARM, 3.0, 21 - pull, z, reach);
                     a.fistR = a.fistL = close * (1 - ramp(u, 0.85, 1));
+                    a.hands(Actor.Hand.CLAW, Actor.Hand.CLAW);
                     a.spread = 1;
                     tx += 8 * reach;
                     hx += 5 * reach;
@@ -311,6 +312,7 @@ final class FightScene {
                 case BLAST -> {
                     a.reach(R_ARM, -2.6, 22, 10.5, e);
                     a.reach(L_ARM, 2.6, 22, 10.5, e);
+                    a.hands(Actor.Hand.OPEN, Actor.Hand.OPEN);
                     a.spread = 1;
                     hx -= 10 * e;
                     tx -= 4 * e;
@@ -322,6 +324,7 @@ final class FightScene {
             a.reach(L_ARM, 2.5, 30.5, 1.5, chargeK);
             hx -= 14 * chargeK;
             tx -= 6 * chargeK;
+            a.hands(Actor.Hand.OPEN, Actor.Hand.OPEN);
             a.spread = 1;
         }
         if (block > 0) {                                                      // forearms crossed in front to take the blow

@@ -91,14 +91,31 @@ final class Pose15 {
      * across. {@code spread} (0..1) fans the open fingers a little.
      */
     Pose15 hand(boolean right, double curl, double spread) {
-        double sign = right ? 1 : -1;                              // the palm faces the body: right hand curls towards +x
-        double[][] amount = {{38, 52}, {78, 88}, {86, 92}, {90, 94}, {92, 96}};
-        double[] relax = {6, 14, 20, 26, 32};
+        double c = Math.max(0, Math.min(1, curl));
+        double[] want = new double[5];
+        for (int f = 0; f < 5; f++) want[f] = c;
+        return fingers(right, want, spread, 0);
+    }
+
+    /**
+     * Every finger on its own: {@code curl[f]} 0..1 for the thumb, index, middle, ring and little finger. The fingers
+     * never hold quite still - a slow flutter rides on whatever they are doing ({@code t} in seconds).
+     */
+    Pose15 fingers(boolean right, double[] curl, double spread, double t) {
+        double sign = right ? 1 : -1;                              // the palm faces the body: the right hand curls towards +x
+        double[][] amount = {{42, 58}, {82, 92}, {88, 95}, {92, 98}, {94, 100}};
         for (int f = 0; f < 5; f++) {
-            double c = Math.max(0, Math.min(1, curl));
-            double a = relax[f] * (1 - c) * 0.6 + amount[f][0] * c, b = relax[f] * 0.9 * (1 - c) + amount[f][1] * c;
-            double fan = f == 0 ? 0 : (f - 2.5) * 5 * spread * (1 - c);
-            rot[Rig15.finger(right, f, 0).ordinal()] = Quat.euler(fan, f == 0 ? -sign * 12 * c : 0, sign * a);
+            double c = Math.max(0, Math.min(1, curl[f]));
+            double flutter = 0.05 * Math.sin(t * 5.3 + f * 1.15 + (right ? 0 : 2.1)) * (1 - c);
+            double cc = Math.max(0, Math.min(1, c + flutter));
+            double a = amount[f][0] * cc, b = amount[f][1] * cc;
+            double fan = f == 0 ? 0 : (f - 2.5) * 8 * spread * (1 - c);
+            if (f == 0) {
+                // The thumb stands out from the palm when the hand is open and comes across it as it closes.
+                rot[Rig15.finger(right, 0, 0).ordinal()] = Quat.euler(0, -sign * (8 + 22 * cc), sign * (a - 16 * (1 - cc)));
+            } else {
+                rot[Rig15.finger(right, f, 0).ordinal()] = Quat.euler(fan, 0, sign * a);
+            }
             rot[Rig15.finger(right, f, 1).ordinal()] = Quat.euler(0, 0, sign * b);
         }
         return this;

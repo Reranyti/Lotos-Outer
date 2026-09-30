@@ -280,7 +280,9 @@ final class Interlude {
             double nod = gw[3] * 22 + gw[1] * 10 + gw[0] * -2 + gw[2] * -4;
             p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath + 6 * gw[3] + (3 + 1.5 * Math.sin(t * 6) * hold) * turn, 10 * hold, 0);
             p.turn(Rig15.Joint.HEAD, -1 + nod * (1 - turn) + (9 - 14 * freed) * turn, (12 * Math.sin(t * 5) * gw[4]) * (1 - turn) - 6 * hold, 7 * gw[0] - 6 * gw[2]);
-            a.fistR = Math.max(0.3 * gw[1], grab * (1 - freed));
+            a.shapeR = hold > 0.3 ? Actor.Hand.GRIP : (gw[1] > 0.3 ? Actor.Hand.LOOSE : Actor.Hand.OPEN);      // the fingers close round the throat
+            a.fistR = Math.max(0.3 * gw[1], 0.6 * grab * (1 - freed));
+            a.shapeL = gw[2] + gw[3] + gw[4] > 0.3 ? Actor.Hand.OPEN : Actor.Hand.LOOSE;
             a.fistL = 0.25 * hold;
             a.spread = 1 - 0.7 * hold;
         }
@@ -334,7 +336,8 @@ final class Interlude {
             p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick - 10 * limpW * fl2 - 16 * impact - 7 * gasp, 6 * kick2 + 10 * limpW * fl3, 3 * Math.sin(t * 9) * flail);
             p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue - 12 * limpW * fl4 - 34 * impact - 14 * gasp, 8 * Math.sin(t * 11) * flail + 12 * limpW * fl2, 6 * Math.sin(t * 9) * flail + 5 * gasp * Math.sin(t * 40));
             p.rootPos[1] = -0.6 * gasp - 0.5 * impact;
-            a.fistR = a.fistL = limpW * 0.15 + arrive * (flail * clutch + 0.05);
+            a.hands(limpW > 0.5 ? Actor.Hand.OPEN : Actor.Hand.GRIP, limpW > 0.5 ? Actor.Hand.OPEN : Actor.Hand.GRIP);      // thrown: open, flung; held: clawing at the fist on his throat
+            a.fistR = a.fistL = arrive * (0.3 * flail * clutch);
             a.spread = 0.4 + 0.6 * limpW;
             honchoRender.clear();
             honchoActor.draw(honchoRender, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);

@@ -80,9 +80,8 @@ final class ExitScene {
     private final int barH;
 
     // The Glitcher.
-    private final Figure figure;
+    private final Actor actor;
     private final SoftRenderer renderer;
-    private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private final GlitchFx glitch = new GlitchFx();
     private final double scale;
 
@@ -143,7 +142,7 @@ final class ExitScene {
 
         // About a third of the screen tall, like on the desktop walk.
         this.scale = h * 0.34 / 32.0;
-        this.figure = new Figure(skin, false);
+        this.actor = new Actor(skin, false);
         this.renderer = new SoftRenderer((int) (22 * scale), (int) (36 * scale));
     }
 
@@ -338,68 +337,94 @@ final class ExitScene {
     // ---- the Glitcher's body -------------------------------------------------------------------
 
     private void updatePose() {
-        pose.reset();
-        int rArm = SkinModel.Part.RIGHT_ARM.ordinal(), lArm = SkinModel.Part.LEFT_ARM.ordinal();
-        int head = SkinModel.Part.HEAD.ordinal(), rLeg = SkinModel.Part.RIGHT_LEG.ordinal();
-        pose.partRoll[rArm] = -0.06;
-        pose.partRoll[lArm] = 0.06;
+        Actor a = actor;
+        Pose15 p = a.begin();
+        Rig15.Joint torso = Rig15.Joint.UPPER_TORSO, head = Rig15.Joint.HEAD;
+        Rig15.Limb rArm = Rig15.Limb.R_ARM, lArm = Rig15.Limb.L_ARM;
+        double breath = Math.sin(clock * 1.5);
+        // Standing front-on with the feet planted, the hips a little low; he breathes, the arms hang loose.
+        p.reach(Rig15.Limb.R_LEG, -2.4, 3, 0, 1).reach(Rig15.Limb.L_LEG, 2.4, 3, 0, 1);
+        p.rootPos[1] = -0.7 - 0.25 * breath;
+        double tx = 2 + breath, ty = 0, tz = 0, hx = -1, hy = 0, hz = 0;
+        double aR = 2 * breath, aL = 2 * breath;
+        double rollR = -4, rollL = 4, flexR = -9, flexL = -9;
         switch (stage) {
             case EMERGE -> {
-                // Pulling himself out with both hands, then letting go.
+                // Pulling himself out of the tear with both hands, then letting go.
                 double reach = 1 - smooth(t / EMERGE_LEN);
-                pose.partPitch[rArm] = -1.5 * reach;
-                pose.partPitch[lArm] = -1.5 * reach;
+                a.reach(rArm, -3.4, 26, 9, reach).reach(lArm, 3.4, 26, 9, reach);
+                a.hands(Actor.Hand.GRIP, Actor.Hand.GRIP);
+                a.fistR = a.fistL = 0.5 * reach;
+                tx += 14 * reach;
+                hx += 8 * reach;
             }
             case WINDOWS -> {
+                // Each window is thrown up with an arm: a pointing finger for the first two, an open hand for the third.
                 int i = Math.min(2, (int) (t / WINDOW_LEN));
                 double lt = t - i * WINDOW_LEN;
                 double up = lt < 1.2 ? smooth(lt / 0.3) : 1 - smooth((lt - 1.2) / 0.4);
                 if (i == 1) {
-                    pose.partPitch[lArm] = -2.3 * up;
-                    pose.partRoll[lArm] = 0.06 + 0.6 * up;
+                    a.reach(lArm, 6.5, 29, 5, up);
+                    a.shapeL = Actor.Hand.POINT;
                 } else {
-                    pose.partPitch[rArm] = -(i == 0 ? 2.3 : 2.9) * up;
-                    pose.partRoll[rArm] = -0.06 - (i == 0 ? 0.6 : 0.1) * up;
+                    double[] tgt = i == 0 ? new double[]{-6.5, 29, 5} : new double[]{-4.5, 32, 1};
+                    a.reach(rArm, tgt[0], tgt[1], tgt[2], up);
+                    a.shapeR = i == 0 ? Actor.Hand.POINT : Actor.Hand.OPEN;
+                    if (i == 2) a.spread = 1;
                 }
-                pose.partYaw[head] = i == 0 ? -0.5 : i == 1 ? 0.5 : 0;
-                pose.partPitch[head] = -0.45;
+                hy = i == 0 ? -29 : i == 1 ? 29 : 0;
+                hx -= 26;
+                tx += 3 * up;
             }
             case FOURTH -> {
                 double up = smooth(t / 0.3);
-                pose.partPitch[rArm] = -2.2 * up;
-                pose.partPitch[lArm] = -2.2 * up;
-                pose.partRoll[rArm] = -0.3 * up;
-                pose.partRoll[lArm] = 0.3 * up;
-                pose.partPitch[head] = -0.3;
+                a.reach(rArm, -4.6, 30, 3, up).reach(lArm, 4.6, 30, 3, up);
+                a.shapeR = a.shapeL = Actor.Hand.OPEN;
+                a.spread = 1;
+                hx -= 17;
             }
             case ERROR2 -> {
                 double down = smooth(t / 0.6);
-                pose.partPitch[rArm] = -2.2 * (1 - down);
-                pose.partPitch[lArm] = -2.2 * (1 - down);
-                pose.partRoll[head] = 0.3 * down;
+                a.reach(rArm, -4.6, 30, 3, 1 - down).reach(lArm, 4.6, 30, 3, 1 - down);
+                a.shapeR = a.shapeL = Actor.Hand.OPEN;
+                hz = 17 * down;
             }
             case TYPE -> {
-                pose.partPitch[rArm] = -1.4 + Math.sin(clock * 30) * 0.05;
-                pose.partPitch[head] = -0.2;
+                // Both hands out in front of him, the fingers running over keys that are not there.
+                a.reach(rArm, -2.8, 21, 9.4, 1).reach(lArm, 2.8, 21, 9.0, 1);
+                a.shapeR = a.shapeL = Actor.Hand.CLAW;
+                a.fistR = 0.22 + 0.22 * Math.sin(clock * 30);
+                a.fistL = 0.22 + 0.22 * Math.sin(clock * 30 + 2.4);
+                hx += 12;
+                tx += 6;
             }
-            case SILENCE -> pose.partPitch[head] = 0.45 * smooth(t / 1.2);
+            case SILENCE -> hx += 26 * smooth(t / 1.2);
             case STOMP -> {
-                pose.partPitch[head] = 0.45;
+                hx += 26;
                 // The leg comes up out to the side - seen from the front a forward kick barely shows.
                 double lift = t < LIFT ? smooth(t / LIFT) : t < IMPACT ? 1 - (t - LIFT) / (IMPACT - LIFT) : 0;
-                pose.partRoll[rLeg] = -0.9 * lift;
-                pose.partPitch[rLeg] = -0.4 * lift;
-                pose.partRoll[rArm] = -0.06 - 0.5 * lift;
-                pose.partRoll[lArm] = 0.06 + 0.3 * lift;
+                if (lift > 0) {
+                    a.reach(Rig15.Limb.R_LEG, -7.5, 3 + 7 * lift, 1.5 * lift, lift);
+                    a.pole(Rig15.Limb.R_LEG, -0.6, 0, 1);
+                    p.ik[Rig15.Limb.R_LEG.ordinal()].roll = 28 * lift;
+                }
+                rollR -= 30 * lift;
+                rollL += 17 * lift;
+                a.fistR = a.fistL = 0.9 * lift;
             }
-            default -> {}
+            default -> { }
         }
-        if (burstTicks > 0) {
-            pose.partRoll[head] += (random.nextDouble() - 0.5) * 1.0;
-            for (int i = 0; i < 6; i++) {
-                if (random.nextInt(3) == 0) pose.partOffset[i][0] = (random.nextDouble() - 0.5) * 3;
+        if (burstTicks > 0) {                                               // a tear: the head twitches, parts jump
+            hz += (random.nextDouble() - 0.5) * 57;
+            for (Rig15.Joint j : new Rig15.Joint[]{Rig15.Joint.HEAD, Rig15.Joint.UPPER_TORSO, Rig15.Joint.R_UPPER_ARM, Rig15.Joint.L_UPPER_ARM, Rig15.Joint.R_UPPER_LEG, Rig15.Joint.L_UPPER_LEG}) {
+                if (random.nextInt(3) == 0) {
+                    p.offset[j.ordinal()][0] = (random.nextDouble() - 0.5) * 3;
+                }
             }
         }
+        p.turn(torso, tx, ty, tz).turn(head, hx, hy, hz);
+        p.turn(Rig15.Joint.R_UPPER_ARM, aR, 0, rollR).turn(Rig15.Joint.L_UPPER_ARM, aL, 0, rollL);
+        p.turn(Rig15.Joint.R_LOWER_ARM, flexR, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, flexL, 0, 0);
     }
 
     private double glitchLevel() {
@@ -608,7 +633,7 @@ final class ExitScene {
         }
         renderer.clear();
         double originX = renderer.width / 2.0, originY = renderer.height - 2 * scale;
-        figure.draw(renderer, pose, scale, originX, originY);
+        actor.draw(renderer, scale, originX, originY);
         glitch.apply(renderer.pixels, renderer.width, renderer.height, glitchLevel());
         Graphics2D gg = (Graphics2D) g.create();
         gg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);

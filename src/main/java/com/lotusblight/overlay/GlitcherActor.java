@@ -48,18 +48,17 @@ final class GlitcherActor {
     private static final int BODY = SkinModel.Part.BODY.ordinal();
     private static final int HEAD = SkinModel.Part.HEAD.ordinal();
 
-    private final Figure figure;
+    private final Actor actor;
     private final int[] skin;
     private final double unit;                     // screen pixels per skin pixel at scale 1
     private final SoftRenderer renderer;
-    private final SoftRenderer.Pose pose = new SoftRenderer.Pose();
     private final double ox, oy;
 
     GlitcherActor(int[] skin, int screenH) {
         this.skin = skin;
         this.unit = screenH * 0.40 / 32.0;
         double u = unit * SS;
-        this.figure = new Figure(skin, false);
+        this.actor = new Actor(skin, false);
         this.renderer = new SoftRenderer((int) (52 * u), (int) (46 * u));
         this.ox = renderer.width / 2.0;
         this.oy = renderer.height - 3 * u;
@@ -132,82 +131,36 @@ final class GlitcherActor {
         double footY = groundY + (hoverFootY - groundY) * lev;
         double scale = 1 + (hoverScale - 1) * lev;
 
-        pose.reset();
+        Actor a = actor;
+        a.begin();
         double facing = heading * 1.15 * (1 - idle);
-        pose.yaw = facing;
+        a.viewYaw = facing;
+        GlitcherPoses.walk(a, phase, walk, anger, t);
 
-        double sw = Math.sin(phase) * walk * (0.65 + 0.35 * anger);
-        pose.partPitch[RIGHT_LEG] = sw;
-        pose.partPitch[LEFT_LEG] = -sw;
-        pose.partPitch[RIGHT_ARM] = -sw * 0.75;
-        pose.partPitch[LEFT_ARM] = sw * 0.75;
-        pose.partYaw[BODY] = Math.sin(phase) * 0.1 * walk;
-
-        // Knocking on the glass, then a wave.
+        // Knocking on the glass with a fist, then a wave with the other hand.
         double handX = x - unit * 5.5 * scale, handY = footY - unit * 17 * scale;
         if (knock > 0.02) {
             double pulse = 0;
             for (int i = 0; i < 3; i++) pulse = Math.max(pulse, Math.exp(-Math.pow((ms - (KNOCK_FROM + 500 + i * 800)) / 110.0, 2)));
             double wave = smooth((ms - WAVE_FROM) / 300.0) * (1 - smooth((ms - KNOCK_TO) / 500.0));
-            pose.partPitch[RIGHT_ARM] = (-1.45 + 0.35 * pulse) * knock;
-            pose.partPitch[LEFT_ARM] = 0;
-            pose.partRoll[LEFT_ARM] = (2.5 + 0.35 * Math.sin(ms * 0.014)) * wave;
+            GlitcherPoses.knock(a, ms, knock, pulse, wave);
         }
-
-        // Picking icons up off the edge: bend, reach, and up they come.
+        // Picking icons up off the edge between finger and thumb.
         double grab = 0;
         for (double gt : GRABS) grab = Math.max(grab, bell(ms, gt, 900));
-        if (grab > 0) {
-            pose.pitch = 0.45 * grab;
-            pose.partPitch[RIGHT_ARM] = -1.3 * grab;
-            pose.partPitch[HEAD] = 0.25 * grab;
-        }
-
-        // Throwing an icon: wind up, let go, follow through.
-        double sinceThrow = throwProgress(ms);
-        if (sinceThrow >= 0) {
-            double windUp = smooth(sinceThrow / 500.0);
-            double swing = smooth((sinceThrow - 600.0) / 140.0);
-            double back = smooth((sinceThrow - 900.0) / 500.0);
-            double arm = 2.5 * windUp * (1 - swing) + (-1.3) * swing * (1 - back);
-            pose.partPitch[RIGHT_ARM] = arm;
-        }
-
-        // The stomp: arms up and out, one knee raised, held, then down hard.
-        if (ms >= STOMP_MS - 1800 && ms < STOMP_MS + 250) {
-            double up = smooth((ms - (STOMP_MS - 1800)) / 1300.0);
-            double slam = smooth((ms - STOMP_MS) / 80.0);
-            double raised = up * (1 - slam);
-            pose.partPitch[RIGHT_LEG] = -0.55 * raised;
-            pose.partRoll[RIGHT_LEG] = LEG_ROLL * raised;
-            pose.partPitch[LEFT_LEG] = 0;
-            pose.partRoll[RIGHT_ARM] = -0.7 * up;
-            pose.partRoll[LEFT_ARM] = 0.7 * up;
-            pose.partPitch[RIGHT_ARM] = -0.5 * up;
-            pose.partPitch[LEFT_ARM] = -0.5 * up;
-            pose.pitch = 0.12 * slam * (1 - smooth((ms - STOMP_MS - 80) / 170.0)) - 0.06 * up;
-        }
-
-        // Floating: arms out, legs hanging, turning slowly to look out at the eyes.
+        GlitcherPoses.pickUp(a, grab);
+        // Throwing one: wind up with a closed hand, let go, follow through.
+        GlitcherPoses.throwIcon(a, throwProgress(ms));
+        // The stomp: arms up and out, fists clenched, one knee raised, held, then down hard.
+        GlitcherPoses.stomp(a, ms, STOMP_MS);
+        // Floating: arms out, hands open, legs hanging, turning slowly to look out at the eyes.
         if (lev > 0) {
-            pose.yaw += (Math.sin(t * 0.6) * 0.35 - facing) * lev;
-            pose.partRoll[RIGHT_ARM] = -0.95 * lev;
-            pose.partRoll[LEFT_ARM] = 0.95 * lev;
-            pose.partPitch[RIGHT_ARM] *= 1 - lev;
-            pose.partPitch[LEFT_ARM] *= 1 - lev;
-            pose.partPitch[RIGHT_LEG] = Math.sin(t * 1.3) * 0.12 * lev + sw * (1 - lev);
-            pose.partPitch[LEFT_LEG] = -Math.sin(t * 1.3 + 0.7) * 0.12 * lev - sw * (1 - lev);
-            pose.partRoll[RIGHT_LEG] = -0.1 * lev;
-            pose.partRoll[LEFT_LEG] = 0.1 * lev;
-            pose.partPitch[HEAD] = -0.15 * lev;
+            a.viewYaw += (Math.sin(t * 0.6) * 0.35 - facing) * lev;
+            GlitcherPoses.hover(a, lev, t);
             footY += Math.sin(t * 1.4) * h * 0.012 * lev;
         }
-
         // Standing and looking at the player, head a little to one side.
-        if (stare > 0) {
-            pose.partRoll[HEAD] = 0.22 * stare;
-            pose.partPitch[HEAD] = -0.1 * stare;
-        }
+        if (stare > 0) a.blendTurn(Rig15.Joint.HEAD, -6, 0, 12.6, stare);
 
         // A tremor while he seethes, and a jolt at the stomp.
         double shakeX = 0, shakeY = 0;
@@ -224,7 +177,7 @@ final class GlitcherActor {
         }
 
         renderer.clear();
-        figure.draw(renderer, pose, unit * SS, ox, oy);
+        actor.draw(renderer, unit * SS, ox, oy);
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
@@ -460,26 +413,21 @@ final class GlitcherActor {
         double heading = Math.cos(t * 0.55) >= 0 ? 1 : -1;
         double x = songTwoX(ms, w);
 
-        pose.reset();
-        pose.yaw = heading * 1.15 * walking;
+        Actor a = actor;
+        a.begin();
+        a.viewYaw = heading * 1.15 * walking;
         double phase = t * 2.6 * Math.PI;
-        double sw = Math.sin(phase) * walking * 0.7;
-        pose.partPitch[RIGHT_LEG] = sw;
-        pose.partPitch[LEFT_LEG] = -sw;
-        pose.partPitch[RIGHT_ARM] = -sw * 0.75;
-        pose.partPitch[LEFT_ARM] = sw * 0.75;
-        pose.partYaw[BODY] = Math.sin(phase) * 0.1 * walking;
+        GlitcherPoses.walk(a, phase, walking, 0.2, t);
         for (double start : STARTS2) {
             double d = ms - start;
             if (d >= 0 && d < 1500) {
-                double windUp = smooth(d / 500.0), swing = smooth((d - 600.0) / 140.0), back = smooth((d - 900.0) / 500.0);
-                pose.partPitch[RIGHT_ARM] = 2.5 * windUp * (1 - swing) + (-1.3) * swing * (1 - back);
+                GlitcherPoses.throwIcon(a, d);
                 break;
             }
         }
-        if (walking < 0.2) pose.partPitch[HEAD] = 0.1;              // just formed: a little dazed
+        if (walking < 0.2) a.blendTurn(Rig15.Joint.HEAD, 8, 0, 0, 1 - walking / 0.2);      // just formed: a little dazed
         renderer.clear();
-        figure.draw(renderer, pose, unit * SS, ox, oy);
+        actor.draw(renderer, unit * SS, ox, oy);
 
         Graphics2D b = (Graphics2D) g.create();
         b.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);

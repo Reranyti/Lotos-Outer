@@ -70,7 +70,7 @@ final class AnimLibrary {
     private static final double STRIDE = 3.0, STANCE = 0.6;
 
     /** A foot's ankle along the cycle (phase 0..1): {z, y, roll}. Planted for 60% of it, then swung through. */
-    private static double[] foot(double p) {
+    static double[] footCycle(double p) {
         p = ((p % 1) + 1) % 1;
         if (p < STANCE) {
             double u = p / STANCE;
@@ -105,8 +105,8 @@ final class AnimLibrary {
             sampled(c, arm + "_hand.rot", 30, t -> new double[]{-4 - 6 * Math.max(0, -s * Math.cos(w * t)), 0, 0});
             Rig15.Limb leg = side == 0 ? Rig15.Limb.R_LEG : Rig15.Limb.L_LEG;
             double x = side == 0 ? -2 : 2, shift = side == 0 ? 0 : 0.5;
-            sampled(c, "ik." + leg.key() + ".pos", 30, t -> new double[]{x, foot(t / T + shift)[1], foot(t / T + shift)[0]});
-            sampled(c, "ik." + leg.key() + ".roll", 30, t -> new double[]{foot(t / T + shift)[2]});
+            sampled(c, "ik." + leg.key() + ".pos", 30, t -> new double[]{x, footCycle(t / T + shift)[1], footCycle(t / T + shift)[0]});
+            sampled(c, "ik." + leg.key() + ".roll", 30, t -> new double[]{footCycle(t / T + shift)[2]});
             c.key("ik." + leg.key() + ".w", 0, Ease.LINEAR, 1);
             c.key("ik." + leg.key() + ".w", T, Ease.LINEAR, 1);
         }
