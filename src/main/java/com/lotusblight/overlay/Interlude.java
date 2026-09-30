@@ -12,16 +12,17 @@ import java.awt.image.BufferedImage;
 import java.util.Random;
 
 /**
- * Between the second song and the third. The Glitcher asks what he is; a rift opens and Honcho is thrown out of
- * it, and the Glitcher takes him by the throat - the player has twelve seconds to push him off, or Honcho
- * dies and so does the player. Furious, the Glitcher says they will play by his rules, the desktop shatters
- * and everyone falls; the third song is the fight on the way down.
+ * Between the second song and the third. The Glitcher stands on the desktop and speaks to the player; a portal
+ * opens and Honcho is thrown out of it; the Glitcher takes him by the throat and asks who he is - the player has
+ * twelve seconds to push him off, or Honcho dies and so does the player. Furious, the Glitcher says they will play
+ * by his rules, the desktop breaks like glass and everyone falls; the third song is the fight on the way down.
  *
  * <p>The scene runs on its own wall clock from the moment it is made.
  */
 final class Interlude {
     static final double MONO_END = 14_000;          // the Glitcher's questions end
-    static final double RIFT_END = 17_800;          // the rift, the throw and the grab: the choke begins
+    static final double RIFT_END = 22_600;          // the portal, the throw, the grab and his question: the choke begins
+    private static final double PORTAL_FROM = 14_000, EXIT_FROM = 16_800, GRAB_FROM = 18_600, WHO_FROM = 19_600, WHO_TO = 22_200;
     static final double CHOKE_MS = 12_000;          // to push him off
     private static final double PUSH = 0.03;        // one press
     private static final double DECAY = 0.04;       // his weight, per second
@@ -35,6 +36,8 @@ final class Interlude {
             {10_300.0, 12_300.0, "私は生きているのか？", "Am I alive?"},
             {12_700.0, 14_000.0, "わからない", "I don't know"},
     };
+    private static final String WHO_JP = "お前は一体何者だ？";
+    private static final String WHO_EN = "Who the hell are you?";
     private static final String ANGRY_JP = "お前たちは、私のルールで遊ぶんだ";
     private static final String ANGRY_EN = "You will play by my rules";
 
@@ -141,10 +144,9 @@ final class Interlude {
             drawStrangle(b, w, h, c, meter, true, 0);
             b.setColor(new Color(0, 0, 0, (int) (255 * f)));                      // and it all goes dark
             b.fillRect(0, 0, w, h);
-        } else if (c < MONO_END) {
-            drawMonologue(b, w, h, c);
         } else if (c < RIFT_END) {
-            drawRift(b, w, h, c);
+            drawStrangle(b, w, h, c, 0, false, 0);
+            drawCaptions(b, w, h, c);
         } else {
             drawStrangle(b, w, h, c, meter, false, 0);
             drawChokeHud(b, w, h, c);
@@ -152,99 +154,35 @@ final class Interlude {
         b.dispose();
     }
 
-    // ---------------------------------------------------------------- the questions
+    // ---------------------------------------------------------------- what he says
 
-    private void drawMonologue(Graphics2D b, int w, int h, double c) {
-        b.setColor(new Color(4, 3, 10, 200));           // dark, but the real desktop still shows through
-        b.fillRect(0, 0, w, h);
-        backdrop.render(b, w, h, c + 50_000, 0.35 * smooth(c / 1400.0));
-        boolean talking = false;
+    private void drawCaptions(Graphics2D b, int w, int h, double c) {
         Object[] line = null;
         for (Object[] m : MONO) {
-            if (c >= (Double) m[0] && c <= (Double) m[1] + 200) { line = m; talking = c < (Double) m[1]; }
+            if (c >= (Double) m[0] && c <= (Double) m[1] + 200) line = m;
         }
-        drawFace(b, w * 0.5, h * 0.4, h * 0.62, 0.6 * smooth(c / 1800.0), c, talking ? 1 : 0.25, null);
+        String jp = null, en = null;
+        double from = 0, to = 0;
         if (line != null) {
-            double from = (Double) line[0], to = (Double) line[1];
+            jp = (String) line[2];
+            en = (String) line[3];
+            from = (Double) line[0];
+            to = (Double) line[1];
+        } else if (c >= WHO_FROM && c <= WHO_TO + 200) {
+            jp = WHO_JP;
+            en = WHO_EN;
+            from = WHO_FROM;
+            to = WHO_TO;
+        }
+        if (jp != null) {
             double a = Math.min(1, (c - from) / 300.0) * (1 - smooth((c - to) / 200.0));
             if (new Random((long) (c / 80)).nextInt(9) == 0) a *= 0.45;
-            ghosted(b, (String) line[2], w / 2.0, h * 0.8, h * 0.065, a, false);
-            ghosted(b, (String) line[3], w / 2.0, h * 0.88, h * 0.04, a, false);
+            ghosted(b, jp, w / 2.0, h * 0.8, h * 0.065, a, false);
+            ghosted(b, en, w / 2.0, h * 0.88, h * 0.04, a, false);
         }
         if (c < 1200) {                                              // out of the dark
             b.setColor(new Color(0, 0, 0, (int) (255 * (1 - c / 1200.0))));
             b.fillRect(0, 0, w, h);
-        }
-    }
-
-    // ---------------------------------------------------------------- the rift, the throw, the grab
-
-    private void drawRift(Graphics2D b, int w, int h, double c) {
-        b.setColor(new Color(4, 3, 10, c < 15_200 ? 190 : 255));
-        b.fillRect(0, 0, w, h);
-        if (c < 15_200) {
-            backdrop.render(b, w, h, c + 50_000, 0.3);
-            drawFace(b, w * 0.5, h * 0.4, h * 0.62, 0.45, c, 0.3, null);
-            // The rift tears open, top to bottom.
-            double p = smooth((c - 14_000) / 1_200.0);
-            drawTear(b, w, h, p, c);
-            b.setColor(new Color(255, 255, 255, (int) (200 * p * p * p)));
-            b.fillRect(0, 0, w, h);
-            return;
-        }
-        // Thrown out of it: the whole picture tumbles, lines stream past, and something comes at us.
-        double cc = c - 15_200;
-        AffineTransform old = b.getTransform();
-        b.translate(w / 2.0, h / 2.0);
-        b.rotate(Math.sin(cc * 0.009) * 0.9 + cc * 0.0011);
-        double zoom = 1 + 0.25 * Math.sin(cc * 0.013);
-        b.scale(zoom, zoom);
-        b.translate(-w / 2.0, -h / 2.0);
-        fall.render(b, w, h, cc * 2.2, 3.5);
-        drawStreaks(b, w, h, cc);
-        b.setTransform(old);
-        double rush = smooth((c - 16_600) / 1_200.0);
-        if (rush > 0) {
-            drawFace(b, w * 0.5, h * 0.42, h * (0.15 + 0.85 * rush), 0.5 + 0.5 * rush, c, 0.6, null);
-            drawHands(b, w, h, smooth((c - 16_900) / 900.0), c);
-            vignette(b, w, h, h * (1.6 - 1.0 * rush), 235);
-        }
-        // The arrival: white at the start of the throw.
-        double flash = Math.max(0, 1 - cc / 500.0);
-        b.setColor(new Color(255, 255, 255, (int) (230 * flash)));
-        b.fillRect(0, 0, w, h);
-    }
-
-    private void drawTear(Graphics2D b, int w, int h, double p, double c) {
-        if (p <= 0) return;
-        Random rnd = new Random(14);
-        int segs = 16;
-        double px = w * 0.47, py = -h * 0.02;
-        java.awt.geom.Path2D.Double path = new java.awt.geom.Path2D.Double();
-        path.moveTo(px, py);
-        for (int i = 1; i <= segs && i <= Math.ceil(segs * p); i++) {
-            px = w * (0.47 + 0.06 * i / segs) + (rnd.nextDouble() - 0.5) * w * 0.05;
-            py = h * 1.04 * i / segs;
-            path.lineTo(px, py);
-        }
-        b.setStroke(new BasicStroke((float) (h * 0.06 * p), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        b.setColor(new Color(120, 200, 255, (int) (60 * p)));
-        b.draw(path);
-        b.setStroke(new BasicStroke((float) (h * 0.012 + 3), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        b.setColor(new Color(255, 255, 255, 230));
-        b.draw(path);
-    }
-
-    private void drawStreaks(Graphics2D b, int w, int h, double cc) {
-        Random rnd = new Random(5);
-        double cx = w / 2.0, cy = h / 2.0;
-        b.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        for (int i = 0; i < 70; i++) {
-            double a = rnd.nextDouble() * Math.PI * 2, base = 0.05 + rnd.nextDouble() * 0.5, sp = 0.6 + rnd.nextDouble();
-            double d0 = ((cc / 1000.0 * sp * 0.9 + base) % 1.0), d1 = d0 + 0.08 + 0.2 * d0;
-            double r0 = d0 * Math.hypot(w, h) * 0.6, r1 = d1 * Math.hypot(w, h) * 0.6;
-            b.setColor(new Color(210, 225, 255, (int) (200 * d0)));
-            b.draw(new java.awt.geom.Line2D.Double(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1));
         }
     }
 
@@ -261,8 +199,14 @@ final class Interlude {
     private double figureUnit;
     private java.awt.geom.Rectangle2D.Double hitBox = new java.awt.geom.Rectangle2D.Double();
 
+    /** What the Glitcher does with his hands at each of the five lines: the right hand's point, the left's (null = at rest). */
+    private static final double[][] GESTURE_R = {{-7.2, 20.0, 7.0}, {-1.0, 19.0, 4.8}, {-9.8, 17.5, 3.5}, {-2.6, 18.5, 7.0}, {-9.6, 17.0, 3.5}};
+    private static final double[][] GESTURE_L = {null, null, {9.8, 17.5, 3.5}, {2.6, 18.5, 7.0}, {9.6, 17.0, 3.5}};
+
     /**
-     * The Glitcher holds Honcho up by the throat; the player has to knock him off by clicking on him.
+     * The room on the desktop, from the first word to the end of the choke: the Glitcher speaking to us with his
+     * face to the screen, the portal opening, Honcho thrown out of it, the Glitcher turning and taking him by the
+     * throat - and then the choke, seen from the side, where the player has to knock him off by clicking on him.
      *
      * @param m     how far he has been pushed back, 0..1
      * @param limp  Honcho has gone slack
@@ -277,9 +221,9 @@ final class Interlude {
             glitcherRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
             honchoRender = new SoftRenderer((int) (60 * unit), (int) (50 * unit));
         }
-        b.setColor(new Color(6, 3, 10, 120));           // the real desktop is the room they are in
+        b.setColor(new Color(6, 3, 10, c < PORTAL_FROM ? 80 : 120));           // the real desktop is the room they are in
         b.fillRect(0, 0, w, h);
-        backdrop.render(b, w, h, c + 50_000, 0.14);
+        backdrop.render(b, w, h, c + 50_000, 0.12);
         // A dim light on the two of them.
         b.setPaint(new RadialGradientPaint((float) (w * 0.5), (float) (h * 0.55), (float) (h * 0.8), new float[]{0f, 1f},
                 new Color[]{new Color(120, 90, 200, 40), new Color(0, 0, 0, 140)}));
@@ -287,26 +231,57 @@ final class Interlude {
 
         double t = c / 1000.0;
         double ground = h * 0.92;
-        double gx = w * (0.63 + 0.14 * m + 0.13 * freed);
-        // The Glitcher: facing left, his right arm out at Honcho's throat.
+        double turnPos = smooth((c - 14_300) / 1300.0);                      // he stands in the middle to speak, then steps aside to the portal's line
+        double gx = w * (0.5 + 0.13 * turnPos + 0.14 * m + 0.13 * freed);
+        double px = w * 0.2, py = h * 0.5;                                   // the portal stands on the left
+        double portalA = smooth((c - PORTAL_FROM) / 1800.0) * (1 - smooth((c - 20_600) / 1000.0));
+        if (c >= PORTAL_FROM && winAt < 0) PortalFx.draw(b, px, py, h * 0.12, h * 0.25, portalA, t, h);
+
+        // ---- the Glitcher
+        double turn = smooth((c - 14_300) / 1300.0);                         // from facing us to facing the portal
+        double prep = smooth((c - EXIT_FROM) / 900.0) * (1 - smooth((c - GRAB_FROM) / 600.0));
+        double grab = smooth((c - GRAB_FROM) / 700.0);
+        double hold = Math.max(grab, c >= RIFT_END ? 1 : 0) * (1 - freed);
+        double breath = Math.sin(t * 1.5);
         {
-            // The Glitcher: feet set apart, the right arm out at the height of Honcho's throat with the fist closed,
-            // the body leaning into it; when he lets go the arm drops and the body heaves back.
             Actor a = glitcherActor;
             Pose15 p = a.begin();
-            double hold = 1 - freed;
-            a.viewYaw = -1.15;
-            a.viewPitch = -0.32 * freed + 0.05 * Math.sin(t * 9) * (1 - freed);
-            p.reach(Rig15.Limb.R_LEG, -2.9, 3, -1.8, 1).reach(Rig15.Limb.L_LEG, 2.9, 3, 2.6, 1);
-            p.rootPos[1] = -0.9 - 0.5 * Math.sin(t * 3.1) * hold;
-            a.reach(Rig15.Limb.R_ARM, -3.6, 26.0, 8.4, hold);
-            p.turn(Rig15.Joint.R_UPPER_ARM, 4 * freed, 0, -10 * freed);
-            p.turn(Rig15.Joint.L_UPPER_ARM, -17 + 11 * Math.sin(t * 5), 0, 14).turn(Rig15.Joint.L_LOWER_ARM, -24 - 8 * Math.sin(t * 5 + 1), 0, 0);
-            p.turn(Rig15.Joint.UPPER_TORSO, 5 + 4 * hold + 2 * Math.sin(t * 6) * hold, 10 * hold, 0);
-            p.turn(Rig15.Joint.HEAD, 9 - 14 * freed, -6 * hold, 0);
-            a.fistR = hold;
-            a.fistL = 0.25;
-            a.spread = 0.3;
+            a.viewYaw = -1.15 * turn;
+            a.viewPitch = -0.32 * freed + 0.05 * Math.sin(t * 9) * hold * (1 - freed);
+            p.reach(Rig15.Limb.R_LEG, -2.6, 3, -0.6 - 1.2 * turn, 1).reach(Rig15.Limb.L_LEG, 2.6, 3, 0.6 + 2.0 * turn, 1);
+            p.rootPos[1] = -0.8 - 0.4 * breath * (1 - turn) - 0.5 * Math.sin(t * 3.1) * hold;
+            p.rootPos[0] = 0.5 * Math.sin(t * 0.7) * (1 - turn);
+            // The gestures of the five questions.
+            double[] gw = new double[MONO.length];
+            double sumR = 0, sumL = 0;
+            double[] tr = new double[3], tl = new double[3];
+            for (int i = 0; i < MONO.length; i++) {
+                double from = (Double) MONO[i][0], to = (Double) MONO[i][1];
+                gw[i] = smooth((c - (from - 350)) / 450.0) * (1 - smooth((c - (to + 100)) / 500.0));
+                sumR += gw[i];
+                for (int k = 0; k < 3; k++) tr[k] += GESTURE_R[i][k] * gw[i];
+                if (GESTURE_L[i] != null) {
+                    sumL += gw[i];
+                    for (int k = 0; k < 3; k++) tl[k] += GESTURE_L[i][k] * gw[i];
+                }
+            }
+            // The right hand: a gesture, then held out for Honcho, then at his throat.
+            double[] prepPt = {-3.6, 23.0, 8.4}, holdPt = {-3.6, 26.0, 8.4};
+            double wr = sumR + prep * 0.8 + hold * 3;
+            double[] rt = new double[3];
+            for (int k = 0; k < 3; k++) rt[k] = (tr[k] + prepPt[k] * prep * 0.8 + holdPt[k] * hold * 3) / Math.max(1e-6, wr);
+            if (wr > 0.01) a.reach(Rig15.Limb.R_ARM, rt[0], rt[1], rt[2], Math.min(1, wr));
+            if (sumL > 0.01 && hold < 0.5) a.reach(Rig15.Limb.L_ARM, tl[0] / sumL, tl[1] / sumL, tl[2] / sumL, Math.min(1, sumL) * (1 - hold));
+            p.turn(Rig15.Joint.R_UPPER_ARM, 4 * freed, 0, -4 - 6 * freed);
+            p.turn(Rig15.Joint.L_UPPER_ARM, (-2 + 2 * breath) * (1 - hold) + (-17 + 11 * Math.sin(t * 5)) * hold, 0, 5 + 9 * hold);
+            p.turn(Rig15.Joint.L_LOWER_ARM, -8 * (1 - hold) - (24 + 8 * Math.sin(t * 5 + 1)) * hold, 0, 0);
+            p.turn(Rig15.Joint.R_LOWER_ARM, -8, 0, 0);
+            double nod = gw[3] * 22 + gw[1] * 10 + gw[0] * -2 + gw[2] * -4;
+            p.turn(Rig15.Joint.UPPER_TORSO, 2 + breath + 6 * gw[3] + (5 + 4 * hold + 2 * Math.sin(t * 6) * hold) * turn, 10 * hold, 0);
+            p.turn(Rig15.Joint.HEAD, -1 + nod * (1 - turn) + (9 - 14 * freed) * turn, (12 * Math.sin(t * 5) * gw[4]) * (1 - turn) - 6 * hold, 7 * gw[0] - 6 * gw[2]);
+            a.fistR = Math.max(0.3 * gw[1], grab * (1 - freed));
+            a.fistL = 0.25 * hold;
+            a.spread = 1 - 0.7 * hold;
         }
         glitcherRender.clear();
         glitcherActor.draw(glitcherRender, unit, glitcherRender.width / 2.0, glitcherRender.height - 6 * unit);
@@ -315,50 +290,57 @@ final class Interlude {
         b.drawImage(glitcherRender.image, (int) gDrawX, (int) gDrawY, null);
         hitBox.setRect(gx - 10 * unit, ground - 36 * unit, 20 * unit, 38 * unit);
 
-        // Honcho: hanging from his hand until he is let go, then falling.
-        double hx = gx - 7.7 * unit, hy = ground - 32.3 * unit;            // where his raised hand is
-        double fatigue = limp ? 1 : Math.min(1, Math.max(0, (c - RIFT_END) / CHOKE_MS) * (1 - 0.6 * m));
-        double flail = (1 - 0.9 * fatigue) * (1 - freed);
-        {
-            // Honcho: hanging by the throat. Both hands go up to the fist that holds him, pulling; the legs kick wildly;
-            // as he tires it all slows and the arms fall.
+        // ---- Honcho: out of the portal, through the air, into the hand that takes him by the throat; then he hangs there.
+        double hxN = gx - 7.7 * unit, hyN = ground - 32.3 * unit;            // where his neck is when he is held
+        if (c >= EXIT_FROM) {
+            double ex = Math.min(1, (c - EXIT_FROM) / (GRAB_FROM + 500 - EXIT_FROM));
+            double fe = smooth(ex);
+            double arrive = smooth((ex - 0.75) / 0.25);
+            double nx = px + (hxN - px) * fe, ny = py + (hyN - py) * fe - Math.sin(Math.PI * fe) * h * 0.14;
+            double fatigue = limp ? 1 : Math.min(1, Math.max(0, (c - RIFT_END) / CHOKE_MS) * (1 - 0.6 * m));
+            double flail = (1 - 0.9 * fatigue) * (1 - freed) * arrive;
+            double fl = Math.sin(ex * 19), fl2 = Math.sin(ex * 23 + 1.2), fl3 = Math.sin(ex * 17 + 2.3);
+            double kick = Math.sin(t * 15) * flail, kick2 = Math.sin(t * 15 + 2.2) * flail;
             Actor a = honchoActor;
             Pose15 p = a.begin();
             a.viewYaw = 0.8;
-            double kick = Math.sin(t * 15) * flail, kick2 = Math.sin(t * 15 + 2.2) * flail;
-            double grab = Math.min(1, 1.3 * flail);
-            a.reach(Rig15.Limb.R_ARM, -2.2 + 1.2 * Math.sin(t * 17) * flail, 26.5 + 1.0 * Math.cos(t * 13) * flail, 3.6, grab);
-            a.reach(Rig15.Limb.L_ARM, 2.2 + 1.2 * Math.cos(t * 19) * flail, 26.0 + 1.0 * Math.sin(t * 14) * flail, 3.8, grab);
-            p.turn(Rig15.Joint.R_UPPER_ARM, 8, 0, -8).turn(Rig15.Joint.L_UPPER_ARM, 10, 0, 8);
-            p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6, 0, 4).turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6, 0, -4);
-            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick), 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2), 0, 0);
+            double grabIk = Math.min(1, 1.3 * flail);
+            a.reach(Rig15.Limb.R_ARM, -2.2 + 1.2 * Math.sin(t * 17) * flail, 26.5 + 1.0 * Math.cos(t * 13) * flail, 3.6, grabIk);
+            a.reach(Rig15.Limb.L_ARM, 2.2 + 1.2 * Math.cos(t * 19) * flail, 26.0 + 1.0 * Math.sin(t * 14) * flail, 3.8, grabIk);
+            double limpW = 1 - arrive;                                       // thrown: the limbs go loose and trail
+            p.turn(Rig15.Joint.R_UPPER_ARM, 8 * arrive + (-140 + 40 * fl) * limpW, 0, -8 - 30 * limpW).turn(Rig15.Joint.L_UPPER_ARM, 10 * arrive + (-120 + 40 * fl2) * limpW, 0, 8 + 30 * limpW);
+            p.turn(Rig15.Joint.R_LOWER_ARM, (-35 - 20 * fl3) * limpW, 0, 0).turn(Rig15.Joint.L_LOWER_ARM, (-45 - 20 * fl) * limpW, 0, 0);
+            p.turn(Rig15.Joint.R_UPPER_LEG, 46 * kick - 6 * arrive + (-40 + 30 * fl2) * limpW, 0, 4).turn(Rig15.Joint.L_UPPER_LEG, -46 * kick2 - 6 * arrive + (25 + 30 * fl3) * limpW, 0, -4);
+            p.turn(Rig15.Joint.R_LOWER_LEG, 30 + 34 * Math.max(0, -kick) + 20 * limpW, 0, 0).turn(Rig15.Joint.L_LOWER_LEG, 30 + 34 * Math.max(0, kick2) + 15 * limpW, 0, 0);
             p.turn(Rig15.Joint.R_FOOT, 25, 0, 0).turn(Rig15.Joint.L_FOOT, 25, 0, 0);
-            p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick, 6 * kick2, 0);
-            p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue, 8 * Math.sin(t * 11) * flail, 6 * Math.sin(t * 9) * flail);
-            a.fistR = a.fistL = 0.8 * flail;
+            p.turn(Rig15.Joint.UPPER_TORSO, -4 - 8 * fatigue + 5 * kick - 8 * limpW * fl2, 6 * kick2 + 8 * limpW * fl3, 0);
+            p.turn(Rig15.Joint.HEAD, -14 - 29 * fatigue - 10 * limpW * fl, 8 * Math.sin(t * 11) * flail + 10 * limpW * fl2, 6 * Math.sin(t * 9) * flail);
+            a.fistR = a.fistL = 0.8 * flail + 0.15 * limpW;
             a.spread = 0.4;
+            honchoRender.clear();
+            honchoActor.draw(honchoRender, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
+            double drop = freed * freed * h * 0.9;
+            double scale = 0.35 + 0.65 * fe;
+            AffineTransform old = b.getTransform();
+            b.translate(nx, ny + 24 * unit * scale + drop);
+            b.rotate((1 - fe) * -Math.PI * 2.4 * (1 - fe) + 0.3 * freed + Math.sin(t * 8) * 0.03 * flail);
+            b.scale(scale, scale);
+            b.drawImage(honchoRender.image, -honchoRender.width / 2, -honchoRender.height + (int) (6 * unit), null);
+            b.setTransform(old);
         }
-        honchoRender.clear();
-        honchoActor.draw(honchoRender, unit, honchoRender.width / 2.0, honchoRender.height - 6 * unit);
-        double drop = freed * freed * h * 0.9;
-        AffineTransform old = b.getTransform();
-        b.translate(hx, hy + 24 * unit + drop);
-        b.rotate(0.3 * freed + Math.sin(t * 8) * 0.03 * flail);
-        b.drawImage(honchoRender.image, -honchoRender.width / 2, -honchoRender.height + (int) (6 * unit), null);
-        b.setTransform(old);
 
         // The dark closing in as the time runs out, red at its edge.
         double left = Math.max(0, RIFT_END + CHOKE_MS - c);
-        if (winAt < 0) {
+        if (winAt < 0 && c >= RIFT_END) {
             double danger = 1 - Math.min(1, left / CHOKE_MS);
             b.setPaint(new RadialGradientPaint((float) (w / 2.0), (float) (h / 2.0), (float) (Math.hypot(w, h) / 2), new float[]{0.55f, 1f},
                     new Color[]{new Color(120, 0, 10, 0), new Color(120, 0, 10, (int) (140 * danger * (0.6 + 0.4 * Math.sin(c * 0.012))))}));
             b.fillRect(0, 0, w, h);
         }
-        // The cut from Honcho's eyes to here.
-        double cut = Math.max(0, 1 - (c - RIFT_END) / 300.0);
-        if (cut > 0) {
-            b.setColor(new Color(255, 255, 255, (int) (255 * cut)));
+        // The portal tears open in a flash.
+        double flash = c >= PORTAL_FROM ? Math.max(0, 1 - (c - PORTAL_FROM) / 600.0) : 0;
+        if (flash > 0) {
+            b.setColor(new Color(255, 255, 255, (int) (150 * flash)));
             b.fillRect(0, 0, w, h);
         }
         // Every press knocks the picture a moment.
@@ -422,6 +404,7 @@ final class Interlude {
         double s = since - ANGRY_AFTER;
         if (s < ANGRY_LEN) {
             // Furious.
+            if (shatter == null) shatter = new DeskShatter(desktopPicture(w, h), w, h);
             b.setColor(new Color(60, 0, 10, 165));
             b.fillRect(0, 0, w, h);
             backdrop.render(b, w, h, c + 50_000, 0.3);
@@ -439,8 +422,11 @@ final class Interlude {
         // The desktop cracks and comes down; the fall goes on beneath it.
         double k = s - ANGRY_LEN;
         fall.render(b, w, h, k, 1.6 + smooth(k / 1500.0));
-        drawShattering(b, w, h, k);
+        if (shatter == null) shatter = new DeskShatter(desktopPicture(w, h), w, h);
+        shatter.render(b, k);
     }
+
+    private DeskShatter shatter;
 
     private BufferedImage desktopPicture(int w, int h) {
         if (desktop != null) return desktop;
@@ -452,54 +438,6 @@ final class Interlude {
             g.dispose();
         }
         return fakeDesktop;
-    }
-
-    private void drawShattering(Graphics2D b, int w, int h, double k) {
-        BufferedImage img = desktopPicture(w, h);
-        int cols = 12, rows = 7;
-        double tw = w / (double) cols, th = h / (double) rows;
-        double shake = Math.max(0, 1 - k / 700.0) * h * 0.012;
-        Random sh = new Random((long) (k / 30));
-        AffineTransform base = b.getTransform();
-        b.translate((sh.nextDouble() - 0.5) * shake * 2, (sh.nextDouble() - 0.5) * shake * 2);
-        Random rnd = new Random(31);
-        for (int r = 0; r < rows; r++) {
-            for (int q = 0; q < cols; q++) {
-                double delay = 500 + rnd.nextDouble() * 900 + (rows - r) * 45;
-                double vx = (rnd.nextDouble() - 0.5) * w * 0.12, spin = (rnd.nextDouble() - 0.5) * 4;
-                double age = Math.max(0, k - delay) / 1000.0;
-                double x0 = q * tw, y0 = r * th;
-                double dx = vx * age, dy = 0.5 * h * 2.4 * age * age;
-                if (y0 + dy > h * 1.3) continue;
-                AffineTransform old = b.getTransform();
-                b.translate(x0 + tw / 2 + dx, y0 + th / 2 + dy);
-                b.rotate(spin * age);
-                b.drawImage(img, (int) (-tw / 2), (int) (-th / 2), (int) (tw / 2) + 1, (int) (th / 2) + 1,
-                        (int) x0, (int) y0, (int) (x0 + tw) + 1, (int) (y0 + th) + 1, null);
-                b.setTransform(old);
-            }
-        }
-        // Cracks running over it before it goes.
-        if (k < 1400) {
-            double f = Math.min(1, k / 450.0);
-            b.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            b.setColor(new Color(255, 255, 255, (int) (240 * (1 - smooth((k - 500) / 900.0)))));
-            Random cr = new Random(6);
-            for (int i = 0; i < 18; i++) {
-                double a = cr.nextDouble() * Math.PI * 2, x = w * (0.35 + 0.3 * cr.nextDouble()), y = h * (0.3 + 0.4 * cr.nextDouble());
-                double reach = Math.hypot(w, h) * (0.15 + 0.4 * cr.nextDouble()) * f, walked = 0;
-                while (walked < reach) {
-                    a += (cr.nextDouble() - 0.5) * 0.9;
-                    double seg = 30 + cr.nextDouble() * 50;
-                    double nx = x + Math.cos(a) * seg, ny = y + Math.sin(a) * seg;
-                    b.draw(new java.awt.geom.Line2D.Double(x, y, nx, ny));
-                    x = nx;
-                    y = ny;
-                    walked += seg;
-                }
-            }
-        }
-        b.setTransform(base);
     }
 
     // ---------------------------------------------------------------- pieces
@@ -540,46 +478,6 @@ final class Interlude {
         o.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) Math.min(1, alpha)));
         o.drawImage(faceBuf, (int) (cx - S / 2.0), (int) (cy - S / 2.0), (int) (cx + S / 2.0), (int) (cy + S / 2.0), 0, 0, S, S, null);
         o.dispose();
-    }
-
-    /** Big dark hands coming up from the bottom corners at the throat, fingers working. */
-    private void drawHands(Graphics2D b, int w, int h, double p, double c) {
-        if (p <= 0.01) return;
-        for (int side = -1; side <= 1; side += 2) {
-            double bx = w * 0.5 + side * w * (0.6 - 0.28 * p);
-            double by = h * (1.25 - 0.45 * p);
-            double dirX = -side, dirY = -0.9;
-            double norm = Math.hypot(dirX, dirY);
-            dirX /= norm;
-            dirY /= norm;
-            b.setColor(new Color(6, 4, 12));
-            b.fill(new java.awt.geom.Ellipse2D.Double(bx - h * 0.13, by - h * 0.11, h * 0.26, h * 0.22));
-            b.setStroke(new BasicStroke((float) (h * 0.05), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            for (int i = 0; i < 4; i++) {
-                double spread = (i - 1.5) * 0.28;
-                double wig = Math.sin(c * 0.02 + i * 1.3) * 0.12 * p;
-                double ang = Math.atan2(dirY, dirX) + spread + wig;
-                double len = h * (0.2 + 0.03 * (i == 1 || i == 2 ? 1 : 0));
-                b.draw(new java.awt.geom.Line2D.Double(bx, by, bx + Math.cos(ang) * len, by + Math.sin(ang) * len));
-            }
-            b.setColor(new Color(170, 90, 240, 190));                        // a violet rim, as if lit by the glitch
-            b.setStroke(new BasicStroke(3f));
-            b.draw(new java.awt.geom.Ellipse2D.Double(bx - h * 0.13, by - h * 0.11, h * 0.26, h * 0.22));
-            for (int i = 0; i < 4; i++) {
-                double spread = (i - 1.5) * 0.28;
-                double wig = Math.sin(c * 0.02 + i * 1.3) * 0.12 * p;
-                double ang = Math.atan2(dirY, dirX) + spread + wig;
-                double len = h * (0.2 + 0.03 * (i == 1 || i == 2 ? 1 : 0));
-                b.setStroke(new BasicStroke((float) (h * 0.05 + 6), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                b.setColor(new Color(170, 90, 240, 110));
-                b.draw(new java.awt.geom.Line2D.Double(bx, by, bx + Math.cos(ang) * len, by + Math.sin(ang) * len));
-                b.setStroke(new BasicStroke((float) (h * 0.05), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                b.setColor(new Color(6, 4, 12));
-                b.draw(new java.awt.geom.Line2D.Double(bx, by, bx + Math.cos(ang) * len, by + Math.sin(ang) * len));
-            }
-            b.setColor(new Color(6, 4, 12));
-            b.fill(new java.awt.geom.Ellipse2D.Double(bx - h * 0.125, by - h * 0.105, h * 0.25, h * 0.21));
-        }
     }
 
     private static void vignette(Graphics2D b, int w, int h, double radius, int darkness) {

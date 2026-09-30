@@ -218,36 +218,10 @@ final class Finale3 {
         d.dispose();
     }
 
-    /** The portal: a tall ring of turning arcs round a dark hollow, sparks drawn into it. */
+    /** The portal, to the right of the two of them. */
     private void drawPortal(Graphics2D g, int w, int h, double c) {
         double a = smooth((c - PORTAL_FROM_MS) / PORTAL_OPEN_MS) * (1 - smooth((c - PORTAL_CLOSE_FROM) / PORTAL_CLOSE_MS));
-        if (a <= 0.01) return;
-        double px = portalX(w), py = portalY(h);
-        double rx = h * 0.13 * a, ry = h * 0.27 * a;
-        Graphics2D d = (Graphics2D) g.create();
-        int gr = (int) (ry * 2.2);
-        d.setPaint(new RadialGradientPaint((float) px, (float) py, Math.max(2, gr), new float[]{0f, 1f},
-                new Color[]{new Color(150, 110, 255, (int) (110 * a)), new Color(150, 110, 255, 0)}));
-        d.fill(new Ellipse2D.Double(px - gr, py - gr, gr * 2, gr * 2));
-        d.setColor(new Color(6, 2, 18, (int) (245 * a)));
-        d.fill(new Ellipse2D.Double(px - rx, py - ry, rx * 2, ry * 2));
-        double t = c / 1000.0;
-        for (int i = 0; i < 12; i++) {
-            double f = 0.35 + 0.65 * (i / 11.0);
-            double start = (t * (i % 2 == 0 ? 70 : -95) + i * 41) % 360;
-            d.setStroke(new BasicStroke((float) (h * 0.004 * (1 + (i % 3)))));
-            d.setColor(i % 2 == 0 ? new Color(170, 120, 255, (int) (220 * a)) : new Color(110, 220, 255, (int) (200 * a)));
-            d.draw(new Arc2D.Double(px - rx * f, py - ry * f, rx * 2 * f, ry * 2 * f, start, 70 + 10 * (i % 4), Arc2D.OPEN));
-        }
-        Random sr = new Random(5);
-        for (int i = 0; i < 26; i++) {                                    // sparks winding in
-            double ang = sr.nextDouble() * Math.PI * 2 + t * (0.8 + sr.nextDouble());
-            double f = 1.0 + 0.5 * ((sr.nextDouble() + t * 0.3) % 1.0);
-            double sz = h * 0.005 * (1 + sr.nextDouble());
-            d.setColor(new Color(220, 200, 255, (int) (200 * a * (1.5 - f))));
-            d.fill(new Ellipse2D.Double(px + Math.cos(ang) * rx * f - sz, py + Math.sin(ang) * ry * f - sz, sz * 2, sz * 2));
-        }
-        d.dispose();
+        PortalFx.draw(g, portalX(w), portalY(h), h * 0.13, h * 0.27, a, c / 1000.0, h);
     }
 
     /** "SIGNAL LOST": static, scanlines, the words split in colour and flickering, then black. */
