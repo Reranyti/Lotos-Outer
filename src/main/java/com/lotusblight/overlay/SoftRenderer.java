@@ -79,6 +79,39 @@ final class SoftRenderer {
         }
     }
 
+    /**
+     * Draws a posed {@link Rig15}: every face is carried along with its joint, the whole turned by
+     * {@code viewYaw} about the vertical (0 = seen from the front) and tipped by {@code viewPitch}.
+     * The floor point (0, 0, 0) lands at (originX, originY); {@code scale} is image pixels per skin pixel.
+     */
+    void drawRig(Rig15 rig, Rig15.Skel sk, int[] skin, double viewYaw, double viewPitch, double scale, double originX, double originY) {
+        double[][] p = new double[4][];
+        for (Rig15.Face face : rig.faces) {
+            for (int i = 0; i < 4; i++) {
+                p[i] = rotateX(rotateY(sk.carry(face.joint(), face.corners()[i]), viewYaw), viewPitch);
+            }
+            double[] n = normalize(cross(sub(p[3], p[0]), sub(p[1], p[0])));
+            if (n[2] <= 1e-6) continue;
+            double light = 0.55 + 0.45 * Math.max(0, dot(n, LIGHT));
+            double[][] s = new double[4][];
+            for (int i = 0; i < 4; i++) {
+                s[i] = new double[]{originX + p[i][0] * scale, originY - p[i][1] * scale, p[i][2]};
+            }
+            double[][] uv = {
+                    {face.u0(), face.v0()}, {face.u1(), face.v0()},
+                    {face.u1(), face.v1()}, {face.u0(), face.v1()}};
+            SkinModel.Face legacy = new SkinModel.Face(SkinModel.Part.BODY, null, face.u0(), face.v0(), face.u1(), face.v1());
+            triangle(s[0], s[1], s[2], uv[0], uv[1], uv[2], legacy, skin, light);
+            triangle(s[0], s[2], s[3], uv[0], uv[2], uv[3], legacy, skin, light);
+        }
+    }
+
+    /** Projects a stage point the same way {@link #drawRig} does, to image coordinates {x, y}. */
+    static double[] project(double[] stage, double viewYaw, double viewPitch, double scale, double originX, double originY) {
+        double[] p = rotateX(rotateY(stage, viewYaw), viewPitch);
+        return new double[]{originX + p[0] * scale, originY - p[1] * scale};
+    }
+
     static double[] transform(double[] c, int part, Pose pose) {
         double[] pivot = SkinModel.PIVOTS[part];
         double x = c[0] - pivot[0], y = c[1] - pivot[1], z = c[2] - pivot[2];
