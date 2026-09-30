@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 
 /**
  * The osu!-style rhythm game that plays over the finale scene: circles rise out of the playfield with a
@@ -28,6 +30,10 @@ final class RhythmGame {
     private int muted;                                   // circles switched off for another mechanic
     private int nextMiss;                                // first circle not yet hit or judged missed
     private final boolean[] hit;
+    private final boolean[] missed;
+    private final double[] endedAt;                       // when each circle was hit or missed, for what becomes of it
+    private final java.util.ArrayDeque<Integer> recent = new java.util.ArrayDeque<>();
+    private PlayfieldFx fx;
     private double lastFlash;                            // time of the last hit, for a small flash
 
     RhythmGame(OsuMap map, int maxHp) {
@@ -37,6 +43,16 @@ final class RhythmGame {
         this.bossMaxHp = Math.max(1, map.circles.size());
         this.bossHp = bossMaxHp;
         this.hit = new boolean[map.circles.size()];
+        this.endedAt = new double[map.circles.size()];
+        this.missed = new boolean[map.circles.size()];
+        java.util.Arrays.fill(endedAt, -1e9);
+    }
+
+    /** The events of the song that move the playfield and change what the circles are made of. */
+    void setFx(PlayfieldFx fx) { this.fx = fx; }
+
+    private PlayfieldFx.Style styleOf(int i) {
+        return fx == null ? PlayfieldFx.Style.NORMAL : fx.style(map.circles.get(i).timeMs(), i);
     }
 
     /** Starting mid-song: drop every note before timeMs without counting it as a miss. */
@@ -100,13 +116,24 @@ final class RhythmGame {
         while (nextMiss < map.circles.size()) {
             OsuMap.Circle c = map.circles.get(nextMiss);
             if (timeMs <= c.timeMs() + map.hitWindowMs) break;
-            if (!hit[nextMiss]) { hp -= 1; misses++; combo = 0; lastMissAt = timeMs; }
+            if (!hit[nextMiss]) { hp -= 1; misses++; combo = 0; lastMissAt = timeMs; endedAt[nextMiss] = timeMs; recent.add(nextMiss); missed[nextMiss] = true; }
             nextMiss++;
         }
     }
 
     /** A left click at screen (mx,my). Returns true if it landed on a circle in its hit window. */
     boolean click(double mx, double my, double timeMs, int w, int h) {
+        if (fx != null) {                                   // the playfield may be turned, shrunk or held in hands
+            java.awt.Shape clip = fx.clip(timeMs, w, h);
+            if (clip != null && !clip.contains(mx, my)) return false;
+            try {
+                Point2D p = fx.transform(timeMs, w, h).inverseTransform(new Point2D.Double(mx, my), null);
+                mx = p.getX();
+                my = p.getY();
+            } catch (java.awt.geom.NoninvertibleTransformException e) {
+                return false;
+            }
+        }
         double[] geo = geometry(w, h);
         double radius = geo[2];
         for (int i = nextMiss; i < map.circles.size(); i++) {
@@ -124,6 +151,8 @@ final class RhythmGame {
                 maxCombo = Math.max(maxCombo, combo);
                 lastFlash = timeMs;
                 lastHitAt = timeMs;
+                endedAt[i] = timeMs;
+                recent.add(i);
                 return true;
             }
         }
@@ -136,10 +165,30 @@ final class RhythmGame {
 
     /** hud false draws just the circles, no HP bars or combo (used where the bars are hidden). */
     void render(Graphics2D g, int w, int h, double timeMs, boolean hud) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        Graphics2D gg = (Graphics2D) g.create();
+        gg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        double glitch = 0;
+        if (fx != null) {
+            java.awt.Shape clip = fx.clip(timeMs, w, h);
+            if (clip != null) gg.clip(clip);
+            gg.transform(fx.transform(timeMs, w, h));
+            glitch = fx.glitch(timeMs);
+            if (glitch > 0.05) {                                       // the whole playfield stutters aside now and then
+                java.util.Random jr = new java.util.Random((long) (timeMs / 60));
+                if (jr.nextDouble() < glitch * 0.3) gg.translate((jr.nextDouble() - 0.5) * w * 0.012 * glitch, (jr.nextDouble() - 0.5) * h * 0.008 * glitch);
+            }
+        }
+        java.awt.image.BufferedImage desktop = fx == null ? null : fx.desktop();
         double[] geo = geometry(w, h);
         double ox = geo[0], oy = geo[1], radius = geo[2], fw = geo[3], fh = geo[4];
 
+        // What becomes of the circles hit or missed a moment ago.
+        while (!recent.isEmpty() && timeMs - endedAt[recent.peekFirst()] > 460) recent.pollFirst();
+        for (int i : recent) {
+            OsuMap.Circle c = map.circles.get(i);
+            CircleArt.after(gg, styleOf(i), ox + c.x() / PLAYFIELD_W * fw, oy + c.y() / PLAYFIELD_H * fh, radius,
+                    timeMs - endedAt[i], missed[i], i, timeMs, desktop);
+        }
         // Draw upcoming circles, farthest-in-time first so nearer ones sit on top.
         for (int i = map.circles.size() - 1; i >= nextMiss; i--) {
             OsuMap.Circle c = map.circles.get(i);
@@ -149,30 +198,24 @@ final class RhythmGame {
             double cx = ox + c.x() / PLAYFIELD_W * fw;
             double cy = oy + c.y() / PLAYFIELD_H * fh;
             double appear = Math.min(1, Math.max(0, 1 - dt / map.approachMs));   // 0..1 as it comes in
-
-            // The circle body.
-            g.setColor(new Color(0x2A, 0x0B, 0x4A, (int) (appear * 220)));
-            g.fillOval((int) (cx - radius), (int) (cy - radius), (int) (radius * 2), (int) (radius * 2));
-            g.setStroke(new BasicStroke((float) (radius * 0.18)));
-            g.setColor(new Color(0xB0, 0x60, 0xFF, (int) (appear * 255)));
-            g.drawOval((int) (cx - radius), (int) (cy - radius), (int) (radius * 2), (int) (radius * 2));
-
-            // The approach ring shrinking onto it.
-            if (dt > 0) {
-                double ar = radius * (1 + 2.6 * dt / map.approachMs);
-                g.setStroke(new BasicStroke((float) (radius * 0.12)));
-                g.setColor(new Color(0xE0, 0xC0, 0xFF, (int) (appear * 200)));
-                g.drawOval((int) (cx - ar), (int) (cy - ar), (int) (ar * 2), (int) (ar * 2));
-            }
+            CircleArt.draw(gg, styleOf(i), cx, cy, radius, appear, dt, map.approachMs, i, timeMs, glitch, desktop);
         }
 
-        if (hud) drawHud(g, w, h, timeMs);
+        if (hud) drawHud(gg, w, h, timeMs);
+        gg.dispose();
     }
 
-    /** Just the bars and the combo (when the circles are drawn somewhere smaller). */
+    /** Just the bars and the combo (when the circles are drawn somewhere else). */
     void renderHud(Graphics2D g, int w, int h, double timeMs) {
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        drawHud(g, w, h, timeMs);
+        Graphics2D gg = (Graphics2D) g.create();
+        gg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (fx != null) {
+            java.awt.Shape clip = fx.clip(timeMs, w, h);
+            if (clip != null) gg.clip(clip);
+            gg.transform(fx.transform(timeMs, w, h));
+        }
+        drawHud(gg, w, h, timeMs);
+        gg.dispose();
     }
 
     private void drawHud(Graphics2D g, int w, int h, double timeMs) {

@@ -168,10 +168,13 @@ public final class GameMain {
         OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2.osu");
         RhythmGame g1 = new RhythmGame(map1, 48);
         RhythmGame g2 = new RhythmGame(map2, 260);
+        g1.setFx(PlayfieldFx.song1());
+        g2.setFx(PlayfieldFx.song2());
         RhythmGame g3 = null;
         if (song3Wav != null && OsuMap.class.getResource("/assets/lotusblight/overlay/map_3.osu") != null) {
             g3 = new RhythmGame(OsuMap.load("/assets/lotusblight/overlay/map_3.osu"), 300);
             g3.fullHud();
+            g3.setFx(PlayfieldFx.song3(GameMain::desktopShot));
         }
         Hazards hazards = new Hazards(skin, screen.height);
         // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
@@ -508,9 +511,7 @@ public final class GameMain {
             else if (phase == Phase.RESULTS && song3Played) { if (resultsShownFor() > 1.2) startFinale(); }
             else if (phase == Phase.SONG1) g1.click(x, y, t, w, h);
             else if (phase == Phase.SONG3 && g3 != null) {
-                double[] held = Song3Show.screenRect(t, w, h);
-                if (held == null) g3.click(x, y, t, w, h);
-                else g3.click(x - held[0], y - held[1], t, (int) held[2], (int) held[3]);
+                g3.click(x, y, t, w, h);
             }
             else if (phase == Phase.SONG2) {
                 fakeWindows.close(x, y);        // a click also clears a fake window it lands on
@@ -608,16 +609,7 @@ public final class GameMain {
                         fall.render(gg, w, h, tt + LEAD_MS + 8000, 1.2, sky);
                         if (fight != null) fight.render(gg, w, h, tt, g3.lastHitAt(), g3.lastMissAt(), g3.combo());
                     });
-                    double[] held = Song3Show.screenRect(t, w, h);
-                    if (held == null) g3.render(g, w, h, t);
-                    else {                                                 // the circles play inside the screen in the hands
-                        Graphics2D cg = (Graphics2D) g.create();
-                        cg.translate(held[0], held[1]);
-                        cg.clipRect(0, 0, (int) held[2], (int) held[3]);
-                        g3.render(cg, (int) held[2], (int) held[3], t, false);
-                        cg.dispose();
-                        g3.renderHud(g, w, h, t);
-                    }
+                    g3.render(g, w, h, t);                                 // the events move it, hold it and change what the circles are
                     double coming = (t + LEAD_MS) / 1800.0;               // out of the dark, during the lead-in
                     if (coming < 1) {
                         g.setColor(new Color(0, 0, 0, (int) (255 * (1 - Math.max(0, coming)))));

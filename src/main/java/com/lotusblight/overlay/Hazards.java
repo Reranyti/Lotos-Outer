@@ -73,6 +73,13 @@ final class Hazards {
     }
 
     /** How much of the eye field is there: opens from 1:21, is gone again by 1:44. */
+    /** The state of the first song's scenery at a time, for the playfield to follow (see {@link PlayfieldFx}). */
+    static double fieldAt(double ms) { return fieldAmount(ms); }
+
+    static double recedeAt(double ms) { return recede(ms); }
+
+    static double aeroAt(double ms) { return aeroAmount(ms); }
+
     private static double fieldAmount(double timeMs) {
         return smooth((timeMs - FAKE_START_MS) / 1000.0) * (1 - smooth((timeMs - RETURN_MS) / 1500.0));
     }
