@@ -32,6 +32,24 @@ import java.util.UUID;
  */
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID)
 public final class HornHandler {
+    private static final String KEEP_KEY = "LotusBlightHornKept";
+
+    /** Death: the horn does not drop; it is remembered and handed back with the new body. */
+    @SubscribeEvent
+    public static void onDrops(net.minecraftforge.event.entity.living.LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        boolean had = event.getDrops().removeIf(drop -> drop.getItem().is(ModItems.HORN.get()));
+        if (had) player.getPersistentData().putBoolean(KEEP_KEY, true);
+    }
+
+    @SubscribeEvent
+    public static void onClone(PlayerEvent.Clone event) {
+        if (!event.isWasDeath() || !(event.getEntity() instanceof ServerPlayer player)) return;
+        if (event.getOriginal().getPersistentData().getBoolean(KEEP_KEY)) {
+            net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(player, new net.minecraft.world.item.ItemStack(ModItems.HORN.get()));
+        }
+    }
+
     static final double RANGE = 150.0;
     static final long HONCHO_COOLDOWN_TICKS = 30 * 20L;
     static final long BLOW_COOLDOWN_TICKS = 2 * 24000L;

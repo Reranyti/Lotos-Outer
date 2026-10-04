@@ -77,6 +77,13 @@ public final class HonchoReturnScene {
         level.playSound(null, player.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.AMBIENT, 0.7f, 1.4f);
     }
 
+    /** Ends every running scene without a result (Honcho was reset). */
+    public static void cancelAll(MinecraftServer server) {
+        for (Scene s : new ArrayList<>(SCENES.values())) {
+            finish(s, server.getPlayerList().getPlayer(s.playerId), false);
+        }
+    }
+
     public static boolean isInScene(ServerPlayer player) {
         return SCENES.containsKey(player.getUUID());
     }
@@ -150,6 +157,11 @@ public final class HonchoReturnScene {
             honcho = h;
         }
         if (honcho != null && honcho.distanceTo(player) > ABORT_DISTANCE) {
+            finish(s, player, false);
+            return;
+        }
+        // Honcho gone (dead, discarded, in another dimension) after he should be out, or the player never answering for a minute: the scene ends
+        if ((honcho == null && s.ticks > HONCHO_OUT + 20) || ((s.stage == Stage.WAIT_HAND || s.stage == Stage.WAIT_YES) && s.stageTicks > 1200)) {
             finish(s, player, false);
             return;
         }

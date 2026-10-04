@@ -23,6 +23,7 @@ public final class NormalBranchReward {
         UUID id = mc.player.getUUID();
         server.execute(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(id);
+            if (player != null) LotusPlayerState.setNormalBranchExitPending(player, false);       // the fight has been played to its end
             if (player == null || LotusPlayerState.isHornGiven(player) || player.getInventory().contains(new ItemStack(ModItems.HORN.get()))) return;
             ItemStack horn = new ItemStack(ModItems.HORN.get());
             if (!player.getInventory().add(horn)) player.drop(horn, false);

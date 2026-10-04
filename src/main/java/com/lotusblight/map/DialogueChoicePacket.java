@@ -44,6 +44,7 @@ public class DialogueChoicePacket {
                     || (packet.branch != LotusPlayerState.BRANCH_RESISTANCE && packet.branch != LotusPlayerState.BRANCH_ALLIANCE)) {
                 return;
             }
+            if (LotusPlayerState.isNormalBranchEntered(player)) return;       // already on the hidden path: the lotus no longer takes a choice
             boolean locked = LotusPlayerState.setDialogueBranch(player, packet.branch);
             // "репутация...плохие действия плохо хорошие хорошо" - committing to a side is the single
             // biggest one-time signal of where the player stands with the Lotus, only counted once

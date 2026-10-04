@@ -697,6 +697,7 @@ public final class LotusCommands {
         }
         var honcho = com.lotusblight.entity.HonchoMeetingManager.findLoadedHoncho(source.getServer());
         if (honcho != null) honcho.discard();
+        com.lotusblight.entity.HonchoReturnScene.cancelAll(source.getServer());
         com.lotusblight.data.HonchoSavedData.get(source.getServer().overworld()).reset();
         source.sendSuccess(() -> Component.literal("Хончо забыт миром: следующий StarFall или встреча создадут его заново."), true);
         return 1;
