@@ -1,15 +1,15 @@
 """
-Sculpts Screech as smooth rock: every body part is a signed-distance shape (balls, capsules, ellipsoids blended together, roughened
+Sculpts Creak as smooth rock: every body part is a signed-distance shape (balls, capsules, ellipsoids blended together, roughened
 like stone, with real holes carved into the chest and head and a small hot eyeball in the eye socket), turned into a triangle mesh by
 surface nets. The parts stay separate (one per bone) so the creature can be posed rigidly, like loose pieces of rock.
 
 The shape is read off one reference picture of the DOORS creature (front three-quarter view) and rebuilt by eye in our own
 geometry; the back and sides are filled in by the same logic. Nothing is taken from the game's files.
 
-Run:  python tools/screech/sculpt_screech.py [preview_dir]
-Writes src/main/resources/assets/lotusblight/models/screech.bin          (triangles, one block per part)
-       src/main/resources/assets/lotusblight/models/screech.skeleton.json (the bones: parent and pivot)
-       src/main/resources/assets/lotusblight/textures/entity/screech.png, screech_glowing.png
+Run:  python tools/creak/sculpt_creak.py [preview_dir]
+Writes src/main/resources/assets/lotusblight/models/creak.bin          (triangles, one block per part)
+       src/main/resources/assets/lotusblight/models/creak.skeleton.json (the bones: parent and pivot)
+       src/main/resources/assets/lotusblight/textures/entity/creak.png, creak_glowing.png
 
 Space: right-handed like the world, units are 1/16 of a block, y up, the character's FRONT is +z and its LEFT is +x.
 """
@@ -24,10 +24,10 @@ from PIL import Image, ImageFilter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 RES = os.path.join(ROOT, 'src/main/resources/assets/lotusblight')
-BIN_OUT = os.path.join(RES, 'models/screech.bin')
-SKEL_OUT = os.path.join(RES, 'models/screech.skeleton.json')
-TEX_OUT = os.path.join(RES, 'textures/entity/screech.png')
-GLOW_OUT = os.path.join(RES, 'textures/entity/screech_glowing.png')
+BIN_OUT = os.path.join(RES, 'models/creak.bin')
+SKEL_OUT = os.path.join(RES, 'models/creak.skeleton.json')
+TEX_OUT = os.path.join(RES, 'textures/entity/creak.png')
+GLOW_OUT = os.path.join(RES, 'textures/entity/creak_glowing.png')
 
 S = 0.0583            # units per picture pixel: the picture's figure is ~720 px tall -> ~42 units
 
@@ -684,7 +684,7 @@ def preview(meshes, base, out_dir, in_reference_space=False, name_suffix=''):
                 sub[win] = zz[win]
                 region = img[miny:maxy + 1, minx:maxx + 1]
                 region[win] = lit[win]
-        Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(os.path.join(out_dir, f'screech_{name}{name_suffix}.png'))
+        Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(os.path.join(out_dir, f'creak_{name}{name_suffix}.png'))
 
 
 def build_meshes(scale):

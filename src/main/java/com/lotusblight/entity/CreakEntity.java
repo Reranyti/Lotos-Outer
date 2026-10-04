@@ -16,20 +16,20 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Screech (the creature of the stairwell): a tall, lanky stone-and-rebar humanoid. For now only its model and its first reflex
+ * Creak (the creature of the stairwell): a tall, lanky stone-and-rebar humanoid. For now only its model and its first reflex
  * exist - when someone looks at it, it covers its face with both hands (see {@link #isCovering()}); its stalking, its
  * attack and the rest of its behaviour are decided separately. The look of it (model, pose, walk) is drawn by
- * {@code ScreechRenderer} from a mesh made by tools/screech.
+ * {@code CreakRenderer} from a mesh made by tools/creak.
  */
-public class ScreechEntity extends PathfinderMob {
-    private static final EntityDataAccessor<Boolean> COVERING = SynchedEntityData.defineId(ScreechEntity.class, EntityDataSerializers.BOOLEAN);
+public class CreakEntity extends PathfinderMob {
+    private static final EntityDataAccessor<Boolean> COVERING = SynchedEntityData.defineId(CreakEntity.class, EntityDataSerializers.BOOLEAN);
     private static final double SEEN_RANGE = 40.0;
     private static final double SEEN_COS = 0.93;
 
     /** How far the hands have come up to the face, 0..1, eased on the client (and kept here so the renderer can read last tick's too). */
     public float cover, coverO;
 
-    public ScreechEntity(EntityType<? extends ScreechEntity> type, Level level) {
+    public CreakEntity(EntityType<? extends CreakEntity> type, Level level) {
         super(type, level);
         this.setPersistenceRequired();
     }

@@ -19,13 +19,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Screech's mesh, read once from the mod's resources: the triangles of every body part (made by tools/screech/sculpt_screech.py, a near
+ * Creak's mesh, read once from the mod's resources: the triangles of every body part (made by tools/creak/sculpt_creak.py, a near
  * and a far level of detail) and the bones they hang on. The mesh is in units of 1/16 block, y up, front +z, the creature's left +x.
  */
-public final class ScreechModel {
+public final class CreakModel {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String BASE = "/assets/lotusblight/models/";
-    private static ScreechModel instance;
+    private static CreakModel instance;
     private static boolean tried;
 
     /** One body part: its bone and its triangles as 8 floats per vertex (position 3, normal 3, uv 2), three vertices a triangle. */
@@ -55,7 +55,7 @@ public final class ScreechModel {
     public final Map<String, Integer> boneIndex = new HashMap<>();
     public final Part[] near, far;
 
-    private ScreechModel(String[] names, int[] parents, float[][] pivots, Part[] near, Part[] far) {
+    private CreakModel(String[] names, int[] parents, float[][] pivots, Part[] near, Part[] far) {
         this.boneNames = names;
         this.boneParent = parents;
         this.bonePivot = pivots;
@@ -65,22 +65,22 @@ public final class ScreechModel {
     }
 
     /** The model, or null if its files can't be read (the creature is then simply not drawn). */
-    public static synchronized ScreechModel get() {
+    public static synchronized CreakModel get() {
         if (!tried) {
             tried = true;
             try {
                 instance = load();
             } catch (Exception e) {
-                LOG.warn("Screech: can't read the model: {}", e.toString());
+                LOG.warn("Creak: can't read the model: {}", e.toString());
             }
         }
         return instance;
     }
 
-    private static ScreechModel load() throws IOException {
+    private static CreakModel load() throws IOException {
         JsonObject skeleton;
-        try (InputStream in = ScreechModel.class.getResourceAsStream(BASE + "screech.skeleton.json")) {
-            if (in == null) throw new IOException("screech.skeleton.json is missing");
+        try (InputStream in = CreakModel.class.getResourceAsStream(BASE + "creak.skeleton.json")) {
+            if (in == null) throw new IOException("creak.skeleton.json is missing");
             skeleton = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
         }
         JsonArray bones = skeleton.getAsJsonArray("bones");
@@ -101,17 +101,17 @@ public final class ScreechModel {
             JsonArray p = b.getAsJsonArray("pivot");
             for (int k = 0; k < 3; k++) pivots[i][k] = p.get(k).getAsFloat();
         }
-        return new ScreechModel(names, parents, pivots, readParts("screech.bin", index), readParts("screech_far.bin", index));
+        return new CreakModel(names, parents, pivots, readParts("creak.bin", index), readParts("creak_far.bin", index));
     }
 
     private static Part[] readParts(String file, Map<String, Integer> boneIndex) throws IOException {
         byte[] data;
-        try (InputStream in = ScreechModel.class.getResourceAsStream(BASE + file)) {
+        try (InputStream in = CreakModel.class.getResourceAsStream(BASE + file)) {
             if (in == null) throw new IOException(file + " is missing");
             data = in.readAllBytes();
         }
         ByteBuffer buf = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
-        if (buf.get() != 'S' || buf.get() != 'C' || buf.get() != 'R' || buf.get() != 'M') throw new IOException(file + " is not a Screech mesh");
+        if (buf.get() != 'S' || buf.get() != 'C' || buf.get() != 'R' || buf.get() != 'M') throw new IOException(file + " is not a Creak mesh");
         buf.getInt();                                     // version
         int count = buf.getInt();
         List<Part> parts = new ArrayList<>();

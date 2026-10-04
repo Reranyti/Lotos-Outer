@@ -210,7 +210,7 @@ public class LotusBlight {
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
         event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
-        event.put(com.lotusblight.registry.ModEntities.SCREECH.get(), com.lotusblight.entity.ScreechEntity.createAttributes().build());
+        event.put(com.lotusblight.registry.ModEntities.CREAK.get(), com.lotusblight.entity.CreakEntity.createAttributes().build());
     }
 
 

@@ -21,7 +21,7 @@ public final class LotusClientSetup {
         // Reuses ZombieRenderer's humanoid model/animation rig via a thin subclass (HonchoRenderer)
         // that overrides the hardcoded vanilla zombie texture with Honcho's own original one.
         event.registerEntityRenderer(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.client.HonchoGeoRenderer::new);
-        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.SCREECH.get(), com.lotusblight.client.ScreechRenderer::new);
+        event.registerEntityRenderer(com.lotusblight.registry.ModEntities.CREAK.get(), com.lotusblight.client.CreakRenderer::new);
     }
 
     /**

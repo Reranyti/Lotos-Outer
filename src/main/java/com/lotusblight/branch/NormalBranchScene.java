@@ -42,12 +42,14 @@ public final class NormalBranchScene {
         int tick;
         Vec3 water;      // where the player is drawn to drown
         double liftFrom; // y the lift starts from
+        ServerPlayer owner; // the body the scene runs on (a respawn gives a new one)
     }
 
     /** Starts the scene for a player who has just finished the run. */
     static void start(ServerPlayer player) {
         Run run = new Run();
         run.water = nearestWater(player);
+        run.owner = player;
         runs.put(player.getUUID(), run);
         player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, TOTAL + 40, 250, false, false));
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new NormalBranchScenePacket(1, 0f));
@@ -65,6 +67,15 @@ public final class NormalBranchScene {
 
     /** Advances one player's scene a tick. Returns true when it's finished (and the run is dropped). */
     private static boolean tickRun(ServerPlayer player, Run run) {
+        // The scene is started by the final death itself: it waits for the respawn, then plays from the start on the new body.
+        if (!player.isAlive()) return false;
+        if (run.owner != player) {
+            run.owner = player;
+            run.tick = 0;
+            run.water = nearestWater(player);
+            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, TOTAL + 40, 250, false, false));
+            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new NormalBranchScenePacket(1, 0f));
+        }
         run.tick++;
         // The player can't act during any of this.
         player.setDeltaMovement(Vec3.ZERO);

@@ -1,7 +1,7 @@
 package com.lotusblight.client;
 
 import com.lotusblight.LotusBlight;
-import com.lotusblight.entity.ScreechEntity;
+import com.lotusblight.entity.CreakEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -18,14 +18,14 @@ import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
 /**
- * Draws Screech from its mesh ({@link ScreechModel}): every body part is a rigid piece of stone hung on a bone, the bones are posed here
+ * Draws Creak from its mesh ({@link CreakModel}): every body part is a rigid piece of stone hung on a bone, the bones are posed here
  * - a stalking walk, the hands coming up to cover the face when it is looked at - and the triangles are handed to the ordinary
  * entity buffers, so shader packs and the light of the place treat it like any other mob. The hollows and the eye are drawn once more
  * with the glowing texture. Far away a coarser mesh is used.
  */
-public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(LotusBlight.MODID, "textures/entity/screech.png");
-    private static final ResourceLocation GLOW = new ResourceLocation(LotusBlight.MODID, "textures/entity/screech_glowing.png");
+public class CreakRenderer extends EntityRenderer<CreakEntity> {
+    private static final ResourceLocation TEXTURE = new ResourceLocation(LotusBlight.MODID, "textures/entity/creak.png");
+    private static final ResourceLocation GLOW = new ResourceLocation(LotusBlight.MODID, "textures/entity/creak_glowing.png");
     private static final double FAR_DISTANCE_SQ = 28.0 * 28.0;
 
     /** The pose that puts both hands in front of the face: shoulder forward and in, elbow up, fingers up and curled towards it. */
@@ -34,19 +34,19 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
             {"right_arm", "-92", "44", "0"}, {"right_forearm", "-66", "10", "0"}, {"right_hand", "-8", "0", "0"},
     };
 
-    public ScreechRenderer(EntityRendererProvider.Context context) {
+    public CreakRenderer(EntityRendererProvider.Context context) {
         super(context);
         this.shadowRadius = 0.5f;
     }
 
     @Override
-    public ResourceLocation getTextureLocation(ScreechEntity entity) {
+    public ResourceLocation getTextureLocation(CreakEntity entity) {
         return TEXTURE;
     }
 
     @Override
-    public void render(ScreechEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
-        ScreechModel model = ScreechModel.get();
+    public void render(CreakEntity entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
+        CreakModel model = CreakModel.get();
         if (model == null) return;
         int n = model.boneNames.length;
         float[][] angles = pose(entity, model, partialTick);
@@ -69,7 +69,7 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
         }
 
         double dist = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.getX(), entity.getY(), entity.getZ());
-        ScreechModel.Part[] parts = dist > FAR_DISTANCE_SQ ? model.far : model.near;
+        CreakModel.Part[] parts = dist > FAR_DISTANCE_SQ ? model.far : model.near;
         // Two passes, each asking for its buffer only when it starts: the buffer source hands out one shared builder for both render
         // types, so a buffer fetched early would end up written into whichever type was asked for last.
         Matrix4f[] matrices = new Matrix4f[parts.length];
@@ -87,7 +87,7 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
     }
 
     /** The angles (degrees about x, y, z) of every bone for this moment. */
-    private static float[][] pose(ScreechEntity e, ScreechModel model, float pt) {
+    private static float[][] pose(CreakEntity e, CreakModel model, float pt) {
         float[][] a = new float[model.boneNames.length][3];
         float age = e.tickCount + pt;
         float cover = Mth.lerp(pt, e.coverO, e.cover);
@@ -129,7 +129,7 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
         return a;
     }
 
-    private static void set(ScreechModel model, float[][] a, String bone, float x, float y, float z) {
+    private static void set(CreakModel model, float[][] a, String bone, float x, float y, float z) {
         Integer i = model.boneIndex.get(bone);
         if (i == null) return;
         a[i][0] = x;
@@ -138,7 +138,7 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
     }
 
     /** Hands a part's triangles to the buffer, moved by the bone matrices; {@code glowOnly} sends just the ones on the glowing tiles. */
-    private static void submit(VertexConsumer vc, ScreechModel.Part part, Matrix4f m, Matrix3f nm, int light, boolean glowOnly) {
+    private static void submit(VertexConsumer vc, CreakModel.Part part, Matrix4f m, Matrix3f nm, int light, boolean glowOnly) {
         float[] mm = new float[16];
         m.get(mm);
         float[] n = new float[9];

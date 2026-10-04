@@ -25,13 +25,13 @@ public final class ModEntities {
                     .sized(0.6f, 1.95f)
                     .build("honcho"));
 
-    public static final RegistryObject<EntityType<com.lotusblight.entity.ScreechEntity>> SCREECH = ENTITY_TYPES.register(
-            "screech",
-            () -> EntityType.Builder.of(com.lotusblight.entity.ScreechEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<com.lotusblight.entity.CreakEntity>> CREAK = ENTITY_TYPES.register(
+            "creak",
+            () -> EntityType.Builder.of(com.lotusblight.entity.CreakEntity::new, MobCategory.MISC)
                     .sized(0.9f, 2.7f)
                     .fireImmune()
                     .clientTrackingRange(10)
-                    .build("screech"));
+                    .build("creak"));
 
     private ModEntities() {}
 }
