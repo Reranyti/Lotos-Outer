@@ -141,6 +141,8 @@ public final class NormalBranchFreeze {
         command.add("/assets/" + LotusBlight.MODID + "/overlay/finale.mp4");
         // Our temporary files go away with the process.
         command.add("--cleanup");
+        // On the Chromo difficulty the first two songs are played on their own, harder maps.
+        if (ChromoClient.isActive()) command.add("--chromo");
         Thread starter = new Thread(() -> {
             try {
                 Process process = new ProcessBuilder(command)

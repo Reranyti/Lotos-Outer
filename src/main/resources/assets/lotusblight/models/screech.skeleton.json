@@ -1,0 +1,140 @@
+{
+  "units_per_block": 16,
+  "bones": [
+    {
+      "name": "waist",
+      "parent": null,
+      "pivot": [
+        0.0,
+        19.62,
+        -0.2
+      ]
+    },
+    {
+      "name": "body",
+      "parent": "waist",
+      "pivot": [
+        0.0,
+        21.255,
+        0.0
+      ]
+    },
+    {
+      "name": "head",
+      "parent": "body",
+      "pivot": [
+        0.0,
+        33.245,
+        0.8
+      ]
+    },
+    {
+      "name": "right_arm",
+      "parent": "body",
+      "pivot": [
+        -5.723,
+        29.43,
+        0.0
+      ]
+    },
+    {
+      "name": "right_forearm",
+      "parent": "right_arm",
+      "pivot": [
+        -8.72,
+        21.364,
+        1.4
+      ]
+    },
+    {
+      "name": "right_hand",
+      "parent": "right_forearm",
+      "pivot": [
+        -6.976,
+        15.533,
+        5.8
+      ]
+    },
+    {
+      "name": "left_arm",
+      "parent": "body",
+      "pivot": [
+        5.723,
+        29.43,
+        0.0
+      ]
+    },
+    {
+      "name": "left_forearm",
+      "parent": "left_arm",
+      "pivot": [
+        8.72,
+        21.364,
+        1.4
+      ]
+    },
+    {
+      "name": "left_hand",
+      "parent": "left_forearm",
+      "pivot": [
+        6.976,
+        15.533,
+        5.8
+      ]
+    },
+    {
+      "name": "right_leg",
+      "parent": "waist",
+      "pivot": [
+        -2.725,
+        19.729,
+        0.0
+      ]
+    },
+    {
+      "name": "right_shin",
+      "parent": "right_leg",
+      "pivot": [
+        -3.27,
+        10.355,
+        0.6
+      ]
+    },
+    {
+      "name": "right_foot",
+      "parent": "right_shin",
+      "pivot": [
+        -2.834,
+        2.834,
+        -0.4
+      ]
+    },
+    {
+      "name": "left_leg",
+      "parent": "waist",
+      "pivot": [
+        2.725,
+        19.729,
+        0.0
+      ]
+    },
+    {
+      "name": "left_shin",
+      "parent": "left_leg",
+      "pivot": [
+        3.27,
+        10.355,
+        0.6
+      ]
+    },
+    {
+      "name": "left_foot",
+      "parent": "left_shin",
+      "pivot": [
+        2.834,
+        2.834,
+        -0.4
+      ]
+    }
+  ]
+}

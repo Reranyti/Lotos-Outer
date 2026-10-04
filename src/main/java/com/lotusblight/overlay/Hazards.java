@@ -33,6 +33,9 @@ final class Hazards {
     private final double[][] stars = new double[320][4];     // x, y (0..1), brightness, twinkle
     private final double[][] streaks = new double[520][3];   // angle, how far out, brightness
 
+    /** How far the Glitcher is turned about the middle of the eyes (the Chromo difficulty spins him). */
+    double actorSpin;
+
     Hazards(int[] skin, int height) {
         java.util.Random rnd = new java.util.Random(81);
         for (double[] s : stars) { s[0] = rnd.nextDouble(); s[1] = rnd.nextDouble(); s[2] = 0.3 + rnd.nextDouble() * 0.7; s[3] = rnd.nextDouble(); }
@@ -58,7 +61,7 @@ final class Hazards {
 
         // The Glitcher walks, throws icons, stomps and rises to the middle of the eyes.
         if (icons == null && timeMs >= GlitcherActor.COLLECT_FROM - 2000) icons = loadIcons();
-        if (!actorBehind(timeMs)) actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+        if (!actorBehind(timeMs)) renderActor(g, w, h, timeMs, fcy, fs);
         actor.renderEffects(g, w, h, timeMs, h * 0.72);
     }
 
@@ -235,8 +238,19 @@ final class Hazards {
         drawEyes(g, w, h, timeMs, fieldAmount(timeMs), fcy, fs);
         if (actorBehind(timeMs)) {
             if (icons == null) icons = loadIcons();
-            actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+            renderActor(g, w, h, timeMs, fcy, fs);
         }
+    }
+
+    private void renderActor(Graphics2D g, int w, int h, double timeMs, double fcy, double fs) {
+        if (actorSpin == 0) {
+            actor.render(g, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+            return;
+        }
+        Graphics2D r = (Graphics2D) g.create();
+        r.rotate(actorSpin, w * 0.5, fcy);
+        actor.render(r, w, h, timeMs, fcy + h * 0.2 * fs, fs, icons, GameMain.desktopIconSpots());
+        r.dispose();
     }
 
     /** Just the field of eyes of 1:21, full strength, for other scenes; {@code timeMs} steers how far it has turned. */

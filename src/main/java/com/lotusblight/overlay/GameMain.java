@@ -75,6 +75,9 @@ public final class GameMain {
     // Set with --interlude WAV: the music of the cutscene between the second and third songs.
     private static String interludeWav;
     // A picture of the desktop for the shattering when the fight was started on its own (no exit scene took one).
+    /** Health for the first song on the Chromo map - the map is very hard, so a lot of misses are allowed. */
+    private static final int CHROMO_SONG1_HP = 320;
+    private static java.awt.Robot cursorRobot;
     private static java.awt.image.BufferedImage testShot;
 
     static java.awt.image.BufferedImage desktopShot() {
@@ -128,7 +131,7 @@ public final class GameMain {
     public static void main(String[] args) throws Exception {
         String song1Wav = null, song2Wav = null, song3Wav = null, framesDir = null, animWav = null, video = null, videoResource = null;
         double animFps = 30, startSong2 = -1, startSong3 = -1, cutsceneAt = -1, finaleAt = -1;
-        boolean minimize = false, lessonOnly = false;
+        boolean minimize = false, lessonOnly = false, chromo = false;
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("--song1")) song1Wav = args[i + 1];
             if (args[i].equals("--song2")) song2Wav = args[i + 1];
@@ -150,6 +153,7 @@ public final class GameMain {
             if (arg.equals("--minimize")) minimize = true;
             if (arg.equals("--from-game")) fromGame = true;
             if (arg.equals("--lesson")) lessonOnly = true;
+            if (arg.equals("--chromo")) chromo = true;
         }
         if (minimize && System.getProperty("os.name", "").toLowerCase().contains("win")) {
             // Windows out of the way for a test run started on its own (the exit scene does this in the real chain).
@@ -165,11 +169,13 @@ public final class GameMain {
         int[] skin = loadSkin();
         Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getDefaultScreenDevice().getDefaultConfiguration().getBounds();
-        OsuMap map1 = OsuMap.load("/assets/lotusblight/overlay/map_1.osu");
-        OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2.osu");
-        RhythmGame g1 = new RhythmGame(map1, 48);
+        // The Chromo difficulty plays the first two songs on their own, harder maps.
+        OsuMap map1 = OsuMap.load("/assets/lotusblight/overlay/map_1" + (chromo ? "_chromo" : "") + ".osu");
+        OsuMap map2 = OsuMap.load("/assets/lotusblight/overlay/map_2" + (chromo ? "_chromo" : "") + ".osu");
+        // 615 notes at 16 stars: the first Chromo song is kind to the player's health (a miss costs one point either way).
+        RhythmGame g1 = new RhythmGame(map1, chromo ? CHROMO_SONG1_HP : 48);
         RhythmGame g2 = new RhythmGame(map2, 260);
-        g1.setFx(PlayfieldFx.song1());
+        g1.setFx(chromo ? PlayfieldFx.song1Chromo() : PlayfieldFx.song1());
         g2.setFx(PlayfieldFx.song2());
         RhythmGame g3 = null;
         if (song3Wav != null && OsuMap.class.getResource("/assets/lotusblight/overlay/map_3.osu") != null) {
@@ -194,6 +200,7 @@ public final class GameMain {
         int[] honchoSkin = loadSkinFile("/assets/lotusblight/textures/entity/honcho.png");
         Engine engine = new Engine(g1, g2, g3, anim, fakeWindows, karaoke, contact, song1Wav, song2Wav, song3Wav, animWav);
         engine.setup(skin, honchoSkin != null ? honchoSkin : skin, screen.height);
+        if (chromo) engine.chromo1 = new ChromoSong1();
         if (lessonOnly) engine.jumpToLesson();
         if (startSong2 >= 0) engine.jumpToSong2(startSong2);
         if (startSong3 >= 0 && g3 != null) engine.jumpToSong3(startSong3);
@@ -240,6 +247,26 @@ public final class GameMain {
                 if (e.getButton() == MouseEvent.BUTTON1) engine.click(e.getX(), e.getY(), canvas.getWidth(), canvas.getHeight());
             }
         });
+        // The Chromo threads are walls for the cursor: a step across one is undone unless the left button is held.
+        java.awt.event.MouseMotionAdapter motion = new java.awt.event.MouseMotionAdapter() {
+            private int px = -1, py = -1;
+            private void moved(MouseEvent e) {
+                boolean held = (e.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK) != 0;
+                if (px >= 0 && engine.cursorBlocked(px, py, e.getX(), e.getY(), held, canvas.getWidth(), canvas.getHeight())) {
+                    try {
+                        java.awt.Point o = canvas.getLocationOnScreen();
+                        if (cursorRobot == null) cursorRobot = new java.awt.Robot();
+                        cursorRobot.mouseMove(o.x + px, o.y + py);
+                    } catch (Exception | Error ignored) { }
+                    return;
+                }
+                px = e.getX();
+                py = e.getY();
+            }
+            @Override public void mouseMoved(MouseEvent e) { moved(e); }
+            @Override public void mouseDragged(MouseEvent e) { moved(e); }
+        };
+        canvas.addMouseMotionListener(motion);
         frame.setContentPane(canvas);
         frame.setVisible(true);
         frame.toFront();
@@ -533,6 +560,14 @@ public final class GameMain {
             }
         }
 
+        /** The first song's extras on the Chromo difficulty (null otherwise). */
+        ChromoSong1 chromo1;
+
+        /** A step of the cursor from (px,py) to (x,y): true if a Chromo thread stops it. */
+        boolean cursorBlocked(int px, int py, int x, int y, boolean leftHeld, int w, int h) {
+            return phase == Phase.SONG1 && chromo1 != null && chromo1.blocked(px, py, x, y, leftHeld, clockMs(), w, h);
+        }
+
         private Hazards hazards;
 
         void render(Graphics2D g, int w, int h, Hazards hazards) {
@@ -541,9 +576,18 @@ public final class GameMain {
             switch (phase) {
                 case SONG1 -> {
                     g1.update(t);
-                    hazards.renderBack(g, w, h, t);
-                    g1.render(g, w, h, t);
-                    hazards.render(g, w, h, t);
+                    if (chromo1 != null) {
+                        final double tt = t;
+                        hazards.actorSpin = ChromoSong1.glitcherSpin(t);
+                        chromo1.render(g, w, h, t, gg -> {
+                            hazards.renderBack(gg, w, h, tt);
+                            chromo1.renderEyes(gg, w, h, tt);
+                        }, gg -> g1.render(gg, w, h, tt), gg -> hazards.render(gg, w, h, tt));
+                    } else {
+                        hazards.renderBack(g, w, h, t);
+                        g1.render(g, w, h, t);
+                        hazards.render(g, w, h, t);
+                    }
                     if (!g1.alive()) end(Phase.DEFEAT);
                     else if (g1.finished(t) || trackOver()) startLesson();
                 }
@@ -581,7 +625,7 @@ public final class GameMain {
                     }
                     if (!g2.alive()) end(Phase.DEFEAT);
                     else if (g2.finished(t) || trackOver()) {
-                        if (g3 != null && song3Wav != null) {
+                        if (chromo1 == null && g3 != null && song3Wav != null) {
                             if (clip != null) { clip.stop(); clip.close(); clip = null; }
                             interlude = new Interlude(glitcherSkin, honchoSkin, desktopShot(), fall);
                             phase = Phase.INTERLUDE;

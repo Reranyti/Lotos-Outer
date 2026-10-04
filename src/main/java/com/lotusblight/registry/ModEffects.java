@@ -16,5 +16,6 @@ public final class ModEffects {
     public static final RegistryObject<MobEffect> COLD_BLIGHT = EFFECTS.register("cold_blight", ColdBlightEffect::new);
     public static final RegistryObject<MobEffect> LOTONIRIYA = EFFECTS.register("lotoniriya", LotoniriyaEffect::new);
     public static final RegistryObject<MobEffect> TRUE_LIGHT = EFFECTS.register("true_light", TrueLightEffect::new);
+    public static final RegistryObject<MobEffect> MENTALLY_UNWELL = EFFECTS.register("mentally_unwell", com.lotusblight.effect.MentallyUnwellEffect::new);
     private ModEffects() {}
 }

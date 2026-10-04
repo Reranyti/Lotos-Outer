@@ -102,6 +102,8 @@ public final class ExitMain {
         fightArgs.addAll(animArgs);
         // The finale animation is played straight from the video, in memory, by the fight itself.
         if (video != null) fightArgs.addAll(List.of("--video", video));
+        // Single flags go last, after the pairs.
+        if (flags.contains("--chromo")) fightArgs.add("--chromo");
 
         if (cleanup) {
             fightArgs.add("--from-game");          // started by the game: the closing scene gives its window back

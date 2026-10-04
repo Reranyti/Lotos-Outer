@@ -10,7 +10,10 @@
   ],
   "client": [
     "chatoverhaul.CustomChatComponentSpeakerIconMixin",
-    "minecraft.PlayerModelFingersMixin"
+    "minecraft.PlayerModelFingersMixin",
+    "minecraft.OptionsScreenChromoMixin",
+    "minecraft.WorldCreationUiStateChromoMixin",
+    "minecraft.GameTabChromoMixin"
   ],
   "injectors": {
     "defaultRequire": 1

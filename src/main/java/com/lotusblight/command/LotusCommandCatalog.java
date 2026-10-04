@@ -33,6 +33,8 @@ public final class LotusCommandCatalog {
 
             new Entry("/lotus timewarp 20", "Прогнать 20 проходов заражения без ускорения тика"),
 
+            new Entry("/effect give @s lotusblight:mentally_unwell 120", "Эффект «Психически не здоров.» на 2 минуты (серая картинка и стены мяса по краям)"),
+            new Entry("/summon lotusblight:screech ~ ~ ~", "Призвать Крика (модель; прикрывает лицо руками, когда на него смотрят)"),
             new Entry("/lotus chase unlock", "Разблокировать лабораторию Побега (обход 15%)"),
             new Entry("/lotus chase status", "Статус лаборатории Побега"),
             new Entry("/lotus chase tp", "Телепорт ко входу в лабораторию Побега"),

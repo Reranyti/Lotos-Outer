@@ -177,6 +177,7 @@ public class LotusBlight {
             MinecraftForge.EVENT_BUS.register(new com.lotusblight.worldgen.QuarantineBarrier());
         }
         MinecraftForge.EVENT_BUS.register(com.lotusblight.command.LotusCommands.class);
+        MinecraftForge.EVENT_BUS.register(com.lotusblight.world.ChromoDifficulty.class);
         com.lotusblight.map.NetworkHandler.register();
         CriteriaTriggers.register(SingleBiomeWorldTrigger.INSTANCE);
         CriteriaTriggers.register(TwoInfectionsTrigger.INSTANCE);
@@ -209,6 +210,7 @@ public class LotusBlight {
     private void registerEntityAttributes(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(com.lotusblight.registry.ModEntities.WORLD_LOTUS_GUARDIAN.get(), net.minecraft.world.entity.animal.Wolf.createAttributes().build());
         event.put(com.lotusblight.registry.ModEntities.HONCHO.get(), com.lotusblight.entity.HonchoEntity.createAttributes().build());
+        event.put(com.lotusblight.registry.ModEntities.SCREECH.get(), com.lotusblight.entity.ScreechEntity.createAttributes().build());
     }
 
 

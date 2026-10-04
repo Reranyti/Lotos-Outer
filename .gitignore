@@ -39,3 +39,7 @@ art/music/contact/
 art/music/third/
 
 /mods-extra/
+
+# test-run logs and the track kept only for reference (no permission to ship it)
+/logs/
+/art/chromo/*.ogg

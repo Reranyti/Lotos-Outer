@@ -81,6 +81,32 @@ abstract class PlayfieldFx {
         };
     }
 
+    /** The first song on the Chromo difficulty: all of the above, and the screen turns (0:45) and swings both ways (1:43). */
+    static PlayfieldFx song1Chromo() {
+        PlayfieldFx base = song1();
+        return new PlayfieldFx() {
+            @Override
+            AffineTransform transform(double ms, int w, int h) {
+                AffineTransform at = new AffineTransform();
+                at.translate(w / 2.0, h / 2.0);
+                at.rotate(ChromoSong1.spin(ms));
+                at.translate(-w / 2.0, -h / 2.0);
+                at.concatenate(base.transform(ms, w, h));
+                return at;
+            }
+
+            @Override
+            Style style(double hitMs, int idx) {
+                return base.style(hitMs, idx);
+            }
+
+            @Override
+            double glitch(double ms) {
+                return base.glitch(ms);
+            }
+        };
+    }
+
     // ------------------------------------------------------------ the second song
 
     /** Error boxes among the circles while the Glitcher throws his windows; the playfield tears as the eye comes. */

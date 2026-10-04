@@ -26,6 +26,25 @@ Lotus Blight — бесплатный некоммерческий фанатс�
   [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **Живая карта**, очищающий порошок, метеоритное снаряжение, репутация с фракциями, свой календарь.
 
+## Предупреждения
+
+- **Жестокое содержание.** Поздние сцены (лестничная клетка, концовки) показывают кровь, расчленёнку
+  и насилие, пугающие образы. Не для детей и не для впечатлительных.
+- **Мерцание, помехи и громкие звуки.** Глитч-эффекты, резкая смена света и пугающие внезапные
+  появления (в том числе в стороннем моде Ransom). Осторожно при светочувствительной эпилепсии.
+- **Окно поверх рабочего стола.** В скрытой ветке мод рисует окно поверх вашего рабочего стола,
+  сворачивает остальные окна и один раз делает снимок экрана **только в памяти**, чтобы «сломать»
+  рабочий стол на картинке. Снимок не сохраняется и никуда не отправляется, мод не пользуется сетью
+  и не читает, не удаляет и не переносит ваши файлы.
+- **Сложность «Хромо» необратима.** Она выбирается в обычном списке сложностей Minecraft, включается
+  для всего мира и не отключается обратно, даже командами.
+- **Готовится: концовки, которые удаляют мир.** Любая концовка (кроме «проклятой») убивает игрока.
+  Мир, созданный заново вместе с модом, концовка может удалить. Миры, созданные без мода, мод не
+  трогает, а в мире, куда мод добавили позже, пропадает только его содержимое. Делайте копии миров.
+- **Сторонний мод Ransom In Minecraft** (Wentory, MIT) в сборке отдельный и необязательный: у него
+  свои пугающие появления и штраф за провал (по умолчанию он отнимает хотбар). Настраивается в его
+  конфиге.
+
 ## Установка
 
 **Проще всего — рекомендуемая сборка.** Архив `LotusBlight-Pack-<версия>.zip` из
@@ -52,7 +71,7 @@ Lotus Blight — бесплатный некоммерческий фанатс�
 - [JourneyMap](https://modrinth.com/mod/journeymap) — очаги и зона заражения на его карте;
 - [Nature's Compass](https://modrinth.com/mod/natures-compass), [YetAnotherConfigLib](https://modrinth.com/mod/yacl).
 
-Игре с шейдерами и сборкой хватает 4–6 ГБ памяти.
+Игре со всей сборкой и шейдерами лучше выделить 6–8 ГБ памяти.
 
 ## Команды
 
@@ -127,6 +146,27 @@ characters or story (see [LICENSE](LICENSE) and [ASSETS.md](ASSETS.md)).
   see [CHANGELOG.md](CHANGELOG.md) (1.8000).
 - **A living map**, cleansing powder, meteorite gear, faction reputation, a calendar of its own.
 
+## Warnings
+
+- **Graphic content.** The late scenes (the stairwell, the endings) show blood, dismemberment and
+  violence, and frightening imagery. Not for children or the easily disturbed.
+- **Flashing, interference and loud sounds.** Glitch effects, sudden changes of light and sudden
+  frightening appearances (including in the third-party Ransom mod). Take care with photosensitive
+  epilepsy.
+- **A window over your desktop.** In the hidden branch the mod draws a window over your desktop,
+  minimises your other windows and takes one screenshot **in memory only**, to "break" the desktop
+  on the picture. The picture is not saved or sent anywhere; the mod uses no network and does not
+  read, delete or move your files.
+- **The Chromo difficulty cannot be undone.** It is picked in Minecraft's ordinary difficulty list,
+  applies to the whole world and cannot be switched back, not even with commands.
+- **Coming: endings that delete the world.** Every ending (except the cursed one) kills the player.
+  A world created anew together with the mod can be deleted by the ending. Worlds made without the
+  mod are never touched, and in a world the mod was added to later only its own content disappears.
+  Keep copies of your worlds.
+- **The third-party Ransom In Minecraft mod** (Wentory, MIT) is separate and optional in the pack: it
+  has its own frightening appearances and a penalty for failing (by default it takes your hotbar).
+  It can be configured in its own config.
+
 ## Installing
 
 **The easy way is the recommended pack.** Get `LotusBlight-Pack-<version>.zip` from the
@@ -154,7 +194,7 @@ Optional — used when installed:
 - [JourneyMap](https://modrinth.com/mod/journeymap) — outbreaks and the infected area on its map;
 - [Nature's Compass](https://modrinth.com/mod/natures-compass), [YetAnotherConfigLib](https://modrinth.com/mod/yacl).
 
-4–6 GB of memory is enough for the game with shaders and the pack.
+Give the game 6–8 GB of memory with the whole pack and shaders.
 
 ## Commands
 

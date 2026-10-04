@@ -40,17 +40,17 @@ public final class RhythmMain {
         String audio = null;
         double startAt = 0;
         int song = 1;
-        boolean desktop = true;
+        boolean desktop = true, chromo = false;
         for (int i = 0; i < args.length; i++) {
             if (i < args.length - 1 && args[i].equals("--audio")) audio = args[i + 1];
             if (i < args.length - 1 && args[i].equals("--at")) startAt = Double.parseDouble(args[i + 1]);
             if (i < args.length - 1 && args[i].equals("--song")) song = Integer.parseInt(args[i + 1]);
             if (args[i].equals("--window")) desktop = false;
+            if (args[i].equals("--chromo")) chromo = true;
         }
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
 
-        OsuMap map = OsuMap.load(song == 2 ? "/assets/lotusblight/overlay/map_2.osu"
-                : "/assets/lotusblight/overlay/map_1.osu");
+        OsuMap map = OsuMap.load("/assets/lotusblight/overlay/map_" + (song == 2 ? 2 : 1) + (chromo ? "_chromo" : "") + ".osu");
         RhythmGame game = new RhythmGame(map, song == 2 ? 180 : 48);
         final boolean overDesktop = desktop;
         int[] skin = loadSkin();
