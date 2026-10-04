@@ -33,6 +33,12 @@ public final class LotusCommandCatalog {
 
             new Entry("/lotus timewarp 20", "Прогнать 20 проходов заражения без ускорения тика"),
 
+            new Entry("/lotus event neutral leafiles", "Нейтральная линия: «Лейфайлс», весь инвентарь становится папкой"),
+            new Entry("/lotus event war skeleton", "Линия войны: заготовка события"),
+            new Entry("/lotus event alliance skeleton", "Линия альянса: заготовка события"),
+            new Entry("/lotus event guiding skeleton", "Путеводная линия: заготовка события (запускать с force)"),
+            new Entry("/lotus event cursed skeleton", "Проклятая / Истинная линия: заготовка события"),
+            new Entry("/lotus event honcho skeleton", "Линия Хончо: заготовка события"),
             new Entry("/effect give @s lotusblight:mentally_unwell 120", "Эффект «Психически не здоров.» на 2 минуты (серая картинка и стены мяса по краям)"),
             new Entry("/summon lotusblight:screech ~ ~ ~", "Призвать Крика (модель; прикрывает лицо руками, когда на него смотрят)"),
             new Entry("/lotus chase unlock", "Разблокировать лабораторию Побега (обход 15%)"),

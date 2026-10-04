@@ -48,6 +48,7 @@ public final class LotusCommands {
                 .then(outbreakCommands())
                 .then(branchCommands())
                 .then(normalBranchCommands())
+                .then(eventCommands())
                 .then(mapCommands())
                 .then(glandCommands())
                 .then(Commands.literal("timewarp")
@@ -63,6 +64,58 @@ public final class LotusCommands {
                 .then(honchoCommands())
                 .then(Commands.literal("compat").executes(ctx -> compatReport(ctx.getSource())))
                 .then(Commands.literal("book").executes(ctx -> openCommandBook(ctx.getSource()))));
+    }
+
+    // ---- /lotus event <line> <event> [player] [force]: running the story events by hand --------------
+    // One explicit branch per event on purpose (no registry, no generic lookup): a failing command points straight at its event.
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> eventCommands() {
+        return Commands.literal("event")
+                .then(Commands.literal("war").then(Commands.literal("skeleton")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Война / заготовка", com.lotusblight.event.WarEvents.skeleton(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Война / заготовка", com.lotusblight.event.WarEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Война / заготовка", com.lotusblight.event.WarEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), true)))))))
+                .then(Commands.literal("alliance").then(Commands.literal("skeleton")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Альянс / заготовка", com.lotusblight.event.AllianceEvents.skeleton(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Альянс / заготовка", com.lotusblight.event.AllianceEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Альянс / заготовка", com.lotusblight.event.AllianceEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), true)))))))
+                .then(Commands.literal("neutral").then(Commands.literal("leafiles")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Нейтральная / Лейфайлс", com.lotusblight.event.NeutralEvents.leafiles(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Нейтральная / Лейфайлс", com.lotusblight.event.NeutralEvents.leafiles(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Нейтральная / Лейфайлс", com.lotusblight.event.NeutralEvents.leafiles(EntityArgument.getPlayer(ctx, "player"), true)))))))
+                .then(Commands.literal("guiding").then(Commands.literal("skeleton")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Путеводная / заготовка", com.lotusblight.event.GuidingEvents.skeleton(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Путеводная / заготовка", com.lotusblight.event.GuidingEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Путеводная / заготовка", com.lotusblight.event.GuidingEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), true)))))))
+                .then(Commands.literal("cursed").then(Commands.literal("skeleton")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Проклятая / заготовка", com.lotusblight.event.CursedEvents.skeleton(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Проклятая / заготовка", com.lotusblight.event.CursedEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Проклятая / заготовка", com.lotusblight.event.CursedEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), true)))))))
+                .then(Commands.literal("honcho").then(Commands.literal("skeleton")
+                        .executes(ctx -> reportEvent(ctx.getSource(), "Хончо / заготовка", com.lotusblight.event.HonchoEvents.skeleton(ctx.getSource().getPlayerOrException(), false)))
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(ctx -> reportEvent(ctx.getSource(), "Хончо / заготовка", com.lotusblight.event.HonchoEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), false)))
+                                .then(Commands.literal("force")
+                                        .executes(ctx -> reportEvent(ctx.getSource(), "Хончо / заготовка", com.lotusblight.event.HonchoEvents.skeleton(EntityArgument.getPlayer(ctx, "player"), true)))))));
+    }
+
+    private static int reportEvent(CommandSourceStack source, String name, com.lotusblight.event.EventResult result) {
+        switch (result) {
+            case DONE -> source.sendSuccess(() -> Component.literal("Событие «" + name + "» выполнено."), true);
+            case WRONG_LINE -> source.sendFailure(Component.literal("Событие «" + name + "»: игрок не на этой линии (добавь force, чтобы всё равно запустить)."));
+            case NOTHING_TO_DO -> source.sendFailure(Component.literal("Событие «" + name + "»: нечего делать (например, пустой инвентарь)."));
+        }
+        return result == com.lotusblight.event.EventResult.DONE ? 1 : 0;
     }
 
     // ---- /lotus normalbranch ... (testing the entry) --------------------
