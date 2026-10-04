@@ -31,7 +31,7 @@ import java.lang.reflect.Modifier;
 @Mod.EventBusSubscriber(modid = LotusBlight.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ChromoClient {
     private static final Logger LOG = LogUtils.getLogger();
-    private static final long PENDING_LIFE_MS = 20 * 60_000L;
+    private static final long PENDING_LIFE_MS = 5 * 60_000L;
 
     private static volatile boolean active;
     private static boolean pendingNewWorld;
@@ -49,6 +49,15 @@ public final class ChromoClient {
 
     public static void setActive(boolean value) {
         active = value;
+    }
+
+    /** Backing out of the world-creation screen (to the title or the world list) takes the Chromo choice back with it. */
+    @SubscribeEvent
+    public static void onScreen(net.minecraftforge.client.event.ScreenEvent.Opening event) {
+        net.minecraft.client.gui.screens.Screen next = event.getNewScreen();
+        if (next instanceof net.minecraft.client.gui.screens.TitleScreen || next instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen) {
+            pendingNewWorld = false;
+        }
     }
 
     @SubscribeEvent

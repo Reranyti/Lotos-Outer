@@ -53,7 +53,7 @@ public class DialogueChoicePacket {
                 LotusPlayerState.addReputation(player, com.lotusblight.data.Faction.LOTUS,
                         packet.branch == LotusPlayerState.BRANCH_ALLIANCE ? 10 : -10);
             }
-            ChatOverhaulBranchColor.applyBranchColor(player, packet.branch);
+            ChatOverhaulBranchColor.applyBranchColor(player, LotusPlayerState.getDialogueBranch(player));
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new PlayerStateSyncPacket(
                     LotusPlayerState.getDialogueBranch(player), LotusPlayerState.hasFullMapVisibility(player),
                     LotusPlayerState.hasHeardInnerVoice(player), LotusPlayerState.hasSeenGuardian(player),

@@ -52,6 +52,12 @@ public final class GuaranteedSpawnManager {
 
     private static final LotusTaskQueue<GlobalPos> PENDING_WATER_CHECKS = new LotusTaskQueue<>();
 
+    /** A world is closing: chunks queued in it mean nothing in the next one. */
+    @SubscribeEvent
+    public void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+        PENDING_WATER_CHECKS.clear();
+    }
+
     @SubscribeEvent
     public void onChunkLoad(ChunkEvent.Load event) {
         if (!event.isNewChunk() || !(event.getLevel() instanceof ServerLevel level)) return;
