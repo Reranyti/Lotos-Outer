@@ -34,8 +34,9 @@ Lotus Blight — бесплатный некоммерческий фанатс�
   появления (в том числе в стороннем моде Ransom). Осторожно при светочувствительной эпилепсии.
 - **Окно поверх рабочего стола.** В скрытой ветке мод рисует окно поверх вашего рабочего стола,
   сворачивает остальные окна и один раз делает снимок экрана **только в памяти**, чтобы «сломать»
-  рабочий стол на картинке. Снимок не сохраняется и никуда не отправляется, мод не пользуется сетью
-  и не читает, не удаляет и не переносит ваши файлы.
+  рабочий стол на картинке. Чтобы знать, где ваши значки, мод читает в память картинку обоев
+  рабочего стола и три значения реестра Windows об их положении. Снимок не сохраняется и никуда не
+  отправляется, мод не пользуется сетью и не удаляет и не переносит ваши файлы.
 - **Сложность «Хромо» необратима.** Она выбирается в обычном списке сложностей Minecraft, включается
   для всего мира и не отключается обратно, даже командами.
 - **Готовится: концовки, которые удаляют мир.** Любая концовка (кроме «проклятой») убивает игрока.
@@ -155,8 +156,9 @@ characters or story (see [LICENSE](LICENSE) and [ASSETS.md](ASSETS.md)).
   epilepsy.
 - **A window over your desktop.** In the hidden branch the mod draws a window over your desktop,
   minimises your other windows and takes one screenshot **in memory only**, to "break" the desktop
-  on the picture. The picture is not saved or sent anywhere; the mod uses no network and does not
-  read, delete or move your files.
+  on the picture. To know where your icons are it reads the picture of your desktop wallpaper into
+  memory, and three Windows registry values about it. The picture is not saved or sent anywhere; the mod uses no network and does
+  not delete or move your files.
 - **The Chromo difficulty cannot be undone.** It is picked in Minecraft's ordinary difficulty list,
   applies to the whole world and cannot be switched back, not even with commands.
 - **Coming: endings that delete the world.** Every ending (except the cursed one) kills the player.

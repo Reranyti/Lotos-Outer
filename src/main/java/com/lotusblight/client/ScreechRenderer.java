@@ -147,8 +147,9 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
         int tris = v.length / 24;
         for (int t = 0; t < tris; t++) {
             if (glowOnly && !part.glow[t]) continue;
-            for (int k = 0; k < 3; k++) {
-                int o = (t * 3 + k) * 8;
+            // Entity render types take quads (four corners each): a triangle is sent as a quad whose last corner repeats the third.
+            for (int k = 0; k < 4; k++) {
+                int o = (t * 3 + Math.min(k, 2)) * 8;
                 float x = v[o], y = v[o + 1], z = v[o + 2];
                 float nx = v[o + 3], ny = v[o + 4], nz = v[o + 5];
                 vc.vertex(mm[0] * x + mm[4] * y + mm[8] * z + mm[12], mm[1] * x + mm[5] * y + mm[9] * z + mm[13], mm[2] * x + mm[6] * y + mm[10] * z + mm[14])

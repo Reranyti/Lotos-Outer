@@ -211,8 +211,8 @@ public class LotusEvents {
         com.lotusblight.data.StarterKitSavedData starterKit = com.lotusblight.data.StarterKitSavedData.get(player.server.overworld());
         if (starterKit.hasReceived(player.getUUID())) return;
         starterKit.markReceived(player.getUUID());
-        player.getInventory().add(new ItemStack(ModItems.LOTUS_SEED.get(), 3));
-        player.getInventory().add(LotusWikiItem.createStack());
+        net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(player, new ItemStack(ModItems.LOTUS_SEED.get(), 3));
+        net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(player, LotusWikiItem.createStack());
         player.displayClientMessage(Component.literal("Три семени лотоса и книга-вики появились у тебя. Ты сам решаешь, куда пустить корни."), false);
         // Used to scan up to 512 blocks out (16 radius tiers x 8 samples x a full-height column
         // scan each) synchronously in this very event handler — effectively the same bug that was

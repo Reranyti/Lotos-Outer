@@ -24,14 +24,14 @@ public abstract class GameTabChromoMixin {
 
     // The selector is brought up to date with the screen's state by a listener (a lambda of the constructor), not in the
     // constructor itself. The call it makes is listed under both names (development and production); only one matches.
-    @Redirect(method = "lambda$new$5(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V",
+    @Redirect(method = {"lambda$new$5(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V", "m_279851_(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V"},
             at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;getDifficulty()Lnet/minecraft/world/Difficulty;"), require = 0)
     private Difficulty lotusblight$initial(WorldCreationUiState state) {
         return shown(state);
     }
 
-    @Redirect(method = "lambda$new$5(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V",
+    @Redirect(method = {"lambda$new$5(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V", "m_279851_(Lnet/minecraft/client/gui/components/CycleButton;Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;)V"},
             at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/screens/worldselection/WorldCreationUiState;m_267816_()Lnet/minecraft/world/Difficulty;"), require = 0)
     private Difficulty lotusblight$initialProduction(WorldCreationUiState state) {
