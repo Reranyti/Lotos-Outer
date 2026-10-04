@@ -70,14 +70,18 @@ public class ScreechRenderer extends EntityRenderer<ScreechEntity> {
 
         double dist = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.getX(), entity.getY(), entity.getZ());
         ScreechModel.Part[] parts = dist > FAR_DISTANCE_SQ ? model.far : model.near;
-        VertexConsumer body = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-        VertexConsumer glow = buffers.getBuffer(RenderType.eyes(GLOW));
-        for (ScreechModel.Part part : parts) {
-            Matrix4f m = new Matrix4f(base).mul(world[part.bone]);
-            Matrix3f nm = new Matrix3f(baseNormal).mul(new Matrix3f(world[part.bone]));
-            submit(body, part, m, nm, light, false);
-            submit(glow, part, m, nm, LightTexture.FULL_BRIGHT, true);
+        // Two passes, each asking for its buffer only when it starts: the buffer source hands out one shared builder for both render
+        // types, so a buffer fetched early would end up written into whichever type was asked for last.
+        Matrix4f[] matrices = new Matrix4f[parts.length];
+        Matrix3f[] normals = new Matrix3f[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            matrices[i] = new Matrix4f(base).mul(world[parts[i].bone]);
+            normals[i] = new Matrix3f(baseNormal).mul(new Matrix3f(world[parts[i].bone]));
         }
+        VertexConsumer body = buffers.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        for (int i = 0; i < parts.length; i++) submit(body, parts[i], matrices[i], normals[i], light, false);
+        VertexConsumer glow = buffers.getBuffer(RenderType.eyes(GLOW));
+        for (int i = 0; i < parts.length; i++) submit(glow, parts[i], matrices[i], normals[i], LightTexture.FULL_BRIGHT, true);
         poseStack.popPose();
         super.render(entity, entityYaw, partialTick, poseStack, buffers, light);
     }

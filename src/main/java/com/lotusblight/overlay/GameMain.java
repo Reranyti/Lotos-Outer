@@ -91,6 +91,11 @@ public final class GameMain {
      * game the scene played out (it then hands over the horn).
      */
     private static void leaveAfterFinale() {
+        leave(Finale3.EXIT_CODE);
+    }
+
+    /** Gives the windows and the game's window back and ends the process with {@code code}. */
+    private static void leave(int code) {
         if (fromGame && System.getProperty("os.name", "").toLowerCase().contains("win")) {
             shellCall("UndoMinimizeALL()");
             ProcessHandle.current().parent().filter(ProcessHandle::isAlive).ifPresent(parent -> {
@@ -100,21 +105,21 @@ public final class GameMain {
                         + "$p=Get-Process -Id " + parent.pid() + " -ErrorAction SilentlyContinue;"
                         + "if($p -and $p.MainWindowHandle -ne 0){[N.W]::ShowWindow($p.MainWindowHandle,9)|Out-Null;[N.W]::SetForegroundWindow($p.MainWindowHandle)|Out-Null}";
                 try {
-                    Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+                    Process p = new ProcessBuilder(WinTools.powershell(), "-NoProfile", "-NonInteractive", "-Command", script)
                             .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
-                    p.waitFor(6, java.util.concurrent.TimeUnit.SECONDS);
+                    if (!p.waitFor(6, java.util.concurrent.TimeUnit.SECONDS)) p.destroyForcibly();
                 } catch (Exception ignored) { }
             });
         }
-        System.exit(Finale3.EXIT_CODE);
+        System.exit(code);
     }
 
     private static void shellCall(String call) {
         try {
-            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+            Process p = new ProcessBuilder(WinTools.powershell(), "-NoProfile", "-NonInteractive", "-Command",
                     "(New-Object -ComObject Shell.Application)." + call)
                     .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
-            p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) p.destroyForcibly();
         } catch (Exception ignored) { }
     }
 
@@ -219,7 +224,7 @@ public final class GameMain {
 
             @Override public void keyPressed(KeyEvent e) {
                 int k = e.getKeyCode();
-                if (k == KeyEvent.VK_ESCAPE) System.exit(0);
+                if (k == KeyEvent.VK_ESCAPE) leave(0);
                 if ((k == KeyEvent.VK_SPACE || k == KeyEvent.VK_ENTER || k == KeyEvent.VK_Z || k == KeyEvent.VK_X) && down.add(k)) engine.space();
             }
 
@@ -248,25 +253,39 @@ public final class GameMain {
             }
         });
         // The Chromo threads are walls for the cursor: a step across one is undone unless the left button is held.
-        java.awt.event.MouseMotionAdapter motion = new java.awt.event.MouseMotionAdapter() {
+        var motion = new java.awt.event.MouseMotionAdapter() {
             private int px = -1, py = -1;
+            private long warpedAt;
             private void moved(MouseEvent e) {
                 boolean held = (e.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK) != 0;
-                if (px >= 0 && engine.cursorBlocked(px, py, e.getX(), e.getY(), held, canvas.getWidth(), canvas.getHeight())) {
+                // The cursor put back by the warp raises an event of its own, and on a scaled display it can land a pixel off: for a moment
+                // after a warp nothing is judged, or a thread right beside it would push the cursor back forever.
+                boolean settling = System.nanoTime() - warpedAt < 80_000_000L;
+                if (!settling && px >= 0 && engine.cursorBlocked(px, py, e.getX(), e.getY(), held, canvas.getWidth(), canvas.getHeight())) {
                     try {
                         java.awt.Point o = canvas.getLocationOnScreen();
                         if (cursorRobot == null) cursorRobot = new java.awt.Robot();
                         cursorRobot.mouseMove(o.x + px, o.y + py);
-                    } catch (Exception | Error ignored) { }
-                    return;
+                        warpedAt = System.nanoTime();
+                        return;
+                    } catch (Exception | Error ignored) {
+                        // no Robot: the wall can't hold, so the cursor goes where it went
+                    }
                 }
                 px = e.getX();
                 py = e.getY();
+            }
+            void left() {
+                px = -1;                      // out of the window (a second screen): the first step back in is not judged from a stale point
+                py = -1;
             }
             @Override public void mouseMoved(MouseEvent e) { moved(e); }
             @Override public void mouseDragged(MouseEvent e) { moved(e); }
         };
         canvas.addMouseMotionListener(motion);
+        canvas.addMouseListener(new MouseAdapter() {
+            @Override public void mouseExited(MouseEvent e) { motion.left(); }
+        });
         frame.setContentPane(canvas);
         frame.setVisible(true);
         frame.toFront();
@@ -278,11 +297,13 @@ public final class GameMain {
         Timer focusTimer = new Timer(300, null);
         focusTimer.addActionListener(ev -> {
             if (frame.isFocused() || ++tries[0] > 16) { focusTimer.stop(); return; }
-            try {
-                java.awt.Robot robot = new java.awt.Robot();
-                robot.keyPress(KeyEvent.VK_ALT);
-                robot.keyRelease(KeyEvent.VK_ALT);
-            } catch (Exception | Error ignored) { }
+            if (tries[0] <= 3) {
+                try {
+                    java.awt.Robot robot = new java.awt.Robot();
+                    robot.keyPress(KeyEvent.VK_ALT);
+                    robot.keyRelease(KeyEvent.VK_ALT);
+                } catch (Exception | Error ignored) { }
+            }
             frame.toFront();
             frame.requestFocus();
         });
@@ -497,7 +518,7 @@ public final class GameMain {
         private void closeWhenShown() {
             if (phase == Phase.RESULTS && song3Played) return;              // after the third song the results wait for the space bar
             if ((System.nanoTime() - endedAt) / 1e9 < END_SCREEN_SECONDS) return;
-            System.exit(0);
+            leave(0);
         }
 
         private double clockMs() {

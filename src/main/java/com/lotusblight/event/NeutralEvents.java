@@ -12,7 +12,8 @@ public final class NeutralEvents {
 
     /** Whether this player is on the neutral line. */
     public static boolean onLine(ServerPlayer player) {
-        return LotusPlayerState.getDialogueBranch(player) == LotusPlayerState.BRANCH_UNDECIDED;
+        // the hidden branch is entered from the undecided state, but its players are not on the neutral line any more
+        return LotusPlayerState.getDialogueBranch(player) == LotusPlayerState.BRANCH_UNDECIDED && !LotusPlayerState.isNormalBranchEntered(player);
     }
 
     /** "Лейфайлс": the whole inventory becomes a folder. */

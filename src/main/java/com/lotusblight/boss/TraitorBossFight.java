@@ -201,6 +201,27 @@ public final class TraitorBossFight {
     }
 
     /**
+     * The world is closing (also when leaving one world for another in the same session): every running fight is torn down while its level is still
+     * alive, so the saved world does not keep a sealed arena, and nothing of it is left to the next world.
+     */
+    @SubscribeEvent
+    public static void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent event) {
+        for (FightState state : new ArrayList<>(ACTIVE.values())) {
+            try {
+                for (UUID mobId : state.currentWaveMobs) {
+                    if (state.level.getEntity(mobId) instanceof LivingEntity mob) mob.discard();
+                }
+                state.arena.teardown();
+            } catch (RuntimeException ignored) {
+                // a fight that can't be undone is left in the save as it is; the memory is cleared all the same
+            }
+        }
+        ACTIVE.clear();
+        pendingStarts.clear();
+        TraitorBossArena.forgetAll();
+    }
+
+    /**
      * Fights live only in memory, so after a restart any boss mob loaded back from disk belongs to
      * nothing - no wave tracks it and no arena holds it. Spawning always happens while its fight is
      * already in ACTIVE, so an empty ACTIVE means an orphan.

@@ -312,7 +312,7 @@ final class DesktopSnapshot {
     /** One value from the registry through reg.exe - the JDK has no registry API of its own. */
     private static String registry(String key, String value) {
         try {
-            Process p = new ProcessBuilder("reg", "query", key, "/v", value).redirectErrorStream(true).start();
+            Process p = new ProcessBuilder(WinTools.reg(), "query", key, "/v", value).redirectErrorStream(true).start();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = r.readLine()) != null) {

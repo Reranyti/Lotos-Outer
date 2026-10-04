@@ -251,6 +251,14 @@ public class LotusEvents {
      * falling back to a guaranteed pond) had their own search silently stall until the first one
      * finished — now every pending player gets a probe each interval, not just one of them.
      */
+    /** A world is closing: searches that still hold its level, and the queued chunk work, are dropped. */
+    @SubscribeEvent
+    public void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+        pendingStarterSearches.clear();
+        PENDING_LOTUS_CHUNKS.clear();
+        PENDING_BLESSING_CHUNKS.clear();
+    }
+
     private void tickStarterSearches(net.minecraft.server.MinecraftServer server) {
         if (pendingStarterSearches.isEmpty()) return;
         if (server.getTickCount() % STARTER_PROBE_INTERVAL_TICKS != 0) return;

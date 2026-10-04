@@ -107,9 +107,19 @@ public final class LotusChaseEvent {
 
         tickActiveRun(server, gameTick);
 
-        if (server.getTickCount() % SWEEP_INTERVAL_TICKS != 0) return;
-        maybeUnlock(server, overworld);
-        checkForNewRunner(overworld);
+        // Someone walking through the start box is inside it for only a handful of ticks, so it is looked at every few ticks; the
+        // slow check is the unlock.
+        if (server.getTickCount() % 4 == 0) checkForNewRunner(overworld);
+        if (server.getTickCount() % SWEEP_INTERVAL_TICKS == 0) maybeUnlock(server, overworld);
+    }
+
+    /** A world is closing (also when switching worlds in one session): forget everything bound to it. */
+    @SubscribeEvent
+    public void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+        structure = null;
+        runnerUuid = null;
+        pendingForfeitHits.clear();
+        LotusChaseStructure.clearProtected();
     }
 
     /**
@@ -215,6 +225,8 @@ public final class LotusChaseEvent {
         ServerPlayer player = server.getPlayerList().getPlayer(runnerUuid);
         if (player == null || !player.isAlive()) {
             endRun();
+            // the clock and the music on the player's screen must not run on after a death
+            if (player != null) NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ChaseStatePacket(ChaseStatePacket.State.CAUGHT, 0));
             return;
         }
 
@@ -250,6 +262,8 @@ public final class LotusChaseEvent {
         if (runnerUuid == null || !(event.getEntity() instanceof ServerPlayer player)) return;
         if (!runnerUuid.equals(player.getUUID()) || !player.isAlive()) return;
         endRun();
+        // a server that is shutting down is not the player running away
+        if (player.getServer() != null && !player.getServer().isRunning()) return;
         // Killing a player in the middle of being removed from the server isn't safe - drop the
         // inventory now, where they were caught, and deliver the hit on their next login.
         if (player.level() instanceof ServerLevel level) {

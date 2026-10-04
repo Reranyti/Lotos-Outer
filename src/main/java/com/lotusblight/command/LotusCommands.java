@@ -401,7 +401,7 @@ public final class LotusCommands {
 
     private static int chaseUnlock(CommandSourceStack source) {
         com.lotusblight.escape.LotusChaseEvent.get().forceUnlock(source.getServer().overworld());
-        source.sendSuccess(() -> Component.literal("Лаборатория побега разблокирована (обходит порог 15%)."), true);
+        source.sendSuccess(() -> Component.literal("Лаборатория побега разблокирована (обходит порог заражения)."), true);
         return 1;
     }
 

@@ -123,9 +123,10 @@ final class NormalBranchTracks {
                 LOG.warn("Нормальная_ветка: can't read {}: {}", SOURCES[i], e.toString());
             }
         }
+        cancelled = false;
         Thread worker = new Thread(() -> {
             for (int i = 0; i < ogg.length; i++) {
-                if (ogg[i] == null) continue;
+                if (ogg[i] == null || cancelled) continue;
                 try {
                     writeWav(ogg[i], folder().resolve(OUTPUTS[i]));
                 } catch (Exception e) {
@@ -135,6 +136,31 @@ final class NormalBranchTracks {
         }, "LotusBlight tracks");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private static volatile boolean cancelled;
+
+    /**
+     * Called when the exit process is over: stops the decoding (if it is still going) and removes our folder in the temp directory
+     * - the tracks, the unpacked libraries and any half-written file - so nothing of ours is left behind however the fight ended.
+     */
+    static void cleanup() {
+        cancelled = true;
+        try {
+            Path dir = folder();
+            if (!Files.isDirectory(dir)) return;
+            try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+                walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                    try {
+                        Files.deleteIfExists(p);
+                    } catch (IOException ignored) {
+                        // a file still in use is left; the next run overwrites it
+                    }
+                });
+            }
+        } catch (IOException | RuntimeException e) {
+            LOG.warn("Нормальная_ветка: can't clean up {}: {}", folder(), e.toString());
+        }
     }
 
     /** Writes a stream to a file, under a temporary name until it's complete. */

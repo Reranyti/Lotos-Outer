@@ -27,6 +27,11 @@ public final class LotusTaskQueue<T> {
         return tasks.size();
     }
 
+    /** Drops everything still waiting (a world is closing and its work is no use to the next). */
+    public void clear() {
+        tasks.clear();
+    }
+
     public int drain(int maximum, Consumer<T> worker) {
         int processed = 0;
         while (processed < maximum) {

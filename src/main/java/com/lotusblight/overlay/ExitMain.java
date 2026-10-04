@@ -210,7 +210,7 @@ public final class ExitMain {
     /** Calls one method of Explorer's Shell.Application object through PowerShell and waits for it. */
     private static void shell(String call) {
         try {
-            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+            Process p = new ProcessBuilder(WinTools.powershell(), "-NoProfile", "-NonInteractive", "-Command",
                     "(New-Object -ComObject Shell.Application)." + call)
                     .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
             p.waitFor(5, TimeUnit.SECONDS);

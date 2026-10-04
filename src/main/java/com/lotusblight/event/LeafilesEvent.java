@@ -29,9 +29,12 @@ public final class LeafilesEvent {
         for (ItemStack s : inventory.offhand) if (!s.isEmpty()) all.add(s.copy());
         if (all.isEmpty()) return EventResult.NOTHING_TO_DO;
 
-        ItemStack folder = FolderItem.pack(all);
+        List<ItemStack> folders = FolderItem.packSafely(all);
         inventory.clearContent();
-        inventory.setItem(inventory.selected, folder);
+        inventory.setItem(inventory.selected, folders.get(0));
+        for (int i = 1; i < folders.size(); i++) {
+            net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(player, folders.get(i));           // a very heavy inventory needs more than one folder
+        }
         player.inventoryMenu.broadcastChanges();
         player.level().playSound(null, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 0.6f);
         player.displayClientMessage(Component.translatable("event.lotusblight.leafiles"), false);

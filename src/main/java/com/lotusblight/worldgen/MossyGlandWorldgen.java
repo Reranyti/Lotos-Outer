@@ -35,6 +35,14 @@ public final class MossyGlandWorldgen {
     private BlockPos currentCenter;
     private int probesOnCurrentCenter = 0;
 
+    /** A world is closing: the next one probes from the beginning. */
+    @SubscribeEvent
+    public void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+        giveUp = false;
+        totalProbes = 0;
+        probesOnCurrentCenter = 0;
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;

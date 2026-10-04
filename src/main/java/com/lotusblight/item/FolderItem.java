@@ -29,6 +29,29 @@ public class FolderItem extends Item {
         super(properties.stacksTo(1).fireResistant());
     }
 
+    /** Roughly how much data one folder may hold: an item's tag over the network has a limit of a couple of megabytes. */
+    private static final int MAX_CHARS = 700_000;
+
+    /** Several folders if one would be too big to send; usually exactly one. */
+    public static List<ItemStack> packSafely(List<ItemStack> stacks) {
+        List<ItemStack> folders = new ArrayList<>();
+        List<ItemStack> batch = new ArrayList<>();
+        int size = 0;
+        for (ItemStack stack : stacks) {
+            if (stack.isEmpty()) continue;
+            int mine = stack.save(new CompoundTag()).toString().length();
+            if (!batch.isEmpty() && size + mine > MAX_CHARS) {
+                folders.add(pack(batch));
+                batch = new ArrayList<>();
+                size = 0;
+            }
+            batch.add(stack);
+            size += mine;
+        }
+        if (!batch.isEmpty()) folders.add(pack(batch));
+        return folders;
+    }
+
     /** A folder holding copies of the given stacks (empty ones are left out). */
     public static ItemStack pack(List<ItemStack> stacks) {
         ItemStack folder = new ItemStack(ModItems.FOLDER.get());
@@ -65,7 +88,8 @@ public class FolderItem extends Item {
         List<ItemStack> contents = unpack(folder);
         folder.shrink(1);
         for (ItemStack stack : contents) {
-            if (!player.getInventory().add(stack)) player.drop(stack, false);           // what does not fit lies at the feet, never lost
+            // Forge's helper puts in what fits and drops the rest at the feet; Inventory.add's yes/no answer can't be trusted for a part that fits
+            net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(player, stack);
         }
         return InteractionResultHolder.consume(folder);
     }

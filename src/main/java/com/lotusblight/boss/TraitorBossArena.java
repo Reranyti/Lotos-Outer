@@ -109,6 +109,11 @@ public final class TraitorBossArena {
      * one that isn't would force a synchronous chunk load on the server thread - the same deadlock
      * class already fixed in LotusChaseStructure (see its own javadoc for the real freeze it caused).
      */
+    /** Forgets every protected block (the world is closing: the next one must not inherit them). */
+    public static void forgetAll() {
+        PROTECTED.clear();
+    }
+
     public void teardown() {
         for (Map.Entry<BlockPos, BlockState> entry : snapshot.entrySet()) {
             BlockPos pos = entry.getKey();

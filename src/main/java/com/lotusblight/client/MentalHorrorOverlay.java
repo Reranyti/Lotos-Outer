@@ -21,20 +21,32 @@ import net.minecraftforge.fml.common.Mod;
 public final class MentalHorrorOverlay {
     private static final ResourceLocation LEFT = new ResourceLocation(LotusBlight.MODID, "textures/misc/meat_wall_left.png");
     private static final ResourceLocation RIGHT = new ResourceLocation(LotusBlight.MODID, "textures/misc/meat_wall_right.png");
-    private static float strength;                  // 0..1, eased towards whether the effect is on
+    private static float strength, strengthO;       // 0..1, eased towards whether the effect is on, once a game tick
 
     private MentalHorrorOverlay() {}
+
+    @SubscribeEvent
+    public static void tick(net.minecraftforge.event.TickEvent.ClientTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        boolean on = mc.player != null && mc.player.hasEffect(ModEffects.MENTALLY_UNWELL.get());
+        strengthO = strength;
+        strength += ((on ? 1.0f : 0.0f) - strength) * 0.12f;
+        if (strength < 0.005f && !on) strength = 0.0f;
+    }
+
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        strength = 0.0f;
+        strengthO = 0.0f;
+    }
 
     @SubscribeEvent
     public static void render(RenderGuiOverlayEvent.Pre event) {
         if (event.getOverlay() != VanillaGuiOverlay.VIGNETTE.type()) return;          // once a frame, under the rest of the interface
         Minecraft mc = Minecraft.getInstance();
-        boolean on = mc.player != null && mc.player.hasEffect(ModEffects.MENTALLY_UNWELL.get());
-        strength += ((on ? 1.0f : 0.0f) - strength) * 0.06f;
-        if (strength < 0.01f) {
-            strength = 0.0f;
-            return;
-        }
+        float strength = net.minecraft.util.Mth.lerp(event.getPartialTick(), strengthO, MentalHorrorOverlay.strength);
+        if (strength < 0.01f) return;
         GuiGraphics g = event.getGuiGraphics();
         int w = g.guiWidth(), h = g.guiHeight();
         float t = (mc.player != null ? mc.player.tickCount : 0) + event.getPartialTick();
@@ -57,6 +69,5 @@ public final class MentalHorrorOverlay {
         g.blit(LEFT, 0, drift - 24, wallW, h + 48, 0.0f, 0.0f, 128, 512, 128, 512);
         g.blit(RIGHT, w - wallW, -drift - 24, wallW, h + 48, 0.0f, 0.0f, 128, 512, 128, 512);
         g.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.disableBlend();
     }
 }

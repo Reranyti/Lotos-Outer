@@ -53,6 +53,13 @@ public final class MapSyncManager {
      * tracking the outbreak count is enough to know when to invalidate.
      */
     private static final Map<ChunkPos, UUID> nearestOwnerCache = new HashMap<>();
+
+    /** A world is closing: the cache of who owns which chunk belongs to it alone. */
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+        nearestOwnerCache.clear();
+        nearestOwnerCacheOutbreakCount = -1;
+    }
     private static int nearestOwnerCacheOutbreakCount = -1;
 
     private MapSyncManager() {

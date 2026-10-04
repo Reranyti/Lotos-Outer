@@ -149,7 +149,7 @@ public final class LotusChaseStructure {
         int leftLen = correctIsLeft ? ARM_CORRECT + EXIT_ROOM_LENGTH + 2 : ARM_DECOY + 2;
         int rightLen = correctIsLeft ? ARM_DECOY + 2 : ARM_CORRECT + EXIT_ROOM_LENGTH + 2;
         return rectLoaded(-PLAZA_DEPTH - 1, JUNCTION + HALF + 2, -PLAZA_HALF, PLAZA_HALF)
-                && rectLoaded(JUNCTION - HALF - 2, JUNCTION + HALF + 2, -leftLen - EXIT_ROOM_HALF, rightLen + EXIT_ROOM_HALF);
+                && rectLoaded(JUNCTION - EXIT_ROOM_HALF - 2, JUNCTION + EXIT_ROOM_HALF + 2, -leftLen - EXIT_ROOM_HALF, rightLen + EXIT_ROOM_HALF);
     }
 
     /** Samples a rectangle of (along-facing, across) offsets on a grid a chunk apart. */
@@ -186,6 +186,12 @@ public final class LotusChaseStructure {
         carveTunnel(junction(), correctDir(), ARM_CORRECT + 1, ARM_CORRECT + EXIT_ROOM_LENGTH, EXIT_ROOM_HALF, false, true,
                 i -> Light.SAFE);
         markSafeFloor();
+        Direction roomSide = correctDir().getClockWise();
+        for (int w : new int[]{-EXIT_ROOM_HALF - 1, -EXIT_ROOM_HALF, EXIT_ROOM_HALF, EXIT_ROOM_HALF + 1}) {
+            for (int h = 0; h <= HEIGHT + 1; h++) {
+                place(slice(junction(), correctDir(), ARM_CORRECT, w).above(h), Blocks.STONE_BRICKS.defaultBlockState());
+            }
+        }
 
         // The door: the first slice is a wall with a 3x3 doorway in it.
         doorCells.clear();
@@ -342,9 +348,10 @@ public final class LotusChaseStructure {
     public void dropHazard(ServerPlayer player, boolean phase2, RandomSource random) {
         Direction dir = player.getDirection();
         BlockPos feet = new BlockPos(player.getBlockX(), entrance.getY() + 1, player.getBlockZ());
+        if (nearSafeRoom(feet)) return;
         double roll = random.nextDouble();
         if (phase2 && roll < 0.30) {
-            partition(feet.relative(dir, 7), dir);
+            partition(onHallAxis(feet.relative(dir, 7), dir), dir);
         } else if (roll < (phase2 ? 0.75 : 0.55)) {
             shelf(feet.relative(dir, 4 + random.nextInt(4)).relative(dir.getClockWise(), random.nextInt(5) - 2), random);
             if (phase2) shelf(feet.relative(dir, 5 + random.nextInt(4)).relative(dir.getClockWise(), random.nextInt(7) - 3), random);
@@ -353,8 +360,30 @@ public final class LotusChaseStructure {
         }
     }
 
-    private boolean insideHall(BlockPos floorAbove) {
-        return level.hasChunkAt(floorAbove) && isProtected(level, floorAbove.below());
+    /** Whether the cell is inside a hall: loaded, within the hall's height, with the hall's own floor under it. */
+    private boolean insideHall(BlockPos pos) {
+        if (!level.hasChunkAt(pos)) return false;
+        int y = pos.getY();
+        if (y < entrance.getY() + 1 || y > entrance.getY() + HEIGHT) return false;
+        return isProtected(level, new BlockPos(pos.getX(), entrance.getY(), pos.getZ()));
+    }
+
+    /** The point moved sideways onto the middle line of the hall that runs along {@code dir} (so a partition spans the whole hall). */
+    private BlockPos onHallAxis(BlockPos p, Direction dir) {
+        if (dir.getAxis() == facing.getAxis()) {                       // running along the entrance hall: its middle is the entrance's line
+            return facing.getAxis() == Direction.Axis.X ? new BlockPos(p.getX(), p.getY(), entrance.getZ()) : new BlockPos(entrance.getX(), p.getY(), p.getZ());
+        }
+        BlockPos j = junction();                                       // running along the cross-hall: its middle is the junction's line
+        return facing.getAxis() == Direction.Axis.X ? new BlockPos(j.getX(), p.getY(), p.getZ()) : new BlockPos(p.getX(), p.getY(), j.getZ());
+    }
+
+    /** Whether the cell is in the last stretch of the real arm or in the safe room: nothing is dropped there. */
+    private boolean nearSafeRoom(BlockPos p) {
+        BlockPos j = junction();
+        Direction c = correctDir();
+        int along = (p.getX() - j.getX()) * c.getStepX() + (p.getZ() - j.getZ()) * c.getStepZ();
+        int across = Math.abs((p.getX() - j.getX()) * facing.getStepX() + (p.getZ() - j.getZ()) * facing.getStepZ());
+        return along > ARM_CORRECT - 10 && across <= EXIT_ROOM_HALF + 2;
     }
 
     /** A shelf falls out of the ceiling onto {@code target} with a puff of dust; it lands as a block to go around or over. */
@@ -397,14 +426,15 @@ public final class LotusChaseStructure {
         Direction right = facing.getClockWise();
         int leftLen = correctIsLeft ? ARM_CORRECT : ARM_DECOY;
         int rightLen = correctIsLeft ? ARM_DECOY : ARM_CORRECT;
-        sweep(entrance, facing, 1, JUNCTION - HALF - 1);
-        sweep(junction(), right, -leftLen, rightLen);
+        sweep(entrance, facing, 1, JUNCTION - HALF - 1, HALF);
+        sweep(junction(), right, -leftLen, rightLen, HALF);
+        sweep(junction(), correctDir(), ARM_CORRECT + 1, ARM_CORRECT + EXIT_ROOM_LENGTH, EXIT_ROOM_HALF);
     }
 
-    private void sweep(BlockPos origin, Direction dir, int from, int to) {
+    private void sweep(BlockPos origin, Direction dir, int from, int to, int half) {
         Direction side = dir.getClockWise();
         for (int i = from; i <= to; i++) {
-            for (int w = -HALF; w <= HALF; w++) {
+            for (int w = -half; w <= half; w++) {
                 for (int h = 1; h <= HEIGHT; h++) {
                     BlockPos pos = origin.relative(dir, i).relative(side, w).above(h);
                     if (!level.hasChunkAt(pos)) continue;
@@ -428,6 +458,11 @@ public final class LotusChaseStructure {
         GlobalPos key = GlobalPos.of(level.dimension(), pos);
         if (state.isAir()) PROTECTED.remove(key);
         else PROTECTED.put(key, this);
+    }
+
+    /** Forgets every protected block (the server is stopping: the next world must not inherit them). */
+    public static void clearProtected() {
+        PROTECTED.clear();
     }
 
     public static boolean isProtected(ServerLevel level, BlockPos pos) {

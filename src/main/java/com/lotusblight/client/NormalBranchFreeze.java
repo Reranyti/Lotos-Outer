@@ -151,6 +151,7 @@ public final class NormalBranchFreeze {
                         .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                         .start();
                 process.onExit().thenAccept(done -> mc.execute(() -> {
+                    NormalBranchTracks.cleanup();
                     release(gen);
                     if (done.exitValue() == NormalBranchReward.FINALE_EXIT_CODE) NormalBranchReward.grantHorn(mc);
                 }));

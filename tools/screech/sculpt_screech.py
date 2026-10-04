@@ -545,9 +545,9 @@ def make_part_mesh(part, res):
             else:
                 region = LIP_T if kind == 4 else (CLAW_T if claw else ROCK_T)
                 cu, cv = centroid[uv_axes[0]] * PX_PER_UNIT, centroid[uv_axes[1]] * PX_PER_UNIT
-                span = region[2] - 12
+                span = region[2] - 28
                 # keep the whole triangle inside the tile: wrap its centroid, keep its own offsets
-                wu, wv = (cu % span) + 6, (cv % span) + 6
+                wu, wv = (cu % span) + 14, (cv % span) + 14
                 u = wu + (pts[k][uv_axes[0]] - centroid[uv_axes[0]]) * PX_PER_UNIT
                 v = wv + (pts[k][uv_axes[1]] - centroid[uv_axes[1]]) * PX_PER_UNIT
                 uvs.append((region[0] + u, region[1] + v))

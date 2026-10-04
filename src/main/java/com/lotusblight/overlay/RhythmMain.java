@@ -51,7 +51,7 @@ public final class RhythmMain {
         if (GraphicsEnvironment.isHeadless()) { System.err.println("No screen."); System.exit(2); }
 
         OsuMap map = OsuMap.load("/assets/lotusblight/overlay/map_" + (song == 2 ? 2 : 1) + (chromo ? "_chromo" : "") + ".osu");
-        RhythmGame game = new RhythmGame(map, song == 2 ? 180 : 48);
+        RhythmGame game = new RhythmGame(map, song == 2 ? 180 : (chromo ? 320 : 48));
         final boolean overDesktop = desktop;
         int[] skin = loadSkin();
         GraphicsConfiguration gc0 = GraphicsEnvironment.getLocalGraphicsEnvironment()
@@ -179,7 +179,7 @@ public final class RhythmMain {
     /** Calls one method of Explorer's Shell.Application through PowerShell (minimize / restore windows). */
     private static void shell(String call) {
         try {
-            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
+            Process p = new ProcessBuilder(WinTools.powershell(), "-NoProfile", "-NonInteractive", "-Command",
                     "(New-Object -ComObject Shell.Application)." + call)
                     .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
             p.waitFor(5, TimeUnit.SECONDS);
