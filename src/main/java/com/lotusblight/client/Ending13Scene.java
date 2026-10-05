@@ -2346,8 +2346,8 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         double shake = Math.exp(-Math.abs(tm - snapT) * 18) * 0.04;
         double back = smooth(tm, snapT + 0.04, snapT + 0.3);
         double[] full = cameraFor(new double[]{0, 1.43, 0.32}, gripMid(), 0, -0.12);
-        r.camera(Math.sin(walk * 11) * 0.012 + rnd.nextGaussian() * shake, lerp(1.62, full[1], walk) - 0.25 * back + Math.abs(Math.sin(walk * 11)) * 0.02 + rnd.nextGaussian() * shake,
-                lerp(lerp(-5.3, full[2], walk), -1.7, back), 0.25 * back, -0.12 - 0.3 * back);
+        r.camera(Math.sin(walk * 11) * 0.012 + rnd.nextGaussian() * shake, lerp(1.62, full[1] + 0.06, walk) - 0.25 * back + Math.abs(Math.sin(walk * 11)) * 0.02 + rnd.nextGaussian() * shake,
+                lerp(lerp(-5.3, full[2] - 0.45 * walk, walk), -1.9, back), 0.25 * back, -0.12 - 0.3 * back);
         double x0 = -1.5, x1 = 1.5, z0 = -9, z1 = 7, h = 2.9;
         r.matSpec = 0.6; r.matShine = 50;
         r.faceXZ(0, x0, z0, x1, z1, checker, 0xFFFFFFFF, 0, 3, 16);
