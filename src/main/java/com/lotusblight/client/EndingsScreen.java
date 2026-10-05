@@ -1,34 +1,45 @@
 package com.lotusblight.client;
 
 import com.lotusblight.data.EndingsBook;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.PlayerFaceRenderer;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /**
- * The endings: a ring of circles, one per ending, each with a line going out from it (the path from the start to the
- * last event and the ending itself). Hovering a circle lights its whole line and names it; clicking opens the map of the way to that ending (EndingMapScreen).
+ * The endings, on an old TV with a VCR: a ring of circles, one per ending, each with a line going out from it. Hovering a circle lights
+ * its whole line and names it; clicking opens the map of the way to that ending (EndingMapScreen). The menu opens with the cassette
+ * going into the deck and the set switching on; a click or a key skips that.
  */
 public final class EndingsScreen extends Screen {
     /** How many endings there are. */
     private static final int SLOTS = 13;
-    private static final int NODE_RADIUS = 13;
+    private static final int NODE_RADIUS = 16;
     private static final int RAY_SHORT = 26;
 
     private final Screen parent;
+    private final VhsTv tv;
     private int hovered = -1;
 
     public EndingsScreen(Screen parent) {
+        this(parent, true);
+    }
+
+    EndingsScreen(Screen parent, boolean intro) {
         super(Component.literal("Концовки"));
         this.parent = parent;
+        this.tv = new VhsTv(intro);
     }
 
     @Override
     protected void init() {
+        tv.layout(this.width, this.height);
         addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose())
-                .bounds(this.width / 2 - 100, this.height - 28, 200, 20).build());
+                .bounds(tv.vcrX() + tv.vcrW() - 120, tv.vcrY() + tv.vcrH() / 2 - 10, 70, 20).build());
     }
 
     @Override
@@ -36,12 +47,16 @@ public final class EndingsScreen extends Screen {
         this.minecraft.setScreen(parent);
     }
 
-    private int ringRadius() {
-        return Math.min(this.width, this.height) * 28 / 100;
+    private int centerX() {
+        return tv.sx + tv.sw / 2;
     }
 
     private int centerY() {
-        return this.height / 2 + 4;
+        return tv.sy + tv.sh / 2;
+    }
+
+    private int ringRadius() {
+        return Math.min(tv.sw, tv.sh) * 31 / 100;
     }
 
     /** Angle of the node: the first one at the top, then clockwise. */
@@ -50,7 +65,7 @@ public final class EndingsScreen extends Screen {
     }
 
     private int nodeX(int i) {
-        return this.width / 2 + (int) Math.round(Math.cos(angle(i)) * ringRadius());
+        return centerX() + (int) Math.round(Math.cos(angle(i)) * ringRadius());
     }
 
     private int nodeY(int i) {
@@ -58,7 +73,20 @@ public final class EndingsScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(int key, int scan, int mods) {
+        if (!tv.picture()) {
+            tv.skip();
+            return true;
+        }
+        return super.keyPressed(key, scan, mods);
+    }
+
+    @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (!tv.picture()) {
+            tv.skip();
+            return true;
+        }
         for (int i = 0; i < SLOTS; i++) {
             double dx = mx - nodeX(i);
             double dy = my - nodeY(i);
@@ -82,12 +110,21 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
-        renderBackground(g);
-        // the title in its frame
+        tv.body(g, this.width, this.height);
+        tv.beginScreen(g);
+        if (tv.picture()) {
+            drawRing(g, mouseX, mouseY);
+        }
+        tv.endScreen(g, this.font);
+        super.render(g, mouseX, mouseY, partial);
+    }
+
+    private void drawRing(GuiGraphics g, int mouseX, int mouseY) {
         int tw = this.font.width(this.title) + 40;
-        int tx = this.width / 2 - tw / 2;
-        frame(g, tx, 10, tx + tw, 32, 0xFFB0B0B0);
-        g.drawCenteredString(this.font, this.title, this.width / 2, 17, 0xFFFFFF);
+        int tx = centerX() - tw / 2;
+        int ty = tv.sy + 16;
+        frame(g, tx, ty, tx + tw, ty + 22, 0xFFB0B0B0);
+        g.drawCenteredString(this.font, this.title, centerX(), ty + 7, 0xFFFFFF);
 
         hovered = -1;
         for (int i = 0; i < SLOTS; i++) {
@@ -109,60 +146,29 @@ public final class EndingsScreen extends Screen {
             line(g, rx0 - 1, ry0, rx1 - 1, ry1, 0x60FF2020);       // the tape's colour channels slip apart
             line(g, rx0 + 1, ry0, rx1 + 1, ry1, 0x6020D0FF);
             line(g, rx0, ry0, rx1, ry1, color);
-            disc(g, x, y, NODE_RADIUS, 0xFF000000 | (seen(i) ? 0x402020 : 0x181818));
+            VhsTv.disc(g, x, y, NODE_RADIUS, 0xFF000000 | (seen(i) ? 0x402020 : 0x181818));
             ring(g, x, y, NODE_RADIUS, on ? 0xFFFFFFFF : color);
             EndingsBook.Ending e = ending(i);
             if (e != null && e.icon() != null) {
-                com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                RenderSystem.enableBlend();
                 float shade = seen(i) || on ? 1f : 0.45f;
                 g.setColor(shade, shade, shade, 1f);
-                g.blit(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("lotusblight", "textures/gui/endings/" + e.icon() + ".png"),
-                        x - 12, y - 12, 24, 24, 0, 0, 64, 64, 64, 64);
+                g.blit(new ResourceLocation("lotusblight", "textures/gui/endings/" + e.icon() + ".png"),
+                        x - 14, y - 14, 28, 28, 0, 0, 64, 64, 64, 64);
                 if (e.icon().equals("alliance") || e.icon().equals("neutral")) {
                     // the player's own face goes into the icon's empty square (see tools/ending_icons.py, FACE)
                     net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-                    net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,
-                            mc.getSkinManager().getInsecureSkinLocation(mc.getUser().getGameProfile()), x - 12 + 8, y - 12 + 1, 9);
+                    PlayerFaceRenderer.draw(g, mc.getSkinManager().getInsecureSkinLocation(mc.getUser().getGameProfile()), x - 14 + 9, y - 14 + 1, 10);
                 }
                 g.setColor(1f, 1f, 1f, 1f);
             }
         }
-
-        g.drawCenteredString(this.font, Component.literal(EndingsBook.seenCount() + " / " + SLOTS), this.width / 2, centerY() - 4, 0xFFA0A0A0);
+        g.drawCenteredString(this.font, Component.literal(EndingsBook.seenCount() + " / " + SLOTS), centerX(), centerY() - 4, 0xFFA0A0A0);
         if (hovered >= 0) {
             EndingsBook.Ending e = ending(hovered);
-            String name = seen(hovered) && e.name() != null ? e.name() : "???";
-            g.drawCenteredString(this.font, Component.literal(name), this.width / 2, centerY() + 10, 0xFFE4E7D8);
+            String name = seen(hovered) && e != null && e.name() != null ? e.name() : "???";
+            g.drawCenteredString(this.font, Component.literal(name), centerX(), centerY() + 10, 0xFFE4E7D8);
         }
-        super.render(g, mouseX, mouseY, partial);
-        vhs(g, this.font, this.width, this.height);
-    }
-
-    /** The whole screen as a worn VHS tape: scanlines, a tracking band crawling up, snow, and the PLAY mark. */
-    static void vhs(GuiGraphics g, net.minecraft.client.gui.Font font, int width, int height) {
-        long ms = net.minecraft.Util.getMillis();
-        for (int y = 0; y < height; y += 2) g.fill(0, y, width, y + 1, 0x26000000);
-        // the tracking band: a bright smear that crawls up, with torn lines at its edge
-        int band = height - (int) ((ms / 14) % (height + 80));
-        g.fill(0, band, width, band + 5, 0x14FFFFFF);
-        g.fill(0, band + 5, width, band + 7, 0x0AFFFFFF);
-        java.util.Random rnd = new java.util.Random(ms / 90);
-        for (int i = 0; i < 14; i++) {
-            int y = band + rnd.nextInt(14) - 4;
-            int x0 = rnd.nextInt(width);
-            g.fill(x0, y, Math.min(width, x0 + 20 + rnd.nextInt(120)), y + 1, 0x30FFFFFF);
-        }
-        // snow
-        java.util.Random snow = new java.util.Random(ms / 60);
-        for (int i = 0; i < 90; i++) {
-            int x = snow.nextInt(width);
-            int y = snow.nextInt(height);
-            g.fill(x, y, x + 1 + snow.nextInt(2), y + 1, 0x30FFFFFF);
-        }
-        // the player's marks, in the corners
-        g.drawString(font, "▶ PLAY", width - 56, 8, 0xFFE0E0E0, true);
-        long sec = ms / 1000;
-        g.drawString(font, String.format("%02d:%02d", (sec / 60) % 100, sec % 60), width - 46, height - 14, 0xFFA0A0A0, true);
     }
 
     // ---- small drawing helpers (the GUI only knows rectangles)
@@ -172,13 +178,6 @@ public final class EndingsScreen extends Screen {
         g.fill(x0, y1 - 1, x1, y1, color);
         g.fill(x0, y0, x0 + 1, y1, color);
         g.fill(x1 - 1, y0, x1, y1, color);
-    }
-
-    private static void disc(GuiGraphics g, int cx, int cy, int r, int color) {
-        for (int dy = -r; dy <= r; dy++) {
-            int dx = (int) Math.floor(Math.sqrt(r * r - dy * dy));
-            g.fill(cx - dx, cy + dy, cx + dx + 1, cy + dy + 1, color);
-        }
     }
 
     private static void ring(GuiGraphics g, int cx, int cy, int r, int color) {

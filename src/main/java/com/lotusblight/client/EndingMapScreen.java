@@ -1,5 +1,6 @@
 package com.lotusblight.client;
 
+import com.lotusblight.data.EndingsBook;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -10,29 +11,47 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
 
 /**
- * The way to one ending, like the advancements window: a chain of squares from the spawn, in a big window that can be dragged
- * and scrolled forward. The steps come from {@link EndingPaths}; a choice shows its answers under its square, a step that is
- * decided but not built yet is dim and dashed.
+ * The way to one ending, on the same TV: a chain of squares from the spawn along the middle of the glass, which can be dragged and
+ * scrolled forward. A choice forks: its answers stand in a column, the answer this line took carries the chain on, the others end
+ * with an arrow to the line they lead to. A step that is decided but not built yet is dim and dashed.
  */
 public final class EndingMapScreen extends Screen {
-    private static final int BOX_W = 132;
-    private static final int BOX_H = 62;
-    private static final int GAP = 26;
+    private static final int BOX_W = 124;
+    private static final int BOX_H = 58;
+    private static final int GAP = 28;
+    private static final int OPT_H = 34;
 
     private final Screen parent;
+    private final VhsTv tv = new VhsTv(false);
     private final List<EndingPaths.Step> steps;
     private double scroll;
+    private int[] columnX;
+    private int totalWidth;
 
     public EndingMapScreen(Screen parent, String endingId, String endingName) {
         super(Component.literal(endingName));
         this.parent = parent;
         this.steps = EndingPaths.of(endingId);
+        layoutColumns();
+    }
+
+    /** Each step takes a column; a choice takes another one for its answers. */
+    private void layoutColumns() {
+        columnX = new int[steps.size()];
+        int x = 24;
+        for (int i = 0; i < steps.size(); i++) {
+            columnX[i] = x;
+            x += BOX_W + GAP;
+            if (!steps.get(i).options().isEmpty()) x += BOX_W + GAP;
+        }
+        totalWidth = x;
     }
 
     @Override
     protected void init() {
+        tv.layout(this.width, this.height);
         addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, b -> onClose())
-                .bounds(this.width / 2 - 100, this.height - 28, 200, 20).build());
+                .bounds(tv.vcrX() + tv.vcrW() - 120, tv.vcrY() + tv.vcrH() / 2 - 10, 70, 20).build());
     }
 
     @Override
@@ -41,7 +60,7 @@ public final class EndingMapScreen extends Screen {
     }
 
     private double maxScroll() {
-        return Math.max(0, steps.size() * (BOX_W + GAP) + 40 - (this.width - 60));
+        return Math.max(0, totalWidth - tv.sw + 24);
     }
 
     @Override
@@ -52,47 +71,90 @@ public final class EndingMapScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        scroll = Math.max(0, Math.min(maxScroll(), scroll - delta * 40));
+        scroll = Math.max(0, Math.min(maxScroll(), scroll - delta * 50));
         return true;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
-        renderBackground(g);
-        g.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFF);
-        int top = 34;
-        int bottom = this.height - 36;
-        g.fill(20, top, this.width - 20, bottom, 0xA0101010);
-        g.enableScissor(20, top, this.width - 20, bottom);
-        int y = top + 30;
+        tv.body(g, this.width, this.height);
+        tv.beginScreen(g);
+        int midY = tv.sy + tv.sh / 2;
+        g.drawCenteredString(this.font, this.title, tv.sx + tv.sw / 2, tv.sy + 12, 0xFFFFFF);
         for (int i = 0; i < steps.size(); i++) {
             EndingPaths.Step step = steps.get(i);
-            int x = 36 + i * (BOX_W + GAP) - (int) scroll;
-            if (x > this.width || x + BOX_W < 0) continue;
-            int edge = step.planned() ? 0xFF707070 : step.kind().color;
-            if (i > 0) g.fill(x - GAP, y + BOX_H / 2, x, y + BOX_H / 2 + 1, 0xFF707070);
-            g.fill(x, y, x + BOX_W, y + BOX_H, step.planned() ? 0xFF1A1A1A : 0xFF2A1818);
-            frame(g, x, y, x + BOX_W, y + BOX_H, edge, step.planned());
-            g.drawString(this.font, step.kind().label + (step.planned() ? " (план)" : ""), x + 4, y - 11, edge, false);
-            int ty = y + 5;
-            for (FormattedCharSequence line : this.font.split(Component.literal(step.title()), BOX_W - 8)) {
-                if (ty > y + BOX_H - 9) break;
-                g.drawString(this.font, line, x + 4, ty, step.planned() ? 0xFF9A9A9A : 0xFFE4E7D8, false);
-                ty += 10;
+            int x = tv.sx + columnX[i] - (int) scroll;
+            int y = midY - BOX_H / 2;
+            boolean last = i == steps.size() - 1;
+            if (x > tv.sx + tv.sw || x + 2 * BOX_W + GAP < tv.sx) {
+                continue;
             }
-            int oy = y + BOX_H + 8;
-            for (String option : step.options()) {
-                g.fill(x + BOX_W / 2, oy - 6, x + BOX_W / 2 + 1, oy, 0xFF505050);
-                for (FormattedCharSequence line : this.font.split(Component.literal(option), BOX_W - 10)) {
-                    g.drawString(this.font, line, x + 6, oy, 0xFF9AD8E8, false);
-                    oy += 10;
-                }
-                oy += 4;
+            // the chain's line in, and out
+            if (i > 0) {
+                int prevEnd = tv.sx + columnX[i - 1] - (int) scroll + BOX_W + (steps.get(i - 1).options().isEmpty() ? 0 : GAP + BOX_W);
+                g.fill(prevEnd, midY, x, midY + 1, 0xFF8A8A8A);
+            }
+            box(g, x, y, step);
+            if (!step.options().isEmpty()) forks(g, step, x + BOX_W, midY);
+        }
+        tv.endScreen(g, this.font);
+        super.render(g, mouseX, mouseY, partial);
+    }
+
+    private void forks(GuiGraphics g, EndingPaths.Step step, int fromX, int midY) {
+        int n = step.options().size();
+        int colX = fromX + GAP;
+        int top = midY - (n * OPT_H + (n - 1) * 8) / 2;
+        for (int k = 0; k < n; k++) {
+            EndingPaths.Opt opt = step.options().get(k);
+            int oy = top + k * (OPT_H + 8);
+            boolean main = k == step.main();
+            int edge = main ? 0xFFE6C36A : 0xFF6A6A6A;
+            // from the choice to this answer: out, a vertical, in
+            int cy = oy + OPT_H / 2;
+            g.fill(fromX, midY, fromX + GAP / 2, midY + 1, edge);
+            g.fill(fromX + GAP / 2, Math.min(midY, cy), fromX + GAP / 2 + 1, Math.max(midY, cy) + 1, edge);
+            g.fill(fromX + GAP / 2, cy, colX, cy + 1, edge);
+            g.fill(colX, oy, colX + BOX_W, oy + OPT_H, 0xFF1C1C22);
+            frame(g, colX, oy, colX + BOX_W, oy + OPT_H, edge, false);
+            int ty = oy + 4;
+            for (FormattedCharSequence line : this.font.split(Component.literal(opt.text()), BOX_W - 8)) {
+                if (ty > oy + OPT_H - 17) break;
+                g.drawString(this.font, line, colX + 4, ty, 0xFF9AD8E8, false);
+                ty += 9;
+            }
+            if (opt.to() != null && !main) {
+                String name = lineName(opt.to());
+                g.drawString(this.font, "→ " + name, colX + 4, oy + OPT_H - 11, 0xFFB98AE6, false);
+            }
+            if (main) {
+                // the chain carries on through this answer
+                int outX = colX + BOX_W;
+                g.fill(outX, cy, outX + GAP / 2, cy + 1, edge);
+                g.fill(outX + GAP / 2, Math.min(midY, cy), outX + GAP / 2 + 1, Math.max(midY, cy) + 1, edge);
+                g.fill(outX + GAP / 2, midY, outX + GAP, midY + 1, edge);
             }
         }
-        g.disableScissor();
-        super.render(g, mouseX, mouseY, partial);
-        EndingsScreen.vhs(g, this.font, this.width, this.height);
+    }
+
+    private static String lineName(String id) {
+        for (EndingsBook.Ending e : EndingsBook.ALL) {
+            if (e.id().equals(id) && e.name() != null) return e.name();
+        }
+        return "???";
+    }
+
+    private void box(GuiGraphics g, int x, int y, EndingPaths.Step step) {
+        int edge = step.planned() ? 0xFF707070 : step.kind().color;
+        g.fill(x, y, x + BOX_W, y + BOX_H, step.planned() ? 0xFF1A1A1A : 0xFF2A1818);
+        frame(g, x, y, x + BOX_W, y + BOX_H, edge, step.planned());
+        g.drawString(this.font, step.kind().label + (step.planned() ? " (план)" : ""), x + 4, y - 11, edge, false);
+        int ty = y + 5;
+        for (FormattedCharSequence line : this.font.split(Component.literal(step.title()), BOX_W - 8)) {
+            if (ty > y + BOX_H - 9) break;
+            g.drawString(this.font, line, x + 4, ty, step.planned() ? 0xFF9A9A9A : 0xFFE4E7D8, false);
+            ty += 10;
+        }
     }
 
     private static void frame(GuiGraphics g, int x0, int y0, int x1, int y1, int color, boolean dashed) {
