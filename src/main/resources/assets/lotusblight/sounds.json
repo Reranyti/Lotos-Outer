@@ -76,5 +76,14 @@
         "name": "lotusblight:vhs_rewind"
       }
     ]
+  },
+  "ending13_music": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "lotusblight:ending13_music",
+        "stream": true
+      }
+    ]
   }
 }

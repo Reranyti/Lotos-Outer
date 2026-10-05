@@ -105,6 +105,11 @@ public final class EndingsScreen extends Screen {
             double dy = my - nodeY(i);
             if (dx * dx + dy * dy <= NODE_RADIUS * NODE_RADIUS) {
                 EndingsBook.Ending e = ending(i);
+                if (e != null && e.id().equals("truth")) {
+                    VhsTv.stopLoops();
+                    this.minecraft.setScreen(new Ending13Screen(this));
+                    return true;
+                }
                 this.minecraft.setScreen(new EndingMapScreen(this, e == null ? null : e.id(), seen(i) && e.name() != null ? e.name() : "???"));
                 return true;
             }
@@ -123,6 +128,7 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
+        if (!tv.ejecting()) this.minecraft.getMusicManager().stopPlaying();          // the game's own menu music stays off while the tape is in
         if (tv.ejectDone()) {
             this.minecraft.setScreen(parent);
             return;

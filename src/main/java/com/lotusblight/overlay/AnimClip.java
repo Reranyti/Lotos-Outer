@@ -137,6 +137,14 @@ final class AnimClip {
         }
     }
 
+    /** A one-number channel at time {@code t} (for what the pose has no place for, such as how closed a hand is), or {@code fallback}. */
+    double value(String channel, double t, double fallback) {
+        Track tr = tracks.get(channel);
+        if (tr == null || tr.keys.isEmpty()) return fallback;
+        double tt = loop && length > 0 ? ((t % length) + length) % length : Math.max(0, Math.min(length, t));
+        return sampleVec(tr, tt)[0];
+    }
+
     /** Which two keys {@code t} lies between and how far along (0..1, before easing). */
     private int segment(Track tr, double t) {
         List<Key> ks = tr.keys;

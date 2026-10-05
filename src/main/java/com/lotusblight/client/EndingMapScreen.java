@@ -77,6 +77,7 @@ public final class EndingMapScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
+        this.minecraft.getMusicManager().stopPlaying();
         tv.body(g, this.width, this.height);
         tv.beginScreen(g);
         int midY = tv.sy + tv.sh / 2;

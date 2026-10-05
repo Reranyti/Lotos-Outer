@@ -121,8 +121,8 @@ final class VhsTv {
     /** Once the picture is on: the music of the menu, and the tape's hiss under it, quieter than the music. Safe to call every frame. */
     static void ensureLoops() {
         Minecraft mc = Minecraft.getInstance();
+        mc.getMusicManager().stopPlaying();                       // the game's own menu music stays off the whole time this is open
         if (music == null || !mc.getSoundManager().isActive(music)) {
-            mc.getMusicManager().stopPlaying();
             music = new Loop("vhs_music", 0.7f);
             mc.getSoundManager().play(music);
         }
