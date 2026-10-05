@@ -106,6 +106,15 @@ public final class EndingsScreen extends Screen {
                     x + (int) (Math.cos(a) * (NODE_RADIUS + len)), y + (int) (Math.sin(a) * (NODE_RADIUS + len)), color);
             disc(g, x, y, NODE_RADIUS, 0xFF000000 | (seen(i) ? 0x402020 : 0x181818));
             ring(g, x, y, NODE_RADIUS, on ? 0xFFFFFFFF : color);
+            EndingsBook.Ending e = ending(i);
+            if (e != null && e.icon() != null) {
+                com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                float shade = seen(i) || on ? 1f : 0.45f;
+                g.setColor(shade, shade, shade, 1f);
+                g.blit(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("lotusblight", "textures/gui/endings/" + e.icon() + ".png"),
+                        x - 12, y - 12, 24, 24, 0, 0, 32, 32, 32, 32);
+                g.setColor(1f, 1f, 1f, 1f);
+            }
         }
 
         g.drawCenteredString(this.font, Component.literal(EndingsBook.seenCount() + " / " + SLOTS), this.width / 2, centerY() - 4, 0xFFA0A0A0);

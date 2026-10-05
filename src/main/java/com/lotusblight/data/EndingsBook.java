@@ -22,13 +22,13 @@ public final class EndingsBook {
     private static final String FILE = "endings.properties";
 
     /** An ending the menu knows about. The name stays hidden ("???") until it has been seen. */
-    public record Ending(String id, String name) {}
+    public record Ending(String id, String name, String icon) {}
 
     /** Every ending, in the order the menu lists them. Names that are not decided yet are left out of the lang files on purpose. */
     public static final List<Ending> ALL = List.of(
-            new Ending("dismembered", "Расчленён."),
-            new Ending("ash", null),
-            new Ending("cursed", null));
+            new Ending("dismembered", "Расчленён.", null),
+            new Ending("ash", null, "honcho"),            // the Honcho line
+            new Ending("cursed", null, "four"));          // the cursed branch, with the true line beside it: all four lights
 
     private static Properties cache;
 
