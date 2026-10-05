@@ -81,6 +81,10 @@ public final class Ending13Scene {
     /** {@code skinPixels} is a 64x64 ARGB skin (the player's own, in the game). */
     public Ending13Scene(int[] skinPixels) {
         this.skin = new Soft3D.Tex(64, 64, skinPixels);
+        this.skin.nearest = true;
+        staticTex.dynamic = true;
+        screenTex.dynamic = true;
+        crackTex.dynamic = true;
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     }
@@ -119,6 +123,28 @@ public final class Ending13Scene {
     /** The picture {@code clock} seconds into the scene (which starts at {@link #T0} of the track), ARGB pixels, W*H. */
     public int[] render(double clock) {
         double t = clock + T0;
+        String overlay = buildFrame(t);
+        double flash = frameFlash;
+        // the 3D picture is in r.color; the 2D overlays go on top of it
+        r.flush();
+        if (DEBUG_ARMS) { long sum = 0; for (int c : r.color) sum += ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255); System.out.println("t=" + t + " raw mean " + sum / 3.0 / r.color.length); }
+        postFx(t);
+        if (DEBUG_ARMS) { long sum = 0; for (int c : r.color) sum += ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255); System.out.println("   after fx " + sum / 3.0 / r.color.length + " fade " + fade + " heavy " + heavy); }
+        double gain = exposure * (1 - exposureBoost) * (1 - fade);
+        for (int i = 0; i < pixels.length; i++) {
+            int p = r.color[i];
+            pixels[i] = 0xFF000000 | (clamp255((int) (((p >> 16) & 255) * gain)) << 16) | (clamp255((int) (((p >> 8) & 255) * gain)) << 8) | clamp255((int) ((p & 255) * gain));
+        }
+        if (overlay != null) overlayText(overlay, tmOverlay, t);
+        if (bloodAmount > 0.01) blood(t);
+        post(t, Math.max(flash, kickFlash));
+        return pixels;
+    }
+
+    private double frameFlash;
+
+    /** Builds the 3D picture of the moment {@code t} (track time) into {@link #r} and the state of the post chain; returns the name of the 2D overlay to put on top. */
+    private String buildFrame(double t) {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, W, H);
         double flash = 0;
@@ -171,20 +197,41 @@ public final class Ending13Scene {
         } else {
             limbo(t);
         }
-        // the 3D picture is in r.color; the 2D overlays go on top of it
-        r.flush();
-        if (DEBUG_ARMS) { long sum = 0; for (int c : r.color) sum += ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255); System.out.println("t=" + t + " raw mean " + sum / 3.0 / r.color.length); }
-        postFx(t);
-        if (DEBUG_ARMS) { long sum = 0; for (int c : r.color) sum += ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255); System.out.println("   after fx " + sum / 3.0 / r.color.length + " fade " + fade + " heavy " + heavy); }
-        double gain = exposure * (1 - exposureBoost) * (1 - fade);
-        for (int i = 0; i < pixels.length; i++) {
-            int p = r.color[i];
-            pixels[i] = 0xFF000000 | (clamp255((int) (((p >> 16) & 255) * gain)) << 16) | (clamp255((int) (((p >> 8) & 255) * gain)) << 8) | clamp255((int) ((p & 255) * gain));
-        }
-        if (overlay != null) overlayText(overlay, tmOverlay, t);
-        if (bloodAmount > 0.01) blood(t);
-        post(t, Math.max(flash, kickFlash));
-        return pixels;
+        frameFlash = flash;
+        return overlay;
+    }
+
+    // ------------------------------------------------------------------ the same picture, by the graphics card
+
+    private int ovW, ovH;
+    private java.awt.image.BufferedImage ovImage;
+    private Graphics2D ovG;
+
+    /** The frame at {@code clock}, drawn by {@code gpu} (an OpenGL context must be current): the result is {@code gpu.outputTexture()}. */
+    public void renderGpu(double clock, GpuScene gpu) {
+        double t = clock + T0;
+        gpu.begin(r);
+        String overlay = buildFrame(t);
+        double flash = frameFlash;
+        GpuScene.Params fp = new GpuScene.Params();
+        fp.gain = exposure * (1 - exposureBoost) * (1 - fade);
+        fp.bloomStrength = fxBloom;
+        fp.bloomThreshold = 0.55;
+        fp.ssao = fxSsao;
+        fp.ssaoRadius = 9;
+        fp.rays = fxRays;
+        fp.rayAt = fxRayAt;
+        fp.rayTint = fxRayTint;
+        fp.dofFocus = fxDofFocus;
+        fp.dofRange = fxDofRange;
+        fp.contrast = fxContrast;
+        fp.sat = fxSat;
+        fp.flash = Math.max(flash, kickFlash);
+        fp.heavy = heavy;
+        fp.glitch = glitch;
+        fp.time = t;
+        fp.seed = rnd.nextLong();
+        gpu.render(fp);
     }
 
     // what the post chain does this frame (each scene sets it)

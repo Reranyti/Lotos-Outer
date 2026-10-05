@@ -26,6 +26,9 @@ final class Soft3D {
     static final class Tex {
         final int w, h;
         final int[] px;
+        /** For the graphics card: changes every frame (re-sent), wants hard texels (a skin), or is one plain colour (sent as a tint). */
+        boolean dynamic, nearest, solid;
+        int solidArgb;
 
         Tex(int w, int h) {
             this.w = w;
@@ -117,6 +120,8 @@ final class Soft3D {
         static Tex solid(int r, int g, int b) {
             Tex t = new Tex(2, 2);
             java.util.Arrays.fill(t.px, argb(255, r, g, b));
+            t.solid = true;
+            t.solidArgb = argb(255, r, g, b);
             return t;
         }
 
@@ -196,6 +201,13 @@ final class Soft3D {
 
     private final List<Tri> tris = new ArrayList<>();
 
+    /** Where the geometry goes instead of the software rasteriser: the graphics-card renderer takes every quad as it is made. */
+    interface Sink {
+        void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive, double spec, double shine, double bump, double wrap, boolean blend, double alpha);
+    }
+
+    Sink sink;
+
     Soft3D(int width, int height, double fovDegrees) {
         this.width = width;
         this.height = height;
@@ -205,7 +217,11 @@ final class Soft3D {
         this.focal = (width / 2.0) / Math.tan(Math.toRadians(fovDegrees) / 2);
     }
 
+    /** The colour the picture was cleared to (the graphics-card renderer clears to it too). */
+    int clearRgb;
+
     void clear(int rgb) {
+        clearRgb = rgb;
         java.util.Arrays.fill(color, 0xFF000000 | rgb);
         java.util.Arrays.fill(depth, Float.POSITIVE_INFINITY);
         java.util.Arrays.fill(glow, 0f);
@@ -239,6 +255,10 @@ final class Soft3D {
      * tile). {@code emissive} 0 = lit by the lights, 1 = shows its own colour at full strength.
      */
     void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive) {
+        if (sink != null) {
+            sink.quad(p, uv, tex, tint, emissive, matSpec, matShine, matBump, matWrap, matBlend, matAlpha);
+            return;
+        }
         double e01 = dist(p[0], p[1]), e12 = dist(p[1], p[2]);
         // a big face is cut into tiles only so far as the clipping needs it; the light itself is per pixel
         int nu = Math.max(1, (int) Math.ceil(e01 / 6.0)), nv = Math.max(1, (int) Math.ceil(e12 / 6.0));
