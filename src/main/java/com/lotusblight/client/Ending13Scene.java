@@ -6,6 +6,9 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import com.lotusblight.cinema.GpuScene;
+import com.lotusblight.cinema.PlayerBoxes;
+import com.lotusblight.cinema.Soft3D;
 import com.lotusblight.overlay.Ending13Rig;
 import java.util.Random;
 
@@ -207,10 +210,13 @@ public final class Ending13Scene {
     private java.awt.image.BufferedImage ovImage;
     private Graphics2D ovG;
 
-    /** The frame at {@code clock}, drawn by {@code gpu} (an OpenGL context must be current): the result is {@code gpu.outputTexture()}. */
-    public void renderGpu(double clock, GpuScene gpu) {
+    /**
+     * The frame at {@code clock}, collected for the graphics card without touching it (so a thread of its own can do this while the game draws
+     * the last frame). Hand the result to {@link GpuScene#draw}.
+     */
+    public GpuScene.Frame collectGpu(double clock, int outW, int outH) {
         double t = clock + T0;
-        gpu.begin(r);
+        GpuScene.Frame frame = new GpuScene.Frame(r);
         String overlay = buildFrame(t);
         double flash = frameFlash;
         GpuScene.Params fp = new GpuScene.Params();
@@ -231,9 +237,9 @@ public final class Ending13Scene {
         fp.glitch = glitch;
         fp.time = t;
         fp.seed = rnd.nextLong();
-        gpu.render(fp);
+        frame.finish(fp);
+        return frame;
     }
-
     // what the post chain does this frame (each scene sets it)
     private double fxBloom = 0.6, fxSsao = 0.55, fxRays = 0, fxContrast = 1.08, fxSat = 0.95, fxDofFocus = 0, fxDofRange = 6;
     private double[] fxRayAt;

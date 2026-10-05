@@ -1,5 +1,7 @@
 package com.lotusblight.client;
 
+import com.lotusblight.cinema.GpuScene;
+
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
@@ -47,18 +49,20 @@ public final class GpuHarness {
             for (int i = 0; i < parts.length; i++) ks[i] = Double.parseDouble(parts[i].trim());
             scene.setKicks(ks);
         }
-        scene.renderGpu(0, gpu);                                   // a first frame to warm up
+        gpu.draw(scene.collectGpu(0, w, h));                       // a first frame to warm up
         for (int i = 5; i < args.length; i++) {
             double t = Double.parseDouble(args[i]);
             long t0 = System.nanoTime();
-            scene.renderGpu(t - Ending13Scene.T0, gpu);
+            GpuScene.Frame fr = scene.collectGpu(t - Ending13Scene.T0, w, h);
+            long tc = System.nanoTime();
+            gpu.draw(fr);
             GL11.glFinish();
             long ms = (System.nanoTime() - t0) / 1_000_000;
             int[] px = gpu.readPixels();
             BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
             out.setRGB(0, 0, w, h, px, 0, w);
             javax.imageio.ImageIO.write(out, "png", new File(dir, String.format(java.util.Locale.ROOT, "g%06.2f.png", t)));
-            System.out.println("t=" + t + "  " + ms + " ms");
+            System.out.println("t=" + t + "  total " + ms + " ms, of which drawing " + (System.nanoTime() - tc) / 1_000_000 + " ms");
         }
         GLFW.glfwDestroyWindow(win);
         GLFW.glfwTerminate();

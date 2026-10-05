@@ -1,4 +1,4 @@
-package com.lotusblight.client;
+package com.lotusblight.cinema;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -19,31 +19,31 @@ import java.util.stream.IntStream;
  * A frame: {@link #clear}, set the camera and the lights, submit geometry ({@link #quad}, {@link #box}, {@link #figure}, ...), then
  * {@link #flush} draws it (in parallel bands), and the post effects work on the result.
  */
-final class Soft3D {
+public final class Soft3D {
     // ------------------------------------------------------------------ textures
 
     /** A texture: ARGB pixels. */
-    static final class Tex {
-        final int w, h;
-        final int[] px;
+    public static final class Tex {
+        public final int w, h;
+        public final int[] px;
         /** For the graphics card: changes every frame (re-sent), wants hard texels (a skin), or is one plain colour (sent as a tint). */
-        boolean dynamic, nearest, solid;
-        int solidArgb;
+        public boolean dynamic, nearest, solid;
+        public int solidArgb;
 
-        Tex(int w, int h) {
+        public Tex(int w, int h) {
             this.w = w;
             this.h = h;
             this.px = new int[w * h];
         }
 
-        Tex(int w, int h, int[] px) {
+        public Tex(int w, int h, int[] px) {
             this.w = w;
             this.h = h;
             this.px = px;
         }
 
         /** Stained plaster or concrete: a base colour with grain, blotches and a slow variation across it. */
-        static Tex surface(int seed, int w, int h, int r, int g, int b, int grain, int blotches) {
+        public static Tex surface(int seed, int w, int h, int r, int g, int b, int grain, int blotches) {
             Tex t = new Tex(w, h);
             Random rnd = new Random(seed);
             for (int i = 0; i < w * h; i++) {
@@ -83,7 +83,7 @@ final class Soft3D {
         }
 
         /** Dripping grime down from the top edge of a wall texture (stains that run). */
-        Tex streaks(int seed, int count, int dark) {
+        public Tex streaks(int seed, int count, int dark) {
             Random rnd = new Random(seed);
             for (int k = 0; k < count; k++) {
                 int x = rnd.nextInt(w), len = h / 4 + rnd.nextInt(h / 2), wd = 1 + rnd.nextInt(3);
@@ -100,7 +100,7 @@ final class Soft3D {
         }
 
         /** Cracks running through a surface. */
-        Tex cracks(int seed, int count, int dark) {
+        public Tex cracks(int seed, int count, int dark) {
             Random rnd = new Random(seed);
             for (int k = 0; k < count; k++) {
                 double x = rnd.nextInt(w), y = rnd.nextInt(h), a = rnd.nextDouble() * 6.28;
@@ -117,7 +117,7 @@ final class Soft3D {
             return this;
         }
 
-        static Tex solid(int r, int g, int b) {
+        public static Tex solid(int r, int g, int b) {
             Tex t = new Tex(2, 2);
             java.util.Arrays.fill(t.px, argb(255, r, g, b));
             t.solid = true;
@@ -126,7 +126,7 @@ final class Soft3D {
         }
 
         /** Text on a transparent (or coloured) ground. */
-        static Tex text(String s, Font font, Color fg, Color bg, int pad) {
+        public static Tex text(String s, Font font, Color fg, Color bg, int pad) {
             BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
             Graphics2D pg = probe.createGraphics();
             pg.setFont(font);
@@ -149,35 +149,35 @@ final class Soft3D {
         }
     }
 
-    static int argb(int a, int r, int g, int b) {
+    public static int argb(int a, int r, int g, int b) {
         return (Math.max(0, Math.min(255, a)) << 24) | (Math.max(0, Math.min(255, r)) << 16) | (Math.max(0, Math.min(255, g)) << 8) | Math.max(0, Math.min(255, b));
     }
 
     /** A point light. */
-    record Light(double x, double y, double z, double r, double g, double b, double range) {}
+    public record Light(double x, double y, double z, double r, double g, double b, double range) {}
 
     // ------------------------------------------------------------------ state
 
-    final int width, height;
+    public final int width, height;
     /** The picture: ARGB. */
-    final int[] color;
+    public final int[] color;
     private final float[] depth;
     /** How much light each pixel gives off by itself (for the bloom). */
     private final float[] glow;
-    final double focal;
-    double camX, camY, camZ, yaw, pitch;
-    double ambR = 0.10, ambG = 0.10, ambB = 0.11;
-    double fogR = 0, fogG = 0, fogB = 0, fogDensity = 0.12;
-    final List<Light> lights = new ArrayList<>();
+    public final double focal;
+    public double camX, camY, camZ, yaw, pitch;
+    public double ambR = 0.10, ambG = 0.10, ambB = 0.11;
+    public double fogR = 0, fogG = 0, fogB = 0, fogDensity = 0.12;
+    public final List<Light> lights = new ArrayList<>();
     /** The material of what is submitted next: how strongly it shines and how sharply. */
-    double matSpec = 0, matShine = 24;
+    public double matSpec = 0, matShine = 24;
     /** When on, what is drawn is translucent: it goes over the solid picture, softly, by the alpha of its texture times {@link #matAlpha}. */
-    boolean matBlend = false;
-    double matAlpha = 1;
+    public boolean matBlend = false;
+    public double matAlpha = 1;
     /** Relief taken from the texture's own light and dark (0 = flat), and a soft wrap of light round the form with a warm tint, for skin and meat. */
-    double matBump = 0, matWrap = 0;
+    public double matBump = 0, matWrap = 0;
     /** If set, light 0 throws shadows; it looks along {@code shadowDir} with a wide view. */
-    double[] shadowDir;
+    public double[] shadowDir;
     private float[] shadowMap;
     private static final int SHADOW = 320;
     private double[] sRight, sUp, sFwd;
@@ -185,30 +185,30 @@ final class Soft3D {
 
     /** One triangle, ready for the bands: screen position and perspective-divided attributes of each corner, and its surface. */
     private static final class Tri {
-        final float[] sx = new float[3], sy = new float[3], iw = new float[3];
-        final float[] u = new float[3], v = new float[3];                 // already divided by w
-        final float[] wx = new float[3], wy = new float[3], wz = new float[3];   // world position divided by w
-        final double[][] world = new double[3][];                          // for the shadow pass
-        Tex tex;
-        int tr, tg, tb;
-        float emissive, spec, shine, bump, wrap;
-        float nx, ny, nz;
-        boolean blend;          // drawn after everything solid, over it, by the texture's own alpha and {@code alpha}
-        float alpha, zAvg;
-        int minX, maxX, minY, maxY;
-        float area;
+        public final float[] sx = new float[3], sy = new float[3], iw = new float[3];
+        public final float[] u = new float[3], v = new float[3];                 // already divided by w
+        public final float[] wx = new float[3], wy = new float[3], wz = new float[3];   // world position divided by w
+        public final double[][] world = new double[3][];                          // for the shadow pass
+        public Tex tex;
+        public int tr, tg, tb;
+        public float emissive, spec, shine, bump, wrap;
+        public float nx, ny, nz;
+        public boolean blend;          // drawn after everything solid, over it, by the texture's own alpha and {@code alpha}
+        public float alpha, zAvg;
+        public int minX, maxX, minY, maxY;
+        public float area;
     }
 
     private final List<Tri> tris = new ArrayList<>();
 
     /** Where the geometry goes instead of the software rasteriser: the graphics-card renderer takes every quad as it is made. */
-    interface Sink {
-        void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive, double spec, double shine, double bump, double wrap, boolean blend, double alpha);
+    public interface Sink {
+        public void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive, double spec, double shine, double bump, double wrap, boolean blend, double alpha);
     }
 
-    Sink sink;
+    public Sink sink;
 
-    Soft3D(int width, int height, double fovDegrees) {
+    public Soft3D(int width, int height, double fovDegrees) {
         this.width = width;
         this.height = height;
         this.color = new int[width * height];
@@ -218,9 +218,9 @@ final class Soft3D {
     }
 
     /** The colour the picture was cleared to (the graphics-card renderer clears to it too). */
-    int clearRgb;
+    public int clearRgb;
 
-    void clear(int rgb) {
+    public void clear(int rgb) {
         clearRgb = rgb;
         java.util.Arrays.fill(color, 0xFF000000 | rgb);
         java.util.Arrays.fill(depth, Float.POSITIVE_INFINITY);
@@ -236,13 +236,13 @@ final class Soft3D {
         shadowDir = null;
     }
 
-    void camera(double x, double y, double z, double yawRad, double pitchRad) {
+    public void camera(double x, double y, double z, double yawRad, double pitchRad) {
         camX = x; camY = y; camZ = z; yaw = yawRad; pitch = pitchRad;
     }
 
     // ------------------------------------------------------------------ submitting geometry
 
-    double[] toView(double x, double y, double z) {
+    public double[] toView(double x, double y, double z) {
         x -= camX; y -= camY; z -= camZ;
         double cy = Math.cos(-yaw), sy = Math.sin(-yaw);
         double x1 = x * cy + z * sy, z1 = -x * sy + z * cy;
@@ -254,7 +254,7 @@ final class Soft3D {
      * One textured quad, corners in order top-left, top-right, bottom-right, bottom-left, with texture coordinates in 0..1 (or beyond, to
      * tile). {@code emissive} 0 = lit by the lights, 1 = shows its own colour at full strength.
      */
-    void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive) {
+    public void quad(double[][] p, double[][] uv, Tex tex, int tint, double emissive) {
         if (sink != null) {
             sink.quad(p, uv, tex, tint, emissive, matSpec, matShine, matBump, matWrap, matBlend, matAlpha);
             return;
@@ -363,7 +363,7 @@ final class Soft3D {
     // ------------------------------------------------------------------ drawing
 
     /** Draws everything submitted: the shadow map first, then the picture in parallel bands. */
-    void flush() {
+    public void flush() {
         buildShadow();
         final List<Tri> blended = new ArrayList<>();
         for (Tri t : tris) if (t.blend) blended.add(t);
@@ -566,7 +566,7 @@ final class Soft3D {
     // ------------------------------------------------------------------ post effects (the "shaders")
 
     /** Screen-space ambient occlusion: creases and the feet of things go darker. */
-    void ssao(double strength, double radiusPx) {
+    public void ssao(double strength, double radiusPx) {
         final int[] src = color.clone();
         final int w = width, h = height;
         final double[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {0.7, 0.7}, {-0.7, 0.7}, {0.7, -0.7}, {-0.7, -0.7}};
@@ -594,7 +594,7 @@ final class Soft3D {
     }
 
     /** Things that glow bleed light around themselves. */
-    void bloom(double threshold, double strength, int radius) {
+    public void bloom(double threshold, double strength, int radius) {
         final int w = width, h = height, sw = w / 4, sh = h / 4;
         float[] r = new float[sw * sh], g = new float[sw * sh], b = new float[sw * sh];
         for (int y = 0; y < sh; y++) {
@@ -661,7 +661,7 @@ final class Soft3D {
      * Light shafts: the bright parts of the picture are smeared towards a light's place on the screen, so a lamp throws visible beams
      * through the dust. {@code worldX/Y/Z} is the light; nothing happens if it is behind the camera.
      */
-    void godRays(double worldX, double worldY, double worldZ, double strength, int tintR, int tintG, int tintB) {
+    public void godRays(double worldX, double worldY, double worldZ, double strength, int tintR, int tintG, int tintB) {
         double[] v = toView(worldX, worldY, worldZ);
         if (v[2] < 0.2) return;
         final double lx = width / 2.0 + focal * v[0] / v[2], ly = height / 2.0 - focal * v[1] / v[2];
@@ -691,7 +691,7 @@ final class Soft3D {
     }
 
     /** Depth of field: what is far from {@code focus} (metres) goes soft. */
-    void dof(double focus, double range, int maxRadius) {
+    public void dof(double focus, double range, int maxRadius) {
         final int w = width, h = height;
         final int[] src = color.clone();
         IntStream.range(0, h).parallel().forEach(y -> {
@@ -716,7 +716,7 @@ final class Soft3D {
     }
 
     /** Colour grading: contrast around the middle, a tint on the shadows and on the highlights, and saturation. */
-    void grade(double contrast, double saturation, int[] shadowTint, int[] highlightTint) {
+    public void grade(double contrast, double saturation, int[] shadowTint, int[] highlightTint) {
         final int w = width, h = height;
         IntStream.range(0, h).parallel().forEach(y -> {
             for (int x = 0; x < w; x++) {
@@ -748,7 +748,7 @@ final class Soft3D {
     }
 
     /** Where a world point lands on the screen: {x, y} in pixels, or null when it is behind the camera. */
-    double[] project(double wx, double wy, double wz) {
+    public double[] project(double wx, double wy, double wz) {
         double[] v = toView(wx, wy, wz);
         if (v[2] < 0.05) return null;
         return new double[]{width / 2.0 + focal * v[0] / v[2], height / 2.0 - focal * v[1] / v[2]};
@@ -759,7 +759,7 @@ final class Soft3D {
     private static final double[][] FULL_UV = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
     /** An axis-aligned box from (x0,y0,z0) to (x1,y1,z1) with one texture on all its faces, tiled {@code tile} times per metre. */
-    void box(double x0, double y0, double z0, double x1, double y1, double z1, Tex tex, int tint, double emissive, double tile) {
+    public void box(double x0, double y0, double z0, double x1, double y1, double z1, Tex tex, int tint, double emissive, double tile) {
         double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
         faceXY(z0, x0, y0, x1, y1, tex, tint, emissive, dx * tile, dy * tile);
         faceXY(z1, x0, y0, x1, y1, tex, tint, emissive, dx * tile, dy * tile);
@@ -773,20 +773,20 @@ final class Soft3D {
         return new double[][]{{0, 0}, {su, 0}, {su, sv}, {0, sv}};
     }
 
-    void faceXY(double z, double x0, double y0, double x1, double y1, Tex tex, int tint, double em, double su, double sv) {
+    public void faceXY(double z, double x0, double y0, double x1, double y1, Tex tex, int tint, double em, double su, double sv) {
         quad(new double[][]{{x0, y1, z}, {x1, y1, z}, {x1, y0, z}, {x0, y0, z}}, uv(su, sv), tex, tint, em);
     }
 
-    void faceYZ(double x, double y0, double z0, double y1, double z1, Tex tex, int tint, double em, double su, double sv) {
+    public void faceYZ(double x, double y0, double z0, double y1, double z1, Tex tex, int tint, double em, double su, double sv) {
         quad(new double[][]{{x, y1, z0}, {x, y1, z1}, {x, y0, z1}, {x, y0, z0}}, uv(su, sv), tex, tint, em);
     }
 
-    void faceXZ(double y, double x0, double z0, double x1, double z1, Tex tex, int tint, double em, double su, double sv) {
+    public void faceXZ(double y, double x0, double z0, double x1, double z1, Tex tex, int tint, double em, double su, double sv) {
         quad(new double[][]{{x0, y, z0}, {x1, y, z0}, {x1, y, z1}, {x0, y, z1}}, uv(su, sv), tex, tint, em);
     }
 
     /** A flat card in space: centre, half width, half height, yaw (the card's x axis is the camera's right when the camera yaw is the same). */
-    void card(double cx, double cy, double cz, double hw, double hh, double yawRad, Tex tex, int tint, double emissive) {
+    public void card(double cx, double cy, double cz, double hw, double hh, double yawRad, Tex tex, int tint, double emissive) {
         double c = Math.cos(yawRad), s = Math.sin(yawRad);
         double[][] p = new double[4][];
         double[][] corners = {{-hw, hh}, {hw, hh}, {hw, -hh}, {-hw, -hh}};
@@ -795,7 +795,7 @@ final class Soft3D {
     }
 
     /** A card that always faces the camera (for dust, sparks, glows). */
-    void billboard(double cx, double cy, double cz, double hw, double hh, Tex tex, int tint, double emissive) {
+    public void billboard(double cx, double cy, double cz, double hw, double hh, Tex tex, int tint, double emissive) {
         double[][] b = basis();
         double[][] p = new double[4][];
         double[][] corners = {{-hw, hh}, {hw, hh}, {hw, -hh}, {-hw, -hh}};
@@ -806,19 +806,19 @@ final class Soft3D {
     }
 
     /** The camera's own axes in the world: right, up, forward. */
-    double[][] basis() {
+    public double[][] basis() {
         double sy = Math.sin(yaw), cy = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
         return new double[][]{{cy, 0, -sy}, {-sy * sp, cp, -cy * sp}, {sy * cp, sp, cy * cp}};
     }
 
     /** A point given in the camera's own terms (x right, y up, z forward), in the world. */
-    double[] local(double lx, double ly, double lz) {
+    public double[] local(double lx, double ly, double lz) {
         double[][] b = basis();
         return new double[]{camX + b[0][0] * lx + b[1][0] * ly + b[2][0] * lz, camY + b[0][1] * lx + b[1][1] * ly + b[2][1] * lz, camZ + b[0][2] * lx + b[1][2] * ly + b[2][2] * lz};
     }
 
     /** A box along the segment a-b with half-widths (sa, sb) around it, for knives, branches, limbs. */
-    void bar(double[] a, double[] b, double[] sideA, double[] sideB, Tex tex, int tint, double emissive) {
+    public void bar(double[] a, double[] b, double[] sideA, double[] sideB, Tex tex, int tint, double emissive) {
         double[][] c = new double[8][];
         int i = 0;
         for (double[] e : new double[][]{a, b}) {
@@ -835,15 +835,15 @@ final class Soft3D {
     // ------------------------------------------------------------------ the player model
 
     /** The pose of the player model: a turn of every part (in radians) around its joint, and a stretch along its length. */
-    static final class Pose {
-        final double[] pitch = new double[6], yaw = new double[6], roll = new double[6];
-        final double[] stretch = {1, 1, 1, 1, 1, 1};
+    public static final class Pose {
+        public final double[] pitch = new double[6], yaw = new double[6], roll = new double[6];
+        public final double[] stretch = {1, 1, 1, 1, 1, 1};
     }
 
-    static final int ALL_PARTS = 0b111111;
+    public static final int ALL_PARTS = 0b111111;
 
     /** The skin model standing at (x, y, z) facing {@code facing} radians. */
-    void figure(PlayerBoxes model, Tex skin, double x, double y, double z, double facing, double scale, Pose pose, int tint, double emissive, int partMask) {
+    public void figure(PlayerBoxes model, Tex skin, double x, double y, double z, double facing, double scale, Pose pose, int tint, double emissive, int partMask) {
         double cf = Math.cos(facing), sf = Math.sin(facing);
         figure(model, skin, new double[]{x, y, z}, new double[][]{{cf, 0, -sf}, {0, 1, 0}, {sf, 0, cf}}, scale, pose, tint, emissive, partMask);
     }
@@ -852,7 +852,7 @@ final class Soft3D {
      * The skin model placed by a frame: the model's x runs along basis[0], y along basis[1], z along basis[2], one skin pixel =
      * {@code scale} metres, {@code origin} is between the feet. {@code tint} multiplies the colours, so a figure can be dark or red.
      */
-    void figure(PlayerBoxes model, Tex skin, double[] origin, double[][] basis, double scale, Pose pose, int tint, double emissive, int partMask) {
+    public void figure(PlayerBoxes model, Tex skin, double[] origin, double[][] basis, double scale, Pose pose, int tint, double emissive, int partMask) {
         for (PlayerBoxes.Face f : model.faces) {
             int part = f.part();
             if ((partMask & (1 << part)) == 0) continue;

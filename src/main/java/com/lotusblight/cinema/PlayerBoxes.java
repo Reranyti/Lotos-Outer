@@ -1,4 +1,4 @@
-package com.lotusblight.client;
+package com.lotusblight.cinema;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,17 +8,17 @@ import java.util.List;
  * layer, each face mapped to its own rectangle of the 64x64 skin. Units are skin pixels, origin between the feet, y up, facing +z.
  * (The same boxes as the overlay's SkinModel, which is private to that package.)
  */
-final class PlayerBoxes {
-    static final int HEAD = 0, BODY = 1, RIGHT_ARM = 2, LEFT_ARM = 3, RIGHT_LEG = 4, LEFT_LEG = 5;
+public final class PlayerBoxes {
+    public static final int HEAD = 0, BODY = 1, RIGHT_ARM = 2, LEFT_ARM = 3, RIGHT_LEG = 4, LEFT_LEG = 5;
 
     /** One textured face: four corners (top-left, top-right, bottom-right, bottom-left) and the skin rectangle drawn over them. */
-    record Face(int part, double[][] corners, int u0, int v0, int u1, int v1) {}
+    public record Face(int part, double[][] corners, int u0, int v0, int u1, int v1) {}
 
-    static final double[][] PIVOTS = {{0, 24, 0}, {0, 24, 0}, {-5, 22, 0}, {5, 22, 0}, {-2, 12, 0}, {2, 12, 0}};
+    public static final double[][] PIVOTS = {{0, 24, 0}, {0, 24, 0}, {-5, 22, 0}, {5, 22, 0}, {-2, 12, 0}, {2, 12, 0}};
 
-    final List<Face> faces = new ArrayList<>();
+    public final List<Face> faces = new ArrayList<>();
 
-    PlayerBoxes() {
+    public PlayerBoxes() {
 // Base layer, then the outer layer puffed out a little so it sits over the base.
         box(HEAD, -4, 24, -4, 8, 8, 8, 0, 0, 0);
         box(HEAD, -4, 24, -4, 8, 8, 8, 32, 0, 0.5);

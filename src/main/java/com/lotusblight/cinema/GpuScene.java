@@ -1,4 +1,4 @@
-package com.lotusblight.client;
+package com.lotusblight.cinema;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
@@ -26,24 +26,23 @@ import java.util.Map;
  * occlusion, light shafts, depth of field, grading) and the tape's look, at any size, 60 times a second. The scene code is the same; only
  * what draws it differs. Needs an OpenGL 3.2 core context to be current on the calling thread.
  */
-final class GpuScene implements Soft3D.Sink {
+public final class GpuScene {
     /** What the post chain does this frame; the scene fills it in. */
-    static final class Params {
-        double gain = 1, bloomStrength = 0.6, bloomThreshold = 0.55, ssao = 0.55, ssaoRadius = 9, rays = 0, dofFocus = 0, dofRange = 6, contrast = 1.08, sat = 0.95;
-        double[] rayAt;
-        int[] rayTint = {210, 225, 255};
-        int[] shadowTint = {-6, -2, 8}, highlightTint = {14, 8, -4};
-        double flash, heavy, glitch, time;
-        long seed;
-        double titleAlpha;
+    public static final class Params {
+        public double gain = 1, bloomStrength = 0.6, bloomThreshold = 0.55, ssao = 0.55, ssaoRadius = 9, rays = 0, dofFocus = 0, dofRange = 6, contrast = 1.08, sat = 0.95;
+        public double[] rayAt;
+        public int[] rayTint = {210, 225, 255};
+        public int[] shadowTint = {-6, -2, 8}, highlightTint = {14, 8, -4};
+        public double flash, heavy, glitch, time;
+        public long seed;
+        public double titleAlpha;
     }
 
     private static final int MAX_LIGHTS = 24;
     private static final int STRIDE = 18;                              // floats per vertex: pos3 uv2 normal3 tint4 mat4 blend2
 
-    final int outW, outH;
+    public final int outW, outH;
     private final int shadowSize = 2048;
-    private Soft3D r;
 
     // programs
     private int progScene, progShadow, progBloomExtract, progBlur, progBloomAdd, progGrade, progVhs, progSprite, progSsao, progDof, progRays, progCopy;
@@ -62,8 +61,16 @@ final class GpuScene implements Soft3D.Sink {
         int id, w, h;
     }
 
+    /** The sprites of light and the texture they use. */
+    public static final class SpriteCmd {
+        public java.awt.image.BufferedImage img;
+        public double[] c = new double[8];
+        public double gain;
+    }
+
     private static final class Batch {
-        GlTex tex;
+        Soft3D.Tex tex;            // null = the white texel
+        int[] snapshot;            // the pixels of a texture that changes every frame, as they were when the frame was made
         float[] data = new float[STRIDE * 6 * 64];
         int floats;
         void add(float[] v, int n) {
@@ -75,19 +82,123 @@ final class GpuScene implements Soft3D.Sink {
 
     private static final class Blended {
         float[] v = new float[STRIDE * 6];
-        GlTex tex;
+        Soft3D.Tex tex;
+        int[] snapshot;
         float z;
     }
 
-    private final IdentityHashMap<Soft3D.Tex, GlTex> texCache = new IdentityHashMap<>();
-    private final ReferenceQueue<Soft3D.Tex> dead = new ReferenceQueue<>();
-    private final Map<PhantomReference<Soft3D.Tex>, Integer> deadIds = new IdentityHashMap<>();
-    private final IdentityHashMap<GlTex, Batch> batches = new IdentityHashMap<>();
-    private final List<Blended> blended = new ArrayList<>();
-    private final List<float[]> sprites = new ArrayList<>();               // x0 y0 x1 y1 (ndc) + gain, + texture id as float bits
-    private final List<Integer> spriteTex = new ArrayList<>();
+    /**
+     * Everything one frame needs, collected without touching the graphics card (so a thread of its own can build it while the game draws the last
+     * one): the quads, the state of the camera and the lights, what the post chain is to do, and the 2D layer.
+     */
+    public static final class Frame implements Soft3D.Sink {
+        final IdentityHashMap<Object, Batch> batches = new IdentityHashMap<>();
+        public final List<Blended> blended = new ArrayList<>();
+        public final List<SpriteCmd> sprites = new ArrayList<>();
+        public Soft3D soft;
+        public double camX, camY, camZ, yaw, pitch, focal, width, height, ambR, ambG, ambB, fogR, fogG, fogB, fogDensity;
+        public int clearRgb;
+        public double[] shadowDir;
+        public final List<Soft3D.Light> lights = new ArrayList<>();
+        public Params params;
+        public int[] overlay;
+        public int ovW, ovH;
 
-    GpuScene(int outW, int outH) {
+        public Frame(Soft3D soft) {
+            this.soft = soft;
+            soft.sink = this;
+        }
+
+        public double[] toView(double x, double y, double z) {
+            x -= camX; y -= camY; z -= camZ;
+            double cy = Math.cos(-yaw), sy = Math.sin(-yaw);
+            double x1 = x * cy + z * sy, z1 = -x * sy + z * cy;
+            double cp = Math.cos(pitch), sp = Math.sin(pitch);
+            return new double[]{x1, y * cp - z1 * sp, y * sp + z1 * cp};
+        }
+
+        /** Ends the collecting: takes a copy of the scene's state. */
+        public void finish(Params fp) {
+            Soft3D r = soft;
+            r.sink = null;
+            camX = r.camX; camY = r.camY; camZ = r.camZ; yaw = r.yaw; pitch = r.pitch; focal = r.focal; width = r.width; height = r.height;
+            ambR = r.ambR; ambG = r.ambG; ambB = r.ambB; fogR = r.fogR; fogG = r.fogG; fogB = r.fogB; fogDensity = r.fogDensity;
+            clearRgb = r.clearRgb;
+            shadowDir = r.shadowDir == null ? null : r.shadowDir.clone();
+            lights.addAll(r.lights);
+            params = fp;
+            soft = null;
+        }
+
+        public void setOverlay(int[] argb, int w, int h) {
+            overlay = argb;
+            ovW = w;
+            ovH = h;
+        }
+
+        public void addSprite(java.awt.image.BufferedImage img, double[] corners, double gain) {
+            SpriteCmd s = new SpriteCmd();
+            s.img = img;
+            s.c = corners;
+            s.gain = gain;
+            sprites.add(s);
+        }
+
+        private Batch batchFor(Soft3D.Tex tex) {
+            Object key = tex == null ? WHITE_KEY : tex;
+            Batch b = batches.get(key);
+            if (b == null) {
+                b = new Batch();
+                b.tex = tex;
+                if (tex != null && tex.dynamic) b.snapshot = tex.px.clone();
+                batches.put(key, b);
+            }
+            return b;
+        }
+
+        @Override
+        public void quad(double[][] p, double[][] uv, Soft3D.Tex tex, int tint, double emissive, double spec, double shine, double bump, double wrap, boolean blend, double alpha) {
+            float tr = ((tint >> 16) & 255) / 255f, tg = ((tint >> 8) & 255) / 255f, tb = (tint & 255) / 255f;
+            Soft3D.Tex use = tex;
+            if (tex.solid) {                                    // a plain colour needs no texture of its own: it rides in the tint over a white texel
+                use = null;
+                tr *= ((tex.solidArgb >> 16) & 255) / 255f;
+                tg *= ((tex.solidArgb >> 8) & 255) / 255f;
+                tb *= (tex.solidArgb & 255) / 255f;
+            }
+            double ax = p[1][0] - p[0][0], ay = p[1][1] - p[0][1], az = p[1][2] - p[0][2];
+            double bx = p[3][0] - p[0][0], by = p[3][1] - p[0][1], bz = p[3][2] - p[0][2];
+            double nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+            double nl = Math.sqrt(nx * nx + ny * ny + nz * nz) + 1e-9;
+            nx /= nl; ny /= nl; nz /= nl;
+            float[] v = new float[STRIDE * 6];
+            int[] order = {0, 1, 2, 0, 2, 3};
+            for (int k = 0; k < 6; k++) {
+                int c = order[k], o = k * STRIDE;
+                v[o] = (float) p[c][0]; v[o + 1] = (float) p[c][1]; v[o + 2] = (float) p[c][2];
+                v[o + 3] = (float) uv[c][0]; v[o + 4] = (float) uv[c][1];
+                v[o + 5] = (float) nx; v[o + 6] = (float) ny; v[o + 7] = (float) nz;
+                v[o + 8] = tr; v[o + 9] = tg; v[o + 10] = tb; v[o + 11] = (float) emissive;
+                v[o + 12] = (float) spec; v[o + 13] = (float) shine; v[o + 14] = (float) bump; v[o + 15] = (float) wrap;
+                v[o + 16] = (float) alpha; v[o + 17] = blend ? 1f : 0f;
+            }
+            if (blend) {
+                Blended b = new Blended();
+                b.v = v;
+                b.tex = use;
+                if (use != null && use.dynamic) b.snapshot = use.px.clone();
+                double[] vz = soft.toView((p[0][0] + p[2][0]) / 2, (p[0][1] + p[2][1]) / 2, (p[0][2] + p[2][2]) / 2);
+                b.z = (float) vz[2];
+                blended.add(b);
+            } else {
+                batchFor(use).add(v, v.length);
+            }
+        }
+    }
+
+    private static final Object WHITE_KEY = new Object();
+
+    public GpuScene(int outW, int outH) {
         this.outW = outW;
         this.outH = outH;
         init();
@@ -189,8 +300,6 @@ final class GpuScene implements Soft3D.Sink {
         whiteGl.h = 1;
     }
 
-    private GlTex whiteGl;
-
     private static int floatTex(int w, int h) {
         int t = GL11.glGenTextures();
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, t);
@@ -243,47 +352,49 @@ final class GpuScene implements Soft3D.Sink {
     }
 
     /** The finished picture, as a texture of the output size (RGBA, 8 bits). */
-    int outputTexture() {
+    public int outputTexture() {
         return out.tex0;
     }
 
-    // ------------------------------------------------------------------ collecting what the scene draws
+    // ------------------------------------------------------------------ textures (on the graphics-card side)
 
-    void begin(Soft3D soft) {
-        this.r = soft;
-        soft.sink = this;
-        for (Batch b : batches.values()) b.floats = 0;
-        blended.clear();
-        sprites.clear();
-        spriteTex.clear();
+    private final IdentityHashMap<Soft3D.Tex, GlTex> texCache = new IdentityHashMap<>();
+    private final IdentityHashMap<java.awt.image.BufferedImage, GlTex> imgCache = new IdentityHashMap<>();
+    private final ReferenceQueue<Object> dead = new ReferenceQueue<>();
+    private final Map<java.lang.ref.Reference<Object>, Integer> deadIds = new IdentityHashMap<>();
+    private GlTex whiteGl;
+
+    private void freeDead() {
         // free the textures of Tex objects that were thrown away
-        java.lang.ref.Reference<? extends Soft3D.Tex> ref;
+        java.lang.ref.Reference<?> ref;
         while ((ref = dead.poll()) != null) {
             Integer id = deadIds.remove(ref);
             if (id != null) GL11.glDeleteTextures(id);
         }
     }
 
-    private GlTex glTex(Soft3D.Tex tex) {
+    private GlTex glTex(Soft3D.Tex tex, int[] snapshot) {
+        if (tex == null) return whiteGl;
         GlTex g = texCache.get(tex);
+        int[] px = snapshot != null ? snapshot : tex.px;
         if (g == null) {
             g = new GlTex();
             g.id = GL11.glGenTextures();
             g.w = tex.w;
             g.h = tex.h;
-            upload(g, tex, true);
+            upload(g, tex, px, true);
             texCache.put(tex, g);
-            deadIds.put(new PhantomReference<>(tex, dead), g.id);
+            deadIds.put(new PhantomReference<Object>(tex, dead), g.id);
         } else if (tex.dynamic) {
-            upload(g, tex, false);
+            upload(g, tex, px, false);
         }
         return g;
     }
 
-    private void upload(GlTex g, Soft3D.Tex tex, boolean first) {
+    private void upload(GlTex g, Soft3D.Tex tex, int[] px, boolean first) {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, g.id);
         if (first) {
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, tex.w, tex.h, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, tex.px);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, tex.w, tex.h, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, px);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
             if (tex.nearest) {
@@ -296,98 +407,42 @@ final class GpuScene implements Soft3D.Sink {
                 GL11.glTexParameterf(GL11.GL_TEXTURE_2D, 0x84FE, 8f);                       // anisotropy, where the card has it
             }
         } else {
-            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, tex.w, tex.h, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, tex.px);
+            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, tex.w, tex.h, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, px);
         }
     }
 
-    @Override
-    public void quad(double[][] p, double[][] uv, Soft3D.Tex tex, int tint, double emissive, double spec, double shine, double bump, double wrap, boolean blend, double alpha) {
-        // a plain colour needs no texture of its own: it rides in the tint, over a white texel
-        GlTex gt;
-        float tr = ((tint >> 16) & 255) / 255f, tg = ((tint >> 8) & 255) / 255f, tb = (tint & 255) / 255f;
-        if (tex.solid) {
-            gt = whiteGl;
-            tr *= ((tex.solidArgb >> 16) & 255) / 255f;
-            tg *= ((tex.solidArgb >> 8) & 255) / 255f;
-            tb *= (tex.solidArgb & 255) / 255f;
-        } else {
-            gt = glTex(tex);
-        }
-        double ax = p[1][0] - p[0][0], ay = p[1][1] - p[0][1], az = p[1][2] - p[0][2];
-        double bx = p[3][0] - p[0][0], by = p[3][1] - p[0][1], bz = p[3][2] - p[0][2];
-        double nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
-        double nl = Math.sqrt(nx * nx + ny * ny + nz * nz) + 1e-9;
-        nx /= nl; ny /= nl; nz /= nl;
-        float[] v = new float[STRIDE * 6];
-        int[] order = {0, 1, 2, 0, 2, 3};
-        for (int k = 0; k < 6; k++) {
-            int c = order[k], o = k * STRIDE;
-            v[o] = (float) p[c][0]; v[o + 1] = (float) p[c][1]; v[o + 2] = (float) p[c][2];
-            v[o + 3] = (float) uv[c][0]; v[o + 4] = (float) uv[c][1];
-            v[o + 5] = (float) nx; v[o + 6] = (float) ny; v[o + 7] = (float) nz;
-            v[o + 8] = tr; v[o + 9] = tg; v[o + 10] = tb; v[o + 11] = (float) emissive;
-            v[o + 12] = (float) spec; v[o + 13] = (float) shine; v[o + 14] = (float) bump; v[o + 15] = (float) wrap;
-            v[o + 16] = (float) alpha; v[o + 17] = blend ? 1f : 0f;
-        }
-        if (blend) {
-            Blended b = new Blended();
-            b.v = v;
-            b.tex = gt;
-            double[] vz = r.toView((p[0][0] + p[2][0]) / 2, (p[0][1] + p[2][1]) / 2, (p[0][2] + p[2][2]) / 2);
-            b.z = (float) vz[2];
-            blended.add(b);
-        } else {
-            Batch bt = batches.get(gt);
-            if (bt == null) {
-                bt = new Batch();
-                bt.tex = gt;
-                batches.put(gt, bt);
-            }
-            bt.add(v, v.length);
-        }
-    }
-
-    /** An image laid over the picture as light (added), its corners given in output pixels. */
-    void addSprite(int glTexId, double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double gain) {
-        // corners clockwise from the top left; stored as ndc with the gain in the last slot
-        float[] s = new float[9];
-        double[][] c = {{x0, y0}, {x1, y1}, {x2, y2}, {x3, y3}};
-        for (int i = 0; i < 4; i++) {
-            s[i * 2] = (float) (c[i][0] / outW * 2 - 1);
-            s[i * 2 + 1] = (float) (1 - c[i][1] / outH * 2);
-        }
-        s[8] = (float) gain;
-        sprites.add(s);
-        spriteTex.add(glTexId);
-    }
-
-    /** A texture for a picture that is sent once and used as a sprite. */
-    int imageTexture(java.awt.image.BufferedImage im) {
-        int id = GL11.glGenTextures();
-        int[] px = im.getRGB(0, 0, im.getWidth(), im.getHeight(), null, 0, im.getWidth());
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, id);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, im.getWidth(), im.getHeight(), 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, px);
+    private int imageTexture(java.awt.image.BufferedImage im) {
+        GlTex g = imgCache.get(im);
+        if (g != null) return g.id;
+        g = new GlTex();
+        g.id = GL11.glGenTextures();
+        g.w = im.getWidth();
+        g.h = im.getHeight();
+        int[] px = im.getRGB(0, 0, g.w, g.h, null, 0, g.w);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, g.id);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, g.w, g.h, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, px);
         GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR_MIPMAP_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        return id;
+        imgCache.put(im, g);
+        return g.id;
     }
 
-    /** The 2D layer drawn on the CPU (text, the camera's marks), ARGB of {@code w}x{@code h}, laid over before the tape's look. */
-    void setOverlay(int[] argb, int w, int h) {
+    private void sendOverlay(Frame f) {
+        if (f.overlay == null) { hasOverlay = false; return; }
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, overlayTex);
-        if (w != overlayW || h != overlayH) {
-            overlayW = w;
-            overlayH = h;
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, w, h, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, argb);
+        if (f.ovW != overlayW || f.ovH != overlayH) {
+            overlayW = f.ovW;
+            overlayH = f.ovH;
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, f.ovW, f.ovH, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, f.overlay);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
         } else {
-            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, w, h, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, argb);
+            GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, f.ovW, f.ovH, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, f.overlay);
         }
         hasOverlay = true;
     }
@@ -396,23 +451,18 @@ final class GpuScene implements Soft3D.Sink {
 
     // ------------------------------------------------------------------ drawing
 
-    private float[] viewProj() {
-        double cy = Math.cos(-r.yaw), sy = Math.sin(-r.yaw), cp = Math.cos(r.pitch), sp = Math.sin(r.pitch);
+    private float[] viewProj(Frame f) {
+        double cy = Math.cos(-f.yaw), sy = Math.sin(-f.yaw), cp = Math.cos(f.pitch), sp = Math.sin(f.pitch);
         // view space (x right, y up, z forward) from a world point, exactly as Soft3D.toView
-        // x1 = (x-cx)*cy + (z-cz)*sy ; z1 = -(x-cx)*sy + (z-cz)*cy ; y' = y*cp - z1*sp ; z' = y*sp + z1*cp
         double[][] v = new double[4][4];
-        // row for x'
         v[0][0] = cy; v[0][1] = 0; v[0][2] = sy;
-        // z1 row: (-sy, 0, cy)
-        // y' row = cp*Y - sp*z1
         v[1][0] = -sp * (-sy); v[1][1] = cp; v[1][2] = -sp * cy;
-        // z' row = sp*Y + cp*z1
         v[2][0] = cp * (-sy); v[2][1] = sp; v[2][2] = cp * cy;
-        for (int i = 0; i < 3; i++) v[i][3] = -(v[i][0] * r.camX + v[i][1] * r.camY + v[i][2] * r.camZ);
+        for (int i = 0; i < 3; i++) v[i][3] = -(v[i][0] * f.camX + v[i][1] * f.camY + v[i][2] * f.camZ);
         v[3][3] = 1;
-        double fx = 2 * r.focal / r.width, fy = 2 * r.focal / r.height;
-        double n = 0.05, f = 80;
-        double[][] pm = {{fx, 0, 0, 0}, {0, fy, 0, 0}, {0, 0, (f + n) / (f - n), -2 * f * n / (f - n)}, {0, 0, 1, 0}};
+        double fx = 2 * f.focal / f.width, fy = 2 * f.focal / f.height;
+        double n = 0.05, fa = 80;
+        double[][] pm = {{fx, 0, 0, 0}, {0, fy, 0, 0}, {0, 0, (fa + n) / (fa - n), -2 * fa * n / (fa - n)}, {0, 0, 1, 0}};
         double[][] m = new double[4][4];
         for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) for (int k = 0; k < 4; k++) m[i][j] += pm[i][k] * v[k][j];
         float[] colMajor = new float[16];
@@ -422,42 +472,41 @@ final class GpuScene implements Soft3D.Sink {
 
     private FloatBuffer vbuf = BufferUtils.createFloatBuffer(STRIDE * 6 * 4096);
 
-    private void uploadAndDraw(List<float[]> chunks) {
-    }
-
     /** Draws every batch: opaque ones texture by texture, then the soft ones far to near. {@code shadowPass} writes only depth along the light. */
-    private void drawGeometry(boolean shadowPass) {
+    private void drawGeometry(Frame f, boolean shadowPass) {
         GL30.glBindVertexArray(vaoScene);
         GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboScene);
         int prog = shadowPass ? progShadow : progScene;
         int locInv = GL20.glGetUniformLocation(prog, "uTexInv");
         int total = 0;
-        for (Batch b : batches.values()) total += b.floats;
-        List<Object[]> ranges = new ArrayList<>();               // {GlTex, first vertex, vertex count}
+        for (Batch b : f.batches.values()) total += b.floats;
         int bl = 0;
-        if (!shadowPass) for (Blended b : blended) bl += b.v.length;
+        if (!shadowPass) for (Blended b : f.blended) bl += b.v.length;
         int need = total + bl;
         if (vbuf.capacity() < need) vbuf = BufferUtils.createFloatBuffer(Math.max(need, vbuf.capacity() * 2));
         vbuf.clear();
+        List<Object[]> ranges = new ArrayList<>();               // {GlTex, first vertex, vertex count}
         int vertex = 0;
-        for (Batch b : batches.values()) {
+        for (Batch b : f.batches.values()) {
             if (b.floats == 0) continue;
             vbuf.put(b.data, 0, b.floats);
-            ranges.add(new Object[]{b.tex, vertex, b.floats / STRIDE, false});
+            ranges.add(new Object[]{glTex(b.tex, b.snapshot), vertex, b.floats / STRIDE});
             vertex += b.floats / STRIDE;
         }
         List<Object[]> softRanges = new ArrayList<>();
-        if (!shadowPass && !blended.isEmpty()) {
-            List<Blended> sorted = new ArrayList<>(blended);
+        if (!shadowPass && !f.blended.isEmpty()) {
+            List<Blended> sorted = new ArrayList<>(f.blended);
             sorted.sort((a, c) -> Float.compare(c.z, a.z));
-            GlTex cur = null;
+            Soft3D.Tex cur = null;
+            boolean first = true;
             Object[] run = null;
             for (Blended b : sorted) {
                 vbuf.put(b.v);
-                if (b.tex != cur) {
-                    run = new Object[]{b.tex, vertex, 0, true};
+                if (first || b.tex != cur) {
+                    run = new Object[]{glTex(b.tex, b.snapshot), vertex, 0};
                     softRanges.add(run);
                     cur = b.tex;
+                    first = false;
                 }
                 run[2] = (Integer) run[2] + 6;
                 vertex += 6;
@@ -507,8 +556,10 @@ final class GpuScene implements Soft3D.Sink {
     }
 
     /** Draws the frame: the scene's geometry, the post chain, the sprites, the overlay and the tape. The result is {@link #outputTexture()}. */
-    void render(Params fp) {
-        r.sink = null;
+    public void draw(Frame f) {
+        Params fp = f.params;
+        freeDead();
+        sendOverlay(f);
         GL11.glDisable(GL11.GL_CULL_FACE);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_DEPTH_TEST);
@@ -517,15 +568,15 @@ final class GpuScene implements Soft3D.Sink {
         GL11.glColorMask(true, true, true, true);
 
         // ---- the shadow of light 0
-        boolean hasShadow = r.shadowDir != null && !r.lights.isEmpty();
+        boolean hasShadow = f.shadowDir != null && !f.lights.isEmpty();
         double[] sR = new double[3], sU = new double[3], sF = new double[3];
-        Soft3D.Light l0 = r.lights.isEmpty() ? null : r.lights.get(0);
+        Soft3D.Light l0 = f.lights.isEmpty() ? null : f.lights.get(0);
         if (hasShadow) {
-            double[] f = norm(r.shadowDir);
-            double[] up = Math.abs(f[1]) > 0.95 ? new double[]{1, 0, 0} : new double[]{0, 1, 0};
-            double[] rr = norm(cross(up, f));
-            double[] uu = cross(f, rr);
-            sR = rr; sU = uu; sF = f;
+            double[] fw = norm(f.shadowDir);
+            double[] up = Math.abs(fw[1]) > 0.95 ? new double[]{1, 0, 0} : new double[]{0, 1, 0};
+            double[] rr = norm(cross(up, fw));
+            double[] uu = cross(fw, rr);
+            sR = rr; sU = uu; sF = fw;
             GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, shadowFbo);
             GL11.glViewport(0, 0, shadowSize, shadowSize);
             GL11.glClearColor(1000f, 0, 0, 1);
@@ -536,24 +587,24 @@ final class GpuScene implements Soft3D.Sink {
             GL20.glUniform3f(loc(progShadow, "uSU"), (float) sU[0], (float) sU[1], (float) sU[2]);
             GL20.glUniform3f(loc(progShadow, "uSF"), (float) sF[0], (float) sF[1], (float) sF[2]);
             GL20.glUniform1i(loc(progShadow, "uTex"), 0);
-            drawGeometry(true);
+            drawGeometry(f, true);
         }
 
         // ---- the scene
         setView(scene);
         GL30.glDrawBuffers(new int[]{GL30.GL_COLOR_ATTACHMENT0, GL30.GL_COLOR_ATTACHMENT1});
-        int clear = r.clearRgb;
+        int clear = f.clearRgb;
         GL11.glClearColor(((clear >> 16) & 255) / 255f, ((clear >> 8) & 255) / 255f, (clear & 255) / 255f, 1f);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         GL20.glUseProgram(progScene);
-        GL20.glUniformMatrix4fv(loc(progScene, "uVP"), false, viewProj());
-        GL20.glUniform3f(loc(progScene, "uCam"), (float) r.camX, (float) r.camY, (float) r.camZ);
-        GL20.glUniform3f(loc(progScene, "uAmb"), (float) r.ambR, (float) r.ambG, (float) r.ambB);
-        GL20.glUniform4f(loc(progScene, "uFog"), (float) (r.fogR / 255.0), (float) (r.fogG / 255.0), (float) (r.fogB / 255.0), (float) r.fogDensity);
-        int n = Math.min(MAX_LIGHTS, r.lights.size());
+        GL20.glUniformMatrix4fv(loc(progScene, "uVP"), false, viewProj(f));
+        GL20.glUniform3f(loc(progScene, "uCam"), (float) f.camX, (float) f.camY, (float) f.camZ);
+        GL20.glUniform3f(loc(progScene, "uAmb"), (float) f.ambR, (float) f.ambG, (float) f.ambB);
+        GL20.glUniform4f(loc(progScene, "uFog"), (float) (f.fogR / 255.0), (float) (f.fogG / 255.0), (float) (f.fogB / 255.0), (float) f.fogDensity);
+        int n = Math.min(MAX_LIGHTS, f.lights.size());
         float[] lp = new float[MAX_LIGHTS * 4], lc = new float[MAX_LIGHTS * 3];
         for (int i = 0; i < n; i++) {
-            Soft3D.Light l = r.lights.get(i);
+            Soft3D.Light l = f.lights.get(i);
             lp[i * 4] = (float) l.x(); lp[i * 4 + 1] = (float) l.y(); lp[i * 4 + 2] = (float) l.z(); lp[i * 4 + 3] = (float) l.range();
             lc[i * 3] = (float) l.r(); lc[i * 3 + 1] = (float) l.g(); lc[i * 3 + 2] = (float) l.b();
         }
@@ -571,7 +622,7 @@ final class GpuScene implements Soft3D.Sink {
         GL20.glUniform1i(loc(progScene, "uTex"), 0);
         GL20.glUniform1i(loc(progScene, "uShadow"), 1);
         tex(1, shadowTex);
-        drawGeometry(false);
+        drawGeometry(f, false);
         GL30.glDrawBuffers(GL30.GL_COLOR_ATTACHMENT0);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
 
@@ -594,7 +645,7 @@ final class GpuScene implements Soft3D.Sink {
         }
         // light shafts
         if (fp.rayAt != null && fp.rays > 0.001) {
-            double[] v = r.toView(fp.rayAt[0], fp.rayAt[1], fp.rayAt[2]);
+            double[] v = f.toView(fp.rayAt[0], fp.rayAt[1], fp.rayAt[2]);
             if (v[2] >= 0.2) {
                 setView(rtA);
                 GL20.glUseProgram(progRays);
@@ -604,7 +655,7 @@ final class GpuScene implements Soft3D.Sink {
                 GL20.glUniform1i(loc(progRays, "uColor"), 0);
                 GL20.glUniform1i(loc(progRays, "uGlow"), 1);
                 GL20.glUniform1i(loc(progRays, "uDepth"), 2);
-                GL20.glUniform2f(loc(progRays, "uLight"), (float) (0.5 + r.focal * v[0] / v[2] / r.width), (float) (0.5 + r.focal * v[1] / v[2] / r.height));
+                GL20.glUniform2f(loc(progRays, "uLight"), (float) (0.5 + f.focal * v[0] / v[2] / f.width), (float) (0.5 + f.focal * v[1] / v[2] / f.height));
                 GL20.glUniform1f(loc(progRays, "uStrength"), (float) fp.rays);
                 GL20.glUniform3f(loc(progRays, "uTint"), fp.rayTint[0] / 255f, fp.rayTint[1] / 255f, fp.rayTint[2] / 255f);
                 fullscreen();
@@ -675,19 +726,23 @@ final class GpuScene implements Soft3D.Sink {
         GL20.glUniform1f(loc(progGrade, "uGain"), (float) fp.gain);
         fullscreen();
         // sprites of light, added
-        if (!sprites.isEmpty()) {
+        if (!f.sprites.isEmpty()) {
             GL11.glEnable(GL11.GL_BLEND);
             GL14.glBlendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE, GL11.GL_ONE, GL11.GL_ONE);
             GL20.glUseProgram(progSprite);
             GL20.glUniform1i(loc(progSprite, "uTex"), 0);
             GL30.glBindVertexArray(vaoSprite);
             GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboSprite);
-            for (int i = 0; i < sprites.size(); i++) {
-                float[] s = sprites.get(i);
-                float[] vd = {s[0], s[1], 0, 0, s[2], s[3], 1, 0, s[4], s[5], 1, 1, s[0], s[1], 0, 0, s[4], s[5], 1, 1, s[6], s[7], 0, 1};
+            for (SpriteCmd sp : f.sprites) {
+                float[] cn = new float[8];
+                for (int i = 0; i < 4; i++) {
+                    cn[i * 2] = (float) (sp.c[i * 2] / outW * 2 - 1);
+                    cn[i * 2 + 1] = (float) (1 - sp.c[i * 2 + 1] / outH * 2);
+                }
+                float[] vd = {cn[0], cn[1], 0, 0, cn[2], cn[3], 1, 0, cn[4], cn[5], 1, 1, cn[0], cn[1], 0, 0, cn[4], cn[5], 1, 1, cn[6], cn[7], 0, 1};
                 GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vd, GL15.GL_STREAM_DRAW);
-                tex(0, spriteTex.get(i));
-                GL20.glUniform1f(loc(progSprite, "uGain"), s[8]);
+                tex(0, imageTexture(sp.img));
+                GL20.glUniform1f(loc(progSprite, "uGain"), (float) sp.gain);
                 GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
             }
             GL11.glDisable(GL11.GL_BLEND);
@@ -718,7 +773,7 @@ final class GpuScene implements Soft3D.Sink {
     }
 
     /** The finished picture as ARGB ints, top row first (for the test stand and for saving frames). */
-    int[] readPixels() {
+    public int[] readPixels() {
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, out.fbo);
         GL11.glReadBuffer(GL30.GL_COLOR_ATTACHMENT0);
         IntBuffer buf = BufferUtils.createIntBuffer(outW * outH);
@@ -728,7 +783,7 @@ final class GpuScene implements Soft3D.Sink {
         return px;
     }
 
-    void delete() {
+    public void delete() {
         for (GlTex t : texCache.values()) GL11.glDeleteTextures(t.id);
         texCache.clear();
     }
