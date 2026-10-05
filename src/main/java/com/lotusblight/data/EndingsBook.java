@@ -37,7 +37,8 @@ public final class EndingsBook {
             new Ending("true", "Истинная", "four"),                     // the true line next to it: all four lights
             new Ending("ash", "Хончо", "honcho"),                    // the Honcho line
             new Ending("dismembered", "Расчленён.", "dismembered"),   // a static-noise figure tearing out of a TV / the red light
-            new Ending("chromo", "Хромо", "chromo"));                // the rainbow / black-and-white diamond
+            new Ending("chromo", "Хромо", "chromo"),
+            new Ending("truth", "Твоя истина и твоя власть", null));        // the 13th; icon and path not given yet                // the rainbow / black-and-white diamond
 
     /** For now every ending and every step is open, so the whole story can be looked through; switch off when the menu goes live. */
     public static final boolean UNLOCK_ALL = true;
