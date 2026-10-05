@@ -166,6 +166,9 @@ final class Soft3D {
     final List<Light> lights = new ArrayList<>();
     /** The material of what is submitted next: how strongly it shines and how sharply. */
     double matSpec = 0, matShine = 24;
+    /** When on, what is drawn is translucent: it goes over the solid picture, softly, by the alpha of its texture times {@link #matAlpha}. */
+    boolean matBlend = false;
+    double matAlpha = 1;
     /** Relief taken from the texture's own light and dark (0 = flat), and a soft wrap of light round the form with a warm tint, for skin and meat. */
     double matBump = 0, matWrap = 0;
     /** If set, light 0 throws shadows; it looks along {@code shadowDir} with a wide view. */
@@ -185,6 +188,8 @@ final class Soft3D {
         int tr, tg, tb;
         float emissive, spec, shine, bump, wrap;
         float nx, ny, nz;
+        boolean blend;          // drawn after everything solid, over it, by the texture's own alpha and {@code alpha}
+        float alpha, zAvg;
         int minX, maxX, minY, maxY;
         float area;
     }
@@ -210,6 +215,8 @@ final class Soft3D {
         matShine = 24;
         matBump = 0;
         matWrap = 0;
+        matBlend = false;
+        matAlpha = 1;
         shadowDir = null;
     }
 
@@ -321,6 +328,9 @@ final class Soft3D {
             t.shine = (float) matShine;
             t.bump = (float) matBump;
             t.wrap = (float) matWrap;
+            t.blend = matBlend;
+            t.alpha = (float) matAlpha;
+            t.zAvg = (float) ((vs[0][2] + vs[1][2] + vs[2][2]) / 3.0);
             t.nx = (float) n[0]; t.ny = (float) n[1]; t.nz = (float) n[2];
             tris.add(t);
         }
@@ -335,10 +345,17 @@ final class Soft3D {
     /** Draws everything submitted: the shadow map first, then the picture in parallel bands. */
     void flush() {
         buildShadow();
+        final List<Tri> blended = new ArrayList<>();
+        for (Tri t : tris) if (t.blend) blended.add(t);
+        blended.sort((a, b) -> Float.compare(b.zAvg, a.zAvg));                  // far ones first
         final int bands = 12;
         IntStream.range(0, bands).parallel().forEach(b -> {
             int y0 = height * b / bands, y1 = height * (b + 1) / bands;
             for (Tri t : tris) {
+                if (t.blend || t.maxY < y0 || t.minY >= y1) continue;
+                raster(t, Math.max(y0, t.minY), Math.min(y1 - 1, t.maxY));
+            }
+            for (Tri t : blended) {
                 if (t.maxY < y0 || t.minY >= y1) continue;
                 raster(t, Math.max(y0, t.minY), Math.min(y1 - 1, t.maxY));
             }
@@ -376,7 +393,9 @@ final class Soft3D {
                 v -= (float) Math.floor(v);
                 int txi = Math.min(tex.w - 1, (int) (u * tex.w)), tyi = Math.min(tex.h - 1, (int) (v * tex.h));
                 int tc = tex.px[tyi * tex.w + txi];
-                if ((tc >>> 24) < 128) continue;
+                float texA = (tc >>> 24) / 255f;
+                float aBlend = 1f;
+                if (t.blend) { aBlend = texA * t.alpha; if (aBlend < 0.01f) continue; } else if ((tc >>> 24) < 128) continue;
                 float wxp = (w0 * t.wx[0] + w1 * t.wx[1] + w2 * t.wx[2]) * z;
                 float wyp = (w0 * t.wy[0] + w1 * t.wy[1] + w2 * t.wy[2]) * z;
                 float wzp = (w0 * t.wz[0] + w1 * t.wz[1] + w2 * t.wz[2]) * z;
@@ -429,6 +448,13 @@ final class Soft3D {
                 fr = fr * fog + (float) fogR * (1 - fog);
                 fg = fg * fog + (float) fogG * (1 - fog);
                 fb = fb * fog + (float) fogB * (1 - fog);
+                if (t.blend) {                                                      // soft: laid over what is already there, no depth written
+                    int old = color[idx];
+                    int orr = (old >> 16) & 255, ogg = (old >> 8) & 255, obb = old & 255;
+                    glow[idx] += aBlend * e * (cr + cg + cb) / 765f * fog;
+                    color[idx] = 0xFF000000 | (clamp((int) (orr + (fr - orr) * aBlend)) << 16) | (clamp((int) (ogg + (fg - ogg) * aBlend)) << 8) | clamp((int) (obb + (fb - obb) * aBlend));
+                    continue;
+                }
                 depth[idx] = z;
                 glow[idx] = e * (cr + cg + cb) / 765f * fog;
                 color[idx] = 0xFF000000 | (clamp((int) fr) << 16) | (clamp((int) fg) << 8) | clamp((int) fb);

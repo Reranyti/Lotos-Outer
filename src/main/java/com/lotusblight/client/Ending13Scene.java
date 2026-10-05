@@ -1002,6 +1002,110 @@ public final class Ending13Scene {
         return new double[]{ox + (cf * bx + sf * bz) * sc, (22 + y1) * sc, oz + (-sf * bx + cf * bz) * sc};
     }
 
+    // ------------------------------------------------------------------ atmosphere: soft sprites, cones of light, dust, mist
+
+    private Soft3D.Tex softDotTex, coneTex, mistTexA;
+
+    /** A round soft dot: opaque in the middle, nothing at the rim. */
+    private Soft3D.Tex softDot() {
+        if (softDotTex != null) return softDotTex;
+        softDotTex = new Soft3D.Tex(64, 64);
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) {
+            double d = Math.hypot(x - 31.5, y - 31.5) / 32.0;
+            double a = Math.pow(Math.max(0, 1 - d), 2.2);
+            softDotTex.px[y * 64 + x] = ((int) (255 * a) << 24) | 0xFFFFFF;
+        }
+        return softDotTex;
+    }
+
+    /** Along a cone: bright at the apex, thinning out towards its base. */
+    private Soft3D.Tex cone() {
+        if (coneTex != null) return coneTex;
+        coneTex = new Soft3D.Tex(4, 64);
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 4; x++) {
+            double v = y / 63.0;
+            double a = Math.pow(1 - v, 1.1) * smooth(v, 0.0, 0.06);
+            coneTex.px[y * 4 + x] = ((int) (255 * a) << 24) | 0xFFFFFF;
+        }
+        return coneTex;
+    }
+
+    /** Drifting cloud, tileable: many soft blobs of different weight. */
+    private Soft3D.Tex mistCloud() {
+        if (mistTexA != null) return mistTexA;
+        final int S = 128;
+        float[] a = new float[S * S];
+        Random q = new Random(404);
+        for (int k = 0; k < 90; k++) {
+            double cx = q.nextDouble() * S, cy = q.nextDouble() * S, rad = 10 + q.nextDouble() * 26, w = 0.25 + q.nextDouble() * 0.75;
+            for (int oy = -1; oy <= 1; oy++) for (int ox = -1; ox <= 1; ox++) {
+                double bx = cx + ox * S, by = cy + oy * S;
+                int x0 = (int) Math.max(0, bx - rad), x1 = (int) Math.min(S - 1, bx + rad), y0 = (int) Math.max(0, by - rad), y1 = (int) Math.min(S - 1, by + rad);
+                for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) {
+                    double d = Math.hypot(x - bx, y - by) / rad;
+                    if (d < 1) a[y * S + x] += (float) (w * (1 - d) * (1 - d));
+                }
+            }
+        }
+        float mx = 0;
+        for (float v : a) mx = Math.max(mx, v);
+        mistTexA = new Soft3D.Tex(S, S);
+        for (int i = 0; i < a.length; i++) mistTexA.px[i] = ((int) (255 * Math.min(1, a[i] / mx * 1.25)) << 24) | 0xFFFFFF;
+        return mistTexA;
+    }
+
+    /** A soft glowing sprite facing the camera: a bulb's halo, a spark, a mote. */
+    private void sprite(double x, double y, double z, double hw, double hh, int tint, double alpha, double emissive) {
+        r.matBlend = true; r.matAlpha = alpha;
+        r.billboard(x, y, z, hw, hh, softDot(), tint, emissive);
+        r.matBlend = false; r.matAlpha = 1;
+    }
+
+    /** A cone of light, as through dust: from an apex to a base, translucent, brighter near the apex. */
+    private void lightCone(double[] apex, double[] base, double rApex, double rBase, int tint, double alpha, int sides) {
+        double[] ax = {base[0] - apex[0], base[1] - apex[1], base[2] - apex[2]};
+        double al = Math.sqrt(ax[0] * ax[0] + ax[1] * ax[1] + ax[2] * ax[2]) + 1e-9;
+        for (int k = 0; k < 3; k++) ax[k] /= al;
+        double[] ref = Math.abs(ax[1]) < 0.9 ? new double[]{0, 1, 0} : new double[]{1, 0, 0};
+        double[] e1 = cross(ax, ref);
+        double l1 = Math.sqrt(e1[0] * e1[0] + e1[1] * e1[1] + e1[2] * e1[2]) + 1e-9;
+        for (int k = 0; k < 3; k++) e1[k] /= l1;
+        double[] e2 = cross(ax, e1);
+        r.matBlend = true; r.matAlpha = alpha;
+        for (int i = 0; i < sides; i++) {
+            double a0 = i * 2 * Math.PI / sides, a1 = (i + 1) * 2 * Math.PI / sides;
+            double[] p0 = new double[3], p1 = new double[3], q0 = new double[3], q1 = new double[3];
+            for (int k = 0; k < 3; k++) {
+                double d0 = Math.cos(a0) * e1[k] + Math.sin(a0) * e2[k], d1 = Math.cos(a1) * e1[k] + Math.sin(a1) * e2[k];
+                p0[k] = apex[k] + d0 * rApex; p1[k] = apex[k] + d1 * rApex;
+                q0[k] = base[k] + d0 * rBase; q1[k] = base[k] + d1 * rBase;
+            }
+            r.quad(new double[][]{p0, p1, q1, q0}, new double[][]{{0, 0}, {1, 0}, {1, 1}, {0, 1}}, cone(), tint, 1.0);
+        }
+        r.matBlend = false; r.matAlpha = 1;
+    }
+
+    /** Specks of dust hanging and drifting in a box of air; they twinkle where they catch the light. */
+    private void motes(double[] c, double rx, double ry, double rz, int n, double t, long seed, int tint, double size, double alpha) {
+        Random q = new Random(seed);
+        for (int i = 0; i < n; i++) {
+            double x = c[0] + (q.nextDouble() * 2 - 1) * rx, y = c[1] + (q.nextDouble() * 2 - 1) * ry, z = c[2] + (q.nextDouble() * 2 - 1) * rz;
+            double ph = q.nextDouble() * 6.28, sp = 0.15 + q.nextDouble() * 0.3;
+            x += Math.sin(t * sp + ph) * 0.18; y += Math.sin(t * sp * 0.7 + ph * 2) * 0.12 - ((t * 0.02 * sp + q.nextDouble()) % 1.0) * 0.25; z += Math.cos(t * sp + ph) * 0.18;
+            double tw = 0.45 + 0.55 * Math.max(0, Math.sin(t * (1.5 + sp * 3) + ph));
+            sprite(x, y, z, size * (0.6 + q.nextDouble() * 0.8), size * (0.6 + q.nextDouble() * 0.8), tint, alpha * tw, 1.0);
+        }
+    }
+
+    /** A flat layer of drifting mist at a height: big, faint, scrolling slowly; layer a few for depth. */
+    private void mistLayer(double y, double half, double cx, double cz, int tint, double alpha, double t, double speed, double tiles) {
+        double off = t * speed;
+        r.matBlend = true; r.matAlpha = alpha;
+        r.quad(new double[][]{{cx - half, y, cz - half}, {cx + half, y, cz - half}, {cx + half, y, cz + half}, {cx - half, y, cz + half}},
+                new double[][]{{off, off * 0.6}, {off + tiles, off * 0.6}, {off + tiles, off * 0.6 + tiles}, {off, off * 0.6 + tiles}}, mistCloud(), tint, 0.55);
+        r.matBlend = false; r.matAlpha = 1;
+    }
+
     private static double[] polar(double a, double rad, double y) {
         return new double[]{Math.cos(a) * rad, y, -1.0 + Math.sin(a) * rad};
     }
@@ -1111,6 +1215,17 @@ public final class Ending13Scene {
             double[] top = polar(a, rd, wallH + 1.0), low = polar(a + 0.03 * Math.sin(t * 0.3 + c), rd + 0.2, 4.8);
             r.bar(top, low, new double[]{0.02, 0, 0}, new double[]{0, 0, 0.02}, dark, 0xFFFFFFFF, 0);
         }
+        // the light comes down from the eye of the dome in a cone, there is dust in it, and mist lies low
+        lightCone(polar(0, 0, wallH + 4.1), polar(0, 0, 0.18), 0.55, 3.6, 0xFFB8CCEE, 0.20, 24);
+        lightCone(polar(0, 0, wallH + 4.1), polar(0, 0, 0.18), 0.30, 2.0, 0xFFE0ECFF, 0.18, 20);
+        for (int k = 0; k < 10; k++) {                                                        // and a faint halo under each lamp of the ring
+            double a = (k + 0.5) * 2 * Math.PI / 10;
+            double[] lc = polar(a, 7.2, 5.9);
+            sprite(lc[0], lc[1], lc[2], 0.9, 0.9, 0xFFC8DAF5, k % 3 == 0 ? 0.45 : 0.22, 1.0);
+        }
+        motes(new double[]{0, 3.2, -1.0}, 4.6, 3.0, 4.6, 140, t, 7, 0xFFEAF2FF, 0.022, 0.8);
+        mistLayer(0.28, 12, 0, -1, 0xFFB0BEDA, 0.34, t, 0.012, 3.0);
+        mistLayer(0.85, 12, 0, -1, 0xFF9AA8C8, 0.22, t, -0.008, 2.4);
     }
 
     private Soft3D.Tex signTexCache;
