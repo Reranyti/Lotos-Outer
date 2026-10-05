@@ -2148,42 +2148,67 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         double u = (t - LIMBO) / (176.0 - LIMBO);
         r.clear(0xF4F4F6);
         r.ambR = 0.95; r.ambG = 0.95; r.ambB = 0.97;
-        r.fogDensity = 0.045; r.fogR = 244; r.fogG = 244; r.fogB = 247;
-        r.lights.add(new Soft3D.Light(0, 4, 0, 1.6, 1.6, 1.7, 14));
-        r.camera(Math.sin(t * 0.4) * 0.02, 1.6 + Math.sin(t * 0.9) * 0.01, 0, Math.sin(t * 0.2) * 0.03, -0.04 + 0.12 * (1 - smooth(u, 0.0, 0.35)));
-        Soft3D.Tex grid = paint(64, 64, g2 -> { g2.setColor(new Color(244, 244, 246)); g2.fillRect(0, 0, 64, 64); g2.setColor(new Color(205, 205, 212)); g2.fillRect(0, 0, 64, 2); g2.fillRect(0, 0, 2, 64); });
-        r.faceXZ(0, -40, -10, 40, 60, grid, 0xFFFFFFFF, 0.6, 40, 35);
-        // frames where scenes were: thin outlines in the white, scattered
-        Random q = new Random(5);
-        Soft3D.Tex line = Soft3D.Tex.solid(150, 150, 160);
-        for (int i = 0; i < 9; i++) {
-            double fx0 = -9 + q.nextDouble() * 18, fz0 = 6 + q.nextDouble() * 22, fw = 1.2 + q.nextDouble() * 1.6, fh = 0.8 + q.nextDouble() * 1.2, fy = 0.4 + q.nextDouble() * 1.8;
-            double th = 0.012;
-            r.box(fx0, fy, fz0, fx0 + fw, fy + th, fz0 + th, line, 0xFFFFFFFF, 0.5, 1);
-            r.box(fx0, fy + fh, fz0, fx0 + fw, fy + fh + th, fz0 + th, line, 0xFFFFFFFF, 0.5, 1);
-            r.box(fx0, fy, fz0, fx0 + th, fy + fh, fz0 + th, line, 0xFFFFFFFF, 0.5, 1);
-            r.box(fx0 + fw, fy, fz0, fx0 + fw + th, fy + fh, fz0 + th, line, 0xFFFFFFFF, 0.5, 1);
+        r.fogDensity = 0.009; r.fogR = 244; r.fogG = 244; r.fogB = 247;
+        r.lights.add(new Soft3D.Light(0, 4, 0, 1.4, 1.4, 1.5, 24));
+        double adv = smooth(u, 0.0, 1.0) * 4.0;
+        r.camera(Math.sin(t * 0.4) * 0.03, 1.6 + Math.sin(t * 0.9) * 0.012, adv, Math.sin(t * 0.2) * 0.04, -0.03 + 0.12 * (1 - smooth(u, 0.0, 0.35)));
+        Soft3D.Tex line = Soft3D.Tex.solid(70, 70, 88);
+        // the floor is only a grid
+        for (int i = -15; i <= 15; i++) r.box(i * 2.0, 0.002, -4, i * 2.0 + 0.035, 0.005, 70, line, 0xFFFFFFFF, 1.0, 1);
+        for (int j = -2; j < 36; j++) r.box(-30, 0.002, j * 2.0, 30, 0.005, j * 2.0 + 0.035, line, 0xFFFFFFFF, 1.0, 1);
+        // fragments of the places he has been, only as outlines hanging in the white
+        outline(-6.0, 0.6, 13, -4.8, 1.5, 13.8, 0.03, line);                 // the set
+        outline(-5.8, 0.75, 13, -5.0, 1.35, 13.01, 0.02, line);
+        r.bar(new double[]{-5.4, 1.5, 13.4}, new double[]{-5.8, 1.9, 13.4}, new double[]{0.012, 0, 0}, new double[]{0, 0, 0.012}, line, 0xFFFFFFFF, 1.0);
+        r.bar(new double[]{-5.4, 1.5, 13.4}, new double[]{-5.0, 1.9, 13.4}, new double[]{0.012, 0, 0}, new double[]{0, 0, 0.012}, line, 0xFFFFFFFF, 1.0);
+        outline(4.6, 0.0, 17, 6.0, 2.3, 17.05, 0.04, line);                  // a door in its frame
+        outline(4.8, 0.1, 17, 5.8, 2.2, 17.05, 0.02, line);
+        outline(-3.4, 0.0, 9, -2.9, 0.45, 9.5, 0.025, line);                 // a chair, seat and back
+        outline(-3.4, 0.45, 9.45, -2.9, 0.95, 9.5, 0.025, line);
+        outline(7.0, 1.1, 22, 8.8, 2.4, 22.04, 0.03, line);                  // a window with its bars
+        for (int k = 1; k < 5; k++) r.box(7.0 + k * 0.36, 1.1, 22, 7.0 + k * 0.36 + 0.02, 2.4, 22.04, line, 0xFFFFFFFF, 1.0, 1);
+        for (int k = 0; k < 6; k++) outline(-1.6, 0.0, 30 + k * 4.5, 1.6, 3.0, 30.05 + k * 4.5, 0.035, line);         // the arches of a corridor going away
+        double cxm = 0, cym = 4.2, czm = 46;                                  // the sign of the last Architect, as lines
+        r.box(cxm - 1.6, cym - 0.3, czm, cxm + 1.6, cym + 0.3, czm + 0.04, line, 0xFFFFFFFF, 1.0, 1);
+        r.box(cxm - 0.3, cym - 1.6, czm, cxm + 0.3, cym + 1.6, czm + 0.04, line, 0xFFFFFFFF, 1.0, 1);
+        // the limits: tall thin bars on both sides, closing in with time
+        double gap = lerp(7.0, 4.2, smooth(u, 0, 1));
+        for (int i = 0; i < 16; i++) {
+            double z = 2 + i * 2.6;
+            r.box(-gap, 0, z, -gap + 0.06, 4.0, z + 0.06, line, 0xFFFFFFFF, 1.0, 1);
+            r.box(gap, 0, z, gap + 0.06, 4.0, z + 0.06, line, 0xFFFFFFFF, 1.0, 1);
         }
-        // the limits: thin tall bars on either side, closing in
-        double gap = lerp(7.0, 5.0, smooth(u, 0, 1));
-        for (int i = 0; i < 12; i++) {
-            double z = 3 + i * 2.2;
-            r.box(-gap, 0, z, -gap + 0.05, 3.6, z + 0.05, line, 0xFFFFFFFF, 0.5, 1);
-            r.box(gap, 0, z, gap + 0.05, 3.6, z + 0.05, line, 0xFFFFFFFF, 0.5, 1);
-        }
+        r.box(-gap, 3.9, 2, -gap + 0.05, 3.96, 44, line, 0xFFFFFFFF, 1.0, 1);
+        r.box(gap, 3.9, 2, gap + 0.05, 3.96, 44, line, 0xFFFFFFFF, 1.0, 1);
         // far ahead, someone: himself, the colour gone to red
         double reveal = smooth(u, 0.45, 0.8);
         if (reveal > 0.02) {
-            Soft3D.Pose pose = new Soft3D.Pose();
-            pose.pitch[PlayerBoxes.HEAD] = 0.05;
-            double d = lerp(18, 11, smooth(u, 0.45, 1.0));
+            Actor15 other = new Actor15();
+            other.reset().turn(Actor15.Part.HEAD, 4, 0, 0).hand(true, 0.3, 0.2).hand(false, 0.3, 0.2);
+            other.solve();
             int tintv = (int) (255 * (1 - 0.5 * reveal));
-            r.figure(model, skin, 0, 0, d, Math.PI, 0.0568 * 1.0, pose, 0xFF000000 | (tintv << 16) | ((int) (60 + 40 * (1 - reveal)) << 8) | ((int) (60 + 40 * (1 - reveal))), 0, Soft3D.ALL_PARTS);
+            r.matWrap = 0.3;
+            SkinActor.draw(r, other, skin, new double[]{0, 0, lerp(26, 18, smooth(u, 0.45, 1.0))}, Math.PI, SkinActor.PX, 0xFF000000 | (tintv << 16) | ((int) (70 + 40 * (1 - reveal)) << 8) | ((int) (70 + 40 * (1 - reveal))), 0);
+            r.matWrap = 0;
         }
-        fxBloom = 0.6; fxSsao = 0; fxRays = 0; fxRayAt = null; fxContrast = 0.92; fxSat = 0.5; fxDofFocus = 0;
-        exposureBoost = 0.4;
+        fxBloom = 0.5; fxSsao = 0; fxRays = 0; fxRayAt = null; fxContrast = 0.95; fxSat = 0.5; fxDofFocus = 0;
+        exposureBoost = 0.35;
         fade = smooth(u, 0.93, 1.0);
         titleAlpha = smooth(u, 0.55, 0.7) * (1 - smooth(u, 0.9, 1.0));
+    }
+
+    /** The edges of a box as thin bars: a drawing of a thing, not the thing. */
+    private void outline(double x0, double y0, double z0, double x1, double y1, double z1, double th, Soft3D.Tex tex) {
+        r.box(x0, y0, z0, x1, y0 + th, z0 + th, tex, 0xFFFFFFFF, 1.0, 1);
+        r.box(x0, y1 - th, z0, x1, y1, z0 + th, tex, 0xFFFFFFFF, 1.0, 1);
+        r.box(x0, y0, z0, x0 + th, y1, z0 + th, tex, 0xFFFFFFFF, 1.0, 1);
+        r.box(x1 - th, y0, z0, x1, y1, z0 + th, tex, 0xFFFFFFFF, 1.0, 1);
+        if (z1 - z0 > 2 * th) {
+            r.box(x0, y0, z1 - th, x1, y0 + th, z1, tex, 0xFFFFFFFF, 1.0, 1);
+            r.box(x0, y1 - th, z1, x1, y1, z1 - th, tex, 0xFFFFFFFF, 1.0, 1);
+            r.box(x0, y0, z0, x0 + th, y0 + th, z1, tex, 0xFFFFFFFF, 1.0, 1);
+            r.box(x1 - th, y0, z0, x1, y0 + th, z1, tex, 0xFFFFFFFF, 1.0, 1);
+        }
     }
 
     // ------------------------------------------------------------------ the memories
@@ -2347,6 +2372,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         r.matSpec = 0.05;
         r.figure(model, skin, new double[]{0, 0, 0.35}, tiltZ(fall * 1.5), 0.0625 * 1.0, v, dim(100), 0, Soft3D.ALL_PARTS);
         r.matSpec = 0;
+        dressCorridor(-1.5, 1.5, -9, 7, 2.9, 0, t);
         // the hands close on his neck, then let go: the clip says when
         drawRig(Ending13Rig.frame("grab", tm * 15.6, false), 0);
         return null;
@@ -2385,6 +2411,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         r.box(-0.5, 0, 4.34, 0.5, 0.05, 4.4, Soft3D.Tex.solid(255, 200, 120), 0xFFFFFFFF, smooth(tm, 0.2, 0.7), 1);    // the crack of light under it
         for (int i = 0; i < 2; i++) r.box(-1.4 + i * 2.4, 2.2, 1.6 - 0.0, -1.1 + i * 2.4, 2.7, 1.72, barsTex, 0xFFFFFFFF, 0, 3);
         for (int i = 0; i < 4; i++) fluorescent(0, 2.92, -5 + i * 3.2, 0.9, i != 1 || beat > 0.3);
+        dressCorridor(-1.7, 1.7, -7, 4.6, 3.0, 1, t);
         // the shape from under the door: dark, long-armed, low, two yellow eyes
         double rise = smooth(tm, 0.25, 0.92);
         Soft3D.Pose c = pose();
@@ -2462,6 +2489,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
             double a = 1 - 0.5 * life;
             r.card(x, y, z, 0.4, 0.075, (q.nextDouble() - 0.5) * 0.4 * life, words, 0xFFFFFFFF, 0.95 * a);
         }
+        dressOffice(t);
         return tm > 0.55 ? "CRACKS" : null;
     }
 
@@ -2511,6 +2539,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         r.matSpec = 0;
         // the hands, closing on his throat
         drawRig(Ending13Rig.frame("grab", tm * 14.0, false), 0);
+        dressCell(t);
         return tm > 0.4 ? "THIS IS YOUR FAULT." : null;
     }
 
@@ -2578,6 +2607,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         }
         r.matSpec = 0;
         // low mist cards
+        dressForest(t, turn);
         // THIS, far behind, and then close
         double near = smooth(tm, 0.62, 0.97);
         Soft3D.Pose p = pose();
@@ -2592,6 +2622,229 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
             r.card(0.55, 3.15, fz + 0.5, 0.06, 0.022, 0, Soft3D.Tex.solid(255, 220, 140), 0xFFFFFFFF, 1.0);
         }
         return tm > 0.82 ? "BLUE" : tm > 0.1 ? "LOST" : null;
+    }
+
+    // ------------------------------------------------------------------ dressing the places, so none is an empty box
+
+    private Soft3D.Tex cabinetTex, clockTex, rugTex, cobwebTex, signTexNo;
+
+    private Soft3D.Tex cabinet() {
+        if (cabinetTex != null) return cabinetTex;
+        cabinetTex = paint(32, 64, g2 -> {
+            g2.setColor(new Color(92, 98, 104)); g2.fillRect(0, 0, 32, 64);
+            g2.setColor(new Color(60, 64, 70));
+            for (int i = 0; i < 4; i++) { g2.drawRect(1, 1 + i * 16, 29, 14); g2.fillRect(11, 6 + i * 16, 10, 2); }
+            g2.setColor(new Color(130, 90, 60, 90)); g2.fillRect(0, 50, 32, 14);
+        });
+        return cabinetTex;
+    }
+
+    private Soft3D.Tex clockFace() {
+        if (clockTex != null) return clockTex;
+        clockTex = paint(64, 64, g2 -> {
+            g2.setColor(new Color(0, 0, 0, 0)); g2.fillRect(0, 0, 64, 64);
+            g2.setColor(new Color(30, 26, 24)); g2.fillOval(2, 2, 60, 60);
+            g2.setColor(new Color(222, 214, 190)); g2.fillOval(6, 6, 52, 52);
+            g2.setColor(new Color(30, 26, 24)); g2.setStroke(new BasicStroke(2f));
+            for (int i = 0; i < 12; i++) { double a = i * Math.PI / 6; g2.drawLine(32 + (int) (Math.cos(a) * 22), 32 + (int) (Math.sin(a) * 22), 32 + (int) (Math.cos(a) * 26), 32 + (int) (Math.sin(a) * 26)); }
+            g2.setStroke(new BasicStroke(3f)); g2.drawLine(32, 32, 32, 14);
+            g2.setStroke(new BasicStroke(2f)); g2.drawLine(32, 32, 44, 38);
+        });
+        return clockTex;
+    }
+
+    private Soft3D.Tex rug() {
+        if (rugTex != null) return rugTex;
+        rugTex = paint(64, 64, g2 -> {
+            g2.setColor(new Color(92, 36, 34)); g2.fillRect(0, 0, 64, 64);
+            g2.setColor(new Color(150, 120, 70)); g2.setStroke(new BasicStroke(2f)); g2.drawRect(3, 3, 57, 57); g2.drawRect(8, 8, 47, 47);
+            g2.setColor(new Color(60, 22, 22)); g2.fillOval(20, 20, 24, 24);
+            g2.setColor(new Color(0, 0, 0, 60)); g2.fillOval(8, 40, 34, 18);
+        });
+        return rugTex;
+    }
+
+    private Soft3D.Tex cobweb() {
+        if (cobwebTex != null) return cobwebTex;
+        cobwebTex = paint(64, 64, g2 -> {
+            g2.setColor(new Color(0, 0, 0, 0)); g2.fillRect(0, 0, 64, 64);
+            g2.setColor(new Color(220, 220, 215, 215)); g2.setStroke(new BasicStroke(1f));
+            for (int i = 0; i <= 6; i++) g2.drawLine(0, 0, (int) (64 * Math.sin(i * Math.PI / 12)), (int) (64 * Math.cos(i * Math.PI / 12)));
+            for (int ring = 1; ring < 7; ring++) { int rr = ring * 9; g2.drawArc(-rr, -rr, rr * 2, rr * 2, 270, 90); }
+        });
+        return cobwebTex;
+    }
+
+    private Soft3D.Tex noEntry() {
+        if (signTexNo != null) return signTexNo;
+        signTexNo = paint(64, 32, g2 -> {
+            g2.setColor(new Color(150, 24, 24)); g2.fillRect(0, 0, 64, 32);
+            g2.setColor(new Color(235, 232, 220)); g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            g2.drawString("NO ENTRY", 6, 14); g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 8)); g2.drawString("PQ SECTOR", 8, 26);
+            g2.setColor(new Color(0, 0, 0, 120)); g2.drawRect(0, 0, 63, 31);
+        });
+        return signTexNo;
+    }
+
+    /** A long corridor made less of a tube: pilasters and lintels every few metres, cable trays, inset panels, doors with numbers, lamps with halos, puddles. */
+    private void dressCorridor(double x0, double x1, double z0, double z1, double h, int style, double t) {
+        boolean red = style == 1;
+        int arch = red ? 0xFF8A5450 : 0xFF98A0A8, panel = red ? 0xFF5A3030 : 0xFF777E86;
+        r.matSpec = 0.3; r.matShine = 24;
+        for (double z = z0 + 1.5; z < z1 - 1.2; z += 3.0) {
+            r.box(x0, 0, z, x0 + 0.24, h, z + 0.2, steel, arch, 0, 1);
+            r.box(x1 - 0.24, 0, z, x1, h, z + 0.2, steel, arch, 0, 1);
+            r.box(x0, h - 0.34, z, x1, h, z + 0.2, steel, arch, 0, 1);
+            r.box(x0 + 0.24, h - 0.42, z, x1 - 0.24, h - 0.34, z + 0.2, dark, 0xFFFFFFFF, 0, 1);
+        }
+        // trays and cables along both walls
+        for (int side = 0; side < 2; side++) {
+            double wx = side == 0 ? x0 : x1 - 0.2;
+            r.box(wx, 2.1, z0, wx + 0.2, 2.16, z1, steel, arch, 0, 1);
+            for (int c = 0; c < 4; c++) {
+                double sag = 0.03;
+                r.bar(new double[]{wx + 0.04 + c * 0.04, 2.2, z0}, new double[]{wx + 0.04 + c * 0.04, 2.2, z1}, new double[]{0.012, 0, 0}, new double[]{0, 0.012, 0}, dark, 0xFFFFFFFF, 0);
+            }
+        }
+        r.matSpec = 0;
+        // inset panels with a lighter border between the pilasters
+        for (double z = z0 + 0.6; z < z1 - 1.5; z += 1.5) {
+            r.box(x0 + 0.01, 0.6, z, x0 + 0.06, 1.9, z + 1.0, wallLow, panel, 0, 1);
+            r.box(x1 - 0.06, 0.6, z, x1 - 0.01, 1.9, z + 1.0, wallLow, panel, 0, 1);
+        }
+        // doors with plates, a notice, an extinguisher, an emergency lamp, drains and puddles
+        Random q = new Random(red ? 71 : 17);
+        for (double z = z0 + 2.4; z < z1 - 2.0; z += 3.0) {
+            boolean left = q.nextBoolean();
+            double dx = left ? x0 : x1;
+            double sgn = left ? 1 : -1;
+            r.box(left ? dx + 0.02 : dx - 0.12, 0, z - 0.45, left ? dx + 0.12 : dx - 0.02, 2.15, z + 0.45, steelDoor, 0xFFAAAAAA, 0, 1);
+            r.faceYZ(left ? dx + 0.125 : dx - 0.125, 1.5, z - 0.12, 1.66, z + 0.12, noticeBoard(), 0xFFFFFFFF, 0.1, 1, 1);
+            r.box(left ? dx + 0.13 : dx - 0.14, 1.78, z - 0.1, left ? dx + 0.14 : dx - 0.13, 1.95, z + 0.1, Soft3D.Tex.solid(240, 236, 210), 0xFFFFFFFF, 0.4, 1);
+        }
+        for (double z = z0 + 3.6; z < z1 - 2.0; z += 4.5) {
+            r.bar(new double[]{x1 - 0.25, 0.1, z}, new double[]{x1 - 0.25, 0.5, z}, new double[]{0.07, 0, 0}, new double[]{0, 0, 0.07}, Soft3D.Tex.solid(180, 30, 30), 0xFFFFFFFF, 0);
+            r.box(x1 - 0.1, 1.0, z - 0.01, x1 - 0.04, 1.3, z + 0.01, Soft3D.Tex.solid(170, 170, 160), 0xFFFFFFFF, 0, 1);
+        }
+        for (double z = z0 + 3.0; z < z1 - 2.0; z += 6.0) {                                          // an emergency lamp on the wall, with its halo
+            r.box(x0 + 0.02, 2.35, z - 0.1, x0 + 0.12, 2.5, z + 0.1, red ? Soft3D.Tex.solid(255, 70, 60) : Soft3D.Tex.solid(255, 235, 200), 0xFFFFFFFF, 0.9, 1);
+            sprite(x0 + 0.2, 2.42, z, 0.45, 0.45, red ? 0xFFFF5040 : 0xFFFFE8C8, 0.40, 1.0);
+        }
+        r.matSpec = 0.9; r.matShine = 80;
+        for (int k = 0; k < 4; k++) r.faceXZ(0.004 + k * 0.0003, -0.7 + q.nextDouble() * 1.4 - 0.4, z0 + 2 + k * 3.2, 0.3 + q.nextDouble() * 0.6, z0 + 3.1 + k * 3.2, puddleTex(), 0xFFFFFFFF, 0, 1, 1);
+        r.matSpec = 0;
+        for (double z = z0 + 2.2; z < z1 - 1; z += 3.4) r.box(-0.3, 0.003, z, 0.3, 0.007, z + 0.5, Soft3D.Tex.solid(8, 8, 10), 0xFFFFFFFF, 0, 1);     // drains
+        // the lamps' light in the air, and the dust in it
+        for (double z = z0 + 2.5; z < z1 - 1; z += 3.2) {
+            lightCone(new double[]{0, h - 0.08, z}, new double[]{0, 0.0, z}, 0.12, 1.1, red ? 0xFFFF9888 : 0xFFE4ECFF, 0.10, 14);
+            sprite(0, h - 0.1, z, 0.55, 0.55, red ? 0xFFFFC0A8 : 0xFFEAF2FF, 0.35, 1.0);
+        }
+        motes(new double[]{0, 1.4, (z0 + z1) / 2}, (x1 - x0) / 2, 1.3, (z1 - z0) / 2, 120, t, 31, red ? 0xFFFFD0C0 : 0xFFE8F0FF, 0.012, 0.8);
+        mistLayer(0.2, 10, 0, (z0 + z1) / 2, red ? 0xFFC09890 : 0xFFB0BCC8, 0.28, t, 0.012, 3.0);
+        mistLayer(0.9, 10, 0, (z0 + z1) / 2, red ? 0xFFA07870 : 0xFF98A4B0, 0.16, t, -0.008, 2.4);
+    }
+
+    /** The office: filing cabinets, books, a clock, pictures, a rug, a coat on a stand, a cup of steam, and the window's light lying across the room in dust. */
+    private void dressOffice(double t) {
+        r.matSpec = 0.3; r.matShine = 24;
+        for (int i = 0; i < 3; i++) r.box(-2.78, 0, -2.6 + i * 0.7, -2.2, 1.35, -2.1 + i * 0.7, cabinet(), 0xFFCCBBBB, 0, 1);       // filing cabinets along the left wall
+        r.box(-2.78, 1.35, -2.6, -2.2, 1.4, -0.5, steel, 0xFF888888, 0, 1);
+        r.matSpec = 0;
+        Random q = new Random(88);
+        for (int i = 0; i < 3; i++) {                                                               // books on the shelves of the back wall
+            double y = 0.24 + i * 0.7;
+            double x = -2.55;
+            while (x < -1.15) {
+                double w = 0.05 + q.nextDouble() * 0.07, hh = 0.2 + q.nextDouble() * 0.2;
+                r.box(x, y, 2.02, x + w, y + hh, 2.3, Soft3D.Tex.solid(60 + q.nextInt(150), 30 + q.nextInt(90), 30 + q.nextInt(80)), 0xFFAAAAAA, 0, 1);
+                x += w + 0.005;
+            }
+        }
+        r.faceXY(2.39, -0.5, 1.5, 0.3, 2.3, noticeBoard(), 0xFF998888, 0.05, 1, 1);               // frames on the back wall
+        r.faceXY(2.39, 0.6, 1.7, 1.2, 2.2, scrap(), 0xFFCCBBAA, 0.05, 1, 1);
+        r.card(1.9, 2.15, 2.38, 0.2, 0.2, 0, clockFace(), 0xFFFFFFFF, 0.1);                         // a clock
+        r.faceXZ(0.005, -1.5, -1.4, 1.5, 1.7, rug(), 0xFF998888, 0, 1, 1);                          // the rug under the desk
+        r.bar(new double[]{3.1, 0, -2.8}, new double[]{3.1, 1.7, -2.8}, new double[]{0.02, 0, 0}, new double[]{0, 0, 0.02}, steel, 0xFF777777, 0);       // a coat stand with a coat
+        r.box(2.95, 1.0, -2.88, 3.25, 1.62, -2.72, Soft3D.Tex.solid(70, 62, 58), 0xFFFFFFFF, 0, 1);
+        r.box(0.9, 0.78, -0.5, 0.98, 0.86, -0.42, white, 0xFFDDDDDD, 0, 1);                         // a cup
+        for (int k = 0; k < 5; k++) sprite(0.94 + Math.sin(t * 1.3 + k) * 0.015, 0.9 + ((t * 0.3 + k * 0.2) % 1.0) * 0.3, -0.46, 0.02, 0.03, 0xFFE8E0D8, 0.20 * (1 - ((t * 0.3 + k * 0.2) % 1.0)), 0.5);
+        for (int k = 0; k < 7; k++) r.box(-0.62 + k * 0.01, 0.78 + k * 0.004, -0.55 + k * 0.03, -0.14 + k * 0.01, 0.785 + k * 0.004, -0.2 + k * 0.03, scrap(), 0xFFFFFFFF, 0, 1);   // a stack of papers
+        // the window's light across the room in dust
+        lightCone(new double[]{3.5, 2.6, 0.8}, new double[]{0.6, 0.0, 0.2}, 0.7, 2.0, 0xFFFF9A58, 0.12, 16);
+        lightCone(new double[]{3.5, 1.7, 0.8}, new double[]{0.0, 0.0, -0.3}, 0.5, 1.6, 0xFFFFB070, 0.10, 14);
+        motes(new double[]{1.4, 1.3, 0.4}, 1.6, 1.1, 1.4, 130, t, 41, 0xFFFFC890, 0.012, 0.9);
+        sprite(-0.64, 1.22, -0.45, 0.6, 0.6, 0xFFFFE0B0, 0.40, 1.0);                                // the desk lamp's halo
+        mistLayer(0.3, 6, 0.4, 0, 0xFFC09080, 0.16, t, 0.01, 2.0);
+    }
+
+    /** The cell: straw, a bucket, a drain, scratches and stains on the walls, webs in the corners, a rat, a drip, the bulb's red light in the air. */
+    private void dressCell(double t) {
+        Random q = new Random(404);
+        for (int i = 0; i < 40; i++) {                                                               // straw on the floor
+            double px = -1.4 + q.nextDouble() * 1.4, pz = -0.5 + q.nextDouble() * 2.4, a = q.nextDouble() * 6.28;
+            r.bar(new double[]{px, 0.012, pz}, new double[]{px + Math.cos(a) * 0.35, 0.012, pz + Math.sin(a) * 0.35}, new double[]{0.008, 0, 0}, new double[]{0, 0.004, 0}, Soft3D.Tex.solid(196, 170, 90), 0xFFAA8866, 0);
+        }
+        r.matSpec = 0.4; r.matShine = 18;
+        r.bar(new double[]{1.0, 0, 0.2}, new double[]{1.0, 0.32, 0.2}, new double[]{0.17, 0, 0}, new double[]{0, 0, 0.17}, steel, 0xFF7A7E86, 0);    // a bucket
+        r.bar(new double[]{1.0, 0.31, 0.2}, new double[]{1.0, 0.33, 0.2}, new double[]{0.19, 0, 0}, new double[]{0, 0, 0.19}, dark, 0xFFFFFFFF, 0);
+        r.matSpec = 0;
+        r.box(-0.35, 0.003, -1.2, 0.35, 0.007, -0.7, Soft3D.Tex.solid(8, 4, 4), 0xFFFFFFFF, 0, 1);       // the drain
+        r.matSpec = 0.9; r.matShine = 70;
+        r.faceXZ(0.005, -0.8, -1.4, 0.2, -0.4, puddleTex(), 0xFFAA6666, 0, 1, 1);
+        r.matSpec = 0;
+        r.faceYZ(-1.595, 0.9, -0.6, 1.8, 1.4, tallyMarks(), 0xFFFFFFFF, 0.05, 1, 1);                 // scratches on the left wall
+        r.faceYZ(1.595, 0.8, -1.2, 1.6, -0.3, bloodHand(), 0xFFCC8888, 0, 1, 1);                     // a hand on the right
+        r.faceXY(2.19, -1.2, 0.6, -0.5, 1.2, noEntry(), 0xFFAAAAAA, 0, 1, 1);
+        for (int k = 0; k < 3; k++) {                                                                // webs in the corners
+            double sx = k % 2 == 0 ? 1.0 : -1.0;
+            r.quad(new double[][]{{sx * 1.59, 2.88, 2.0 - k * 0.3}, {sx * 1.59, 2.88, 2.0 - k * 0.3 - 0.5 * sx}, {sx * 1.59, 2.4, 2.0 - k * 0.3 - 0.5 * sx}, {sx * 1.59, 2.4, 2.0 - k * 0.3}},
+                    new double[][]{{0, 0}, {1, 0}, {1, 1}, {0, 1}}, cobweb(), 0xFFFFFFFF, 0.2);
+        }
+        // a rat along the foot of the wall, a drip
+        double rx = -1.4 + ((t * 0.4) % 1.0) * 2.6;
+        r.box(rx, 0.0, 1.8, rx + 0.12, 0.07, 1.86, dark, 0xFFAA9988, 0, 1);
+        r.bar(new double[]{rx, 0.02, 1.83}, new double[]{rx - 0.12, 0.012, 1.83 + Math.sin(t * 10) * 0.03}, new double[]{0.004, 0, 0}, new double[]{0, 0.004, 0}, dark, 0xFFFFFFFF, 0);
+        double ph = (t * 0.6) % 1.0;
+        sprite(-1.1, 2.7 - ph * 2.69, 0.4, 0.01, 0.025, 0xFFC09090, 0.9, 0.5);
+        // the red light in the air
+        lightCone(new double[]{0, 2.6, 0.5}, new double[]{0, 0.0, 0.5}, 0.05, 1.6, 0xFFFF6048, 0.12, 16);
+        sprite(0, 2.5, 0.5, 0.7, 0.7, 0xFFFF5038, 0.45, 1.0);
+        motes(new double[]{0, 1.3, 0.2}, 1.4, 1.2, 2.0, 90, t, 51, 0xFFFFB0A0, 0.010, 0.8);
+        mistLayer(0.25, 5, 0, 0, 0xFFC08078, 0.20, t, 0.01, 1.6);
+    }
+
+    /** The forest: the moon's light coming down through the trees in beams, fireflies, ferns, fallen logs, rocks, mist in layers, a sign on the fence. */
+    private void dressForest(double t, double turn) {
+        Random q = new Random(909);
+        double cz = r.camZ, cx = r.camX;
+        for (int i = 0; i < 14; i++) {                                                               // rocks
+            double rx = (q.nextDouble() - 0.5) * 12, rz = cz - 6 + q.nextDouble() * 22;
+            if (Math.abs(rx) < 1.2) continue;
+            double sz = 0.15 + q.nextDouble() * 0.35;
+            r.box(rx - sz, 0, rz - sz * 0.8, rx + sz, sz * 0.9, rz + sz * 0.8, rust, 0xFF667070, 0, 1.5);
+        }
+        for (int i = 0; i < 4; i++) {                                                                // fallen logs
+            double lx = (q.nextDouble() - 0.5) * 9, lz = cz - 3 + q.nextDouble() * 18, a = q.nextDouble() * 3.14;
+            if (Math.abs(lx) < 1.6) lx += lx < 0 ? -2.2 : 2.2;
+            r.bar(new double[]{lx, 0.2, lz}, new double[]{lx + Math.cos(a) * 3.0, 0.22, lz + Math.sin(a) * 3.0}, new double[]{0.2, 0, 0}, new double[]{0, 0.2, 0}, bark, 0xFF8A8A88, 0);
+        }
+        for (int i = 0; i < 60; i++) {                                                               // ferns along the path
+            double fx = (q.nextDouble() - 0.5) * 12, fz = cz - 4 + q.nextDouble() * 24;
+            if (Math.abs(fx) < 0.9) continue;
+            for (int leaf = 0; leaf < 4; leaf++) {
+                double a = leaf * 1.57 + q.nextDouble();
+                r.bar(new double[]{fx, 0.02, fz}, new double[]{fx + Math.cos(a) * 0.45, 0.28, fz + Math.sin(a) * 0.45}, new double[]{0.03, 0, 0}, new double[]{0, 0.004, 0}, grass, 0xFFAABBAA, 0);
+            }
+        }
+        r.faceYZ(-1.62, 0.9, cz + 3.0, 1.3, cz + 3.7, noEntry(), 0xFFAAAAAA, 0, 1, 1);               // a sign on the fence
+        // beams of the moon through the trunks
+        double dir = turn > 1.5 ? -1 : 1;
+        for (int k = 0; k < 5; k++) {
+            double bx = cx - 4 + k * 1.1, bz = cz + dir * (3.0 + k * 1.8);
+            lightCone(new double[]{bx - 2.0, 14, bz + 2.0}, new double[]{bx, 0.0, bz}, 0.25, 1.1, 0xFFB0C8FF, 0.10, 12);
+        }
+        motes(new double[]{cx, 1.4, cz + dir * 4}, 5, 1.6, 7, 160, t, 61, 0xFFA8D8FF, 0.014, 0.9);       // fireflies of cold light
+        for (int k = 0; k < 4; k++) mistLayer(0.3 + k * 0.7, 24, cx, cz + dir * 6, 0xFF8AA0C8, 0.20 - k * 0.03, t, (k % 2 == 0 ? 1 : -1) * 0.006, 4.0);
     }
 
     private Soft3D.Tex mist;
