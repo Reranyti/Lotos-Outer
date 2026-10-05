@@ -26,17 +26,20 @@ public final class EndingsBook {
 
     /** Every ending, in the order the menu lists them. Names that are not decided yet are left out of the lang files on purpose. */
     public static final List<Ending> ALL = List.of(
-            new Ending("war", null, "war"),
-            new Ending("alliance", null, "alliance"),
-            new Ending("neutral", null, "neutral"),
-            new Ending("guiding", null, "moon"),                  // the guiding line: moonlight
-            new Ending("starlight", null, "star"),                // starlight
-            new Ending("mischievous", null, "mischief"),          // the mischievous light
-            new Ending("cursed", null, "glitch"),                 // the cursed branch: the glitch light
-            new Ending("true", null, "four"),                     // the true line next to it: all four lights
-            new Ending("ash", null, "honcho"),                    // the Honcho line
+            new Ending("war", "Война", "war"),
+            new Ending("alliance", "Альянс", "alliance"),
+            new Ending("neutral", "Нейтральная", "neutral"),
+            new Ending("guiding", "Путеводная", "moon"),                  // the guiding line: moonlight
+            new Ending("starlight", "Звёздный свет", "star"),                // starlight
+            new Ending("mischievous", "Озорной свет", "mischief"),          // the mischievous light
+            new Ending("cursed", "Проклятая", "glitch"),                 // the cursed branch: the glitch light
+            new Ending("true", "Истинная", "four"),                     // the true line next to it: all four lights
+            new Ending("ash", "Хончо", "honcho"),                    // the Honcho line
             new Ending("dismembered", "Расчленён.", "dismembered"),   // a static-noise figure tearing out of a TV / the red light
-            new Ending("chromo", null, "chromo"));                // the rainbow / black-and-white diamond          // the rainbow / black-and-white diamond          // the cursed branch, with the true line beside it: all four lights
+            new Ending("chromo", "Хромо", "chromo"));                // the rainbow / black-and-white diamond
+
+    /** For now every ending and every step is open, so the whole story can be looked through; switch off when the menu goes live. */
+    public static final boolean UNLOCK_ALL = true;
 
     private static Properties cache;
 
@@ -62,7 +65,7 @@ public final class EndingsBook {
     }
 
     public static synchronized boolean isSeen(String id) {
-        return load().containsKey(id);
+        return UNLOCK_ALL || load().containsKey(id);
     }
 
     public static synchronized int seenCount() {
