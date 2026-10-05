@@ -254,14 +254,25 @@ def neutral():
 
 
 def honcho():
-    """The skin's head is plain black: a black head over the pale suit with the red tie."""
+    """From the render: a head that is a black blob shedding square pixels, a lavender suit, brown braces, a dark purple tie."""
     img = canvas()
     d = ImageDraw.Draw(img)
-    poly(d, [(3, 31.5), (4.5, 23), (11, 21), (21, 21), (27.5, 23), (29, 31.5)], (190, 196, 244, 255), (70, 74, 130, 255), 0.5)
-    poly(d, [(12, 21), (20, 21), (16, 26)], (255, 255, 255, 255), (150, 150, 190, 255), 0.35)
-    poly(d, [(15.2, 24.5), (16.8, 24.5), (17.6, 31), (14.4, 31)], (206, 62, 62, 255), (110, 24, 24, 255), 0.3)
-    poly(d, [(9, 2.5), (23, 2.5), (23, 20.5), (9, 20.5)], (10, 10, 14, 255), (70, 70, 84, 255), 0.5)
-    line(d, 9.8, 3.4, 22.2, 3.4, (46, 46, 58, 255), 0.5)
+    rnd = random.Random(5)
+    poly(d, [(3, 31.5), (4.5, 22.5), (11, 20.5), (21, 20.5), (27.5, 22.5), (29, 31.5)], (150, 140, 224, 255), (66, 56, 140, 255), 0.5)    # shoulders and chest
+    poly(d, [(3, 31.5), (4.5, 22.5), (8, 21.5), (7, 31.5)], (124, 112, 204, 255))                                                        # shaded side
+    poly(d, [(12.5, 20.5), (19.5, 20.5), (16, 24)], (236, 236, 250, 255), (150, 150, 190, 255), 0.3)                                      # collar
+    poly(d, [(15, 22), (17.4, 22), (18.6, 29), (16, 31), (14, 29)], (84, 62, 150, 255), (40, 28, 90, 255), 0.3)                           # tie
+    poly(d, [(9.5, 21), (11.6, 21), (13, 31.5), (10.8, 31.5)], (136, 66, 40, 255), (70, 30, 16, 255), 0.25)                               # braces
+    poly(d, [(20.4, 21), (22.5, 21), (21.2, 31.5), (19, 31.5)], (136, 66, 40, 255), (70, 30, 16, 255), 0.25)
+    # the head: a black blot with square pixels flying off it
+    ellipse(d, 9.5, 2.5, 22.5, 19.5, (6, 6, 8, 255))
+    for _ in range(14):
+        x = rnd.uniform(6, 26)
+        y = rnd.uniform(0.5, 17)
+        if 9.5 < x < 22.5 and 3 < y < 19:
+            continue
+        sz = rnd.uniform(0.7, 1.6)
+        d.rectangle((x * SS, y * SS, (x + sz) * SS, (y + sz) * SS), fill=(6, 6, 8, 255))
     return img
 
 
