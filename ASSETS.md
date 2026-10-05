@@ -64,7 +64,7 @@ the repository: they are added at build time from the local `art/music` and `art
 | `finale.mp4` | анимация финала / the finale animation | **уточнить / to confirm** |
 | `aero.jpg`, `aero2.jpg` | обои в стиле Aero / Aero-style wallpapers | найдены на Pinterest, авторы неизвестны — **уточнить**; уберём или заменим по просьбе автора / found on Pinterest, authors unknown — **to confirm**; will be removed or replaced at the author's request |
 | `textures/overlay/glitcher.png` | скин Глитчера / the Glitcher's skin | команда / the team |
-| `sounds/vhs_music.ogg`, `sounds/vhs_noise.ogg`, `sounds/vhs_insert.ogg` | меню концовок: музыка, фоновый шум плёнки, кассета в магнитофоне / endings menu: music, tape hiss, the cassette going in | положил автор проекта (файлы `lofi-op1-cassette.mp3`, `40405c5f135348c.mp3`, `vhs-lca.mp3`), **источник и лицензию уточнить / source and licence to confirm** |
+| `sounds/vhs_music.ogg`, `sounds/vhs_noise.ogg`, `sounds/vhs_insert.ogg`, `sounds/vhs_rewind.ogg`, `textures/gui/vhs_pause.png` | меню концовок: музыка, фоновый шум плёнки, кассета в магнитофоне, перемотка при выходе, надпись PAUSE / endings menu: music, tape hiss, the cassette going in, the rewind on leaving, the PAUSE caption | положил автор проекта (файлы `lofi-op1-cassette.mp3`, `40405c5f135348c.mp3`, `vhs-lca.mp3`, `RewindNoise.ogg`, картинка PAUSE), **источник и лицензию уточнить / source and licence to confirm** |
 
 ## Модели и анимации GeckoLib / GeckoLib models and animations
 

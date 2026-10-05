@@ -44,8 +44,12 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public void onClose() {
-        VhsTv.stopLoops();
-        this.minecraft.setScreen(parent);
+        // leaving: the tape is stopped, a blue PAUSE screen and the rewind play, the cassette comes out, and only then the title returns
+        if (!tv.ejecting()) {
+            tv.startEject();
+        } else {
+            tv.skipEject();
+        }
     }
 
     private int centerX() {
@@ -75,6 +79,10 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (tv.ejecting()) {
+            tv.skipEject();
+            return true;
+        }
         if (!tv.picture()) {
             tv.skip();
             return true;
@@ -84,6 +92,10 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (tv.ejecting()) {
+            tv.skipEject();
+            return true;
+        }
         if (!tv.picture()) {
             tv.skip();
             return true;
@@ -111,9 +123,13 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
+        if (tv.ejectDone()) {
+            this.minecraft.setScreen(parent);
+            return;
+        }
         tv.body(g, this.width, this.height);
         tv.beginScreen(g);
-        if (tv.picture()) {
+        if (tv.picture() && !tv.ejecting()) {
             VhsTv.ensureLoops();
             drawRing(g, mouseX, mouseY);
         }

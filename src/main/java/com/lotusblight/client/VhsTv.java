@@ -30,6 +30,10 @@ final class VhsTv {
     private final long openedAt = Util.getMillis();
     private boolean skipped;
     private boolean insertSoundPlayed;
+    private long ejectAt = -1;                       // the cassette is being taken out (the menu is closing)
+    private boolean ejectSkipped;
+    private static final long EJECT_MS = 3500;       // as long as the rewind recording
+    private static final long EJECT_OUT_MS = 1200;   // the last stretch: the cassette comes out of the slot
     private final boolean intro;
 
     VhsTv(boolean intro) {
@@ -56,6 +60,22 @@ final class VhsTv {
     int vcrY() { return vcrY; }
     int vcrW() { return vcrW; }
     int vcrH() { return vcrH; }
+
+    /** Closing the menu: stop the tape, play the rewind, show the blue PAUSE screen, then the cassette comes out. */
+    void startEject() {
+        if (ejectAt >= 0) return;
+        ejectAt = Util.getMillis();
+        stopLoops();
+        play("vhs_rewind");
+    }
+
+    boolean ejecting() { return ejectAt >= 0; }
+
+    boolean ejectDone() {
+        return ejectAt >= 0 && (ejectSkipped || Util.getMillis() - ejectAt >= EJECT_MS);
+    }
+
+    void skipEject() { ejectSkipped = true; }
 
     void skip() {
         skipped = true;
@@ -145,19 +165,28 @@ final class VhsTv {
         g.fill(slotX, vcrY + vcrH / 2 - 3, slotX + slotW, vcrY + vcrH / 2 - 2, 0xFF5A5046);
         for (int i = 0; i < 5; i++) g.fill(vcrX + 12 + i * 10, vcrY + 8, vcrX + 18 + i * 10, vcrY + 12, 0xFF3A322C);
         g.drawString(Minecraft.getInstance().font, "VHS", vcrX + vcrW - 38, vcrY + 7, on ? 0xFFE0A030 : 0xFF605040, false);
-        // the cassette going into the deck: it comes up from below and is hidden by the deck's front once it is past the slot
-        if (age < INSERT_MS) {
-            float p = Math.min(1f, age / (INSERT_MS * 0.6f));
-            float e = 1 - (1 - p) * (1 - p);
+        // the cassette going into the deck (and, when the menu closes, coming out again): it is hidden by the deck's front past the slot
+        float pIn = Math.min(1f, age / (INSERT_MS * 0.6f));
+        float amount = age < INSERT_MS ? 1 - (1 - pIn) * (1 - pIn) : 1f;           // 0 = below the deck, 1 = in
+        boolean show = age < INSERT_MS;
+        if (ejecting()) {
+            long ea = Util.getMillis() - ejectAt;
+            if (ea > EJECT_MS - EJECT_OUT_MS) {
+                float q = Math.min(1f, (ea - (EJECT_MS - EJECT_OUT_MS)) / (float) EJECT_OUT_MS);
+                amount = 1 - (1 - (1 - q) * (1 - q));
+                show = true;
+            }
+        }
+        if (show) {
             int cw = (int) (slotW * 0.94);
             int ch = (int) (cw * 0.62);
             int cxp = slotX + (slotW - cw) / 2;
             int slotY = vcrY + vcrH / 2 + 4;
             int start = vcrY + vcrH + 40;
             int end = slotY - ch + 12;
-            int cy = (int) (start + (end - start) * e);
+            int cy = (int) (start + (end - start) * amount);
             g.enableScissor(slotX - 6, slotY, slotX + slotW + 6, h);
-            cassette(g, cxp, cy, cw, ch, age / (float) INSERT_MS);
+            cassette(g, cxp, cy, cw, ch, amount);
             g.disableScissor();
         }
     }
@@ -214,7 +243,16 @@ final class VhsTv {
     void endScreen(GuiGraphics g, Font font) {
         long ms = Util.getMillis();
         long age = age();
-        if (age < INSERT_MS) {
+        if (ejecting()) {
+            long ea = ms - ejectAt;
+            g.fill(sx, sy, sx + sw, sy + sh, 0xFF1428C8);                                  // the blue of a deck with no picture
+            if (ea < EJECT_MS - 200) {
+                int size = Math.min(sw, sh) / 2;
+                g.blit(new ResourceLocation("lotusblight", "textures/gui/vhs_pause.png"),
+                        sx + (sw - size) / 2, sy + (sh - size) / 2, size, size, 0, 0, 120, 120, 120, 120);
+            }
+            age = Long.MAX_VALUE / 4;
+        } else if (age < INSERT_MS) {
             // before the tape plays the set shows only blue snow
             Random r = new Random(ms / 45);
             g.fill(sx, sy, sx + sw, sy + sh, 0xFF000000);

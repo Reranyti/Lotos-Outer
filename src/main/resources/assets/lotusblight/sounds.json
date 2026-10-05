@@ -68,5 +68,13 @@
         "name": "lotusblight:vhs_insert"
       }
     ]
+  },
+  "vhs_rewind": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "lotusblight:vhs_rewind"
+      }
+    ]
   }
 }
