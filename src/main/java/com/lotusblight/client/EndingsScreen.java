@@ -9,8 +9,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * The endings: a ring of circles, one per ending, each with a line going out from it (the path from the start to the
- * last event and the ending itself). Clicking a circle pulls its line out and names it; what the line shows along the
- * way (dialogue taken and not taken, events) is filled in once those are recorded.
+ * last event and the ending itself). Hovering a circle lights its whole line and names it; clicking opens the map of the way to that ending (EndingMapScreen).
  */
 public final class EndingsScreen extends Screen {
     /** How many endings there are. */
@@ -19,7 +18,7 @@ public final class EndingsScreen extends Screen {
     private static final int RAY_SHORT = 26;
 
     private final Screen parent;
-    private int selected = -1;
+    private int hovered = -1;
 
     public EndingsScreen(Screen parent) {
         super(Component.literal("Концовки"));
@@ -64,7 +63,8 @@ public final class EndingsScreen extends Screen {
             double dx = mx - nodeX(i);
             double dy = my - nodeY(i);
             if (dx * dx + dy * dy <= NODE_RADIUS * NODE_RADIUS) {
-                selected = selected == i ? -1 : i;
+                EndingsBook.Ending e = ending(i);
+                this.minecraft.setScreen(new EndingMapScreen(this, e == null ? null : e.id(), seen(i) && e.name() != null ? e.name() : "???"));
                 return true;
             }
         }
@@ -89,24 +89,29 @@ public final class EndingsScreen extends Screen {
         frame(g, tx, 10, tx + tw, 32, 0xFFB0B0B0);
         g.drawCenteredString(this.font, this.title, this.width / 2, 17, 0xFFFFFF);
 
+        hovered = -1;
+        for (int i = 0; i < SLOTS; i++) {
+            int dx = mouseX - nodeX(i);
+            int dy = mouseY - nodeY(i);
+            if (dx * dx + dy * dy <= NODE_RADIUS * NODE_RADIUS) hovered = i;
+        }
         for (int i = 0; i < SLOTS; i++) {
             int x = nodeX(i);
             int y = nodeY(i);
             double a = angle(i);
-            boolean on = i == selected;
+            boolean on = i == hovered;
             int len = on ? ringRadius() * 6 / 10 : RAY_SHORT;
             int color = on ? 0xFFE4E7D8 : seen(i) ? 0xFF907070 : 0xFF505050;
             line(g, x + (int) (Math.cos(a) * NODE_RADIUS), y + (int) (Math.sin(a) * NODE_RADIUS),
                     x + (int) (Math.cos(a) * (NODE_RADIUS + len)), y + (int) (Math.sin(a) * (NODE_RADIUS + len)), color);
-            boolean hover = (mouseX - x) * (mouseX - x) + (mouseY - y) * (mouseY - y) <= NODE_RADIUS * NODE_RADIUS;
             disc(g, x, y, NODE_RADIUS, 0xFF000000 | (seen(i) ? 0x402020 : 0x181818));
-            ring(g, x, y, NODE_RADIUS, on || hover ? 0xFFFFFFFF : color);
+            ring(g, x, y, NODE_RADIUS, on ? 0xFFFFFFFF : color);
         }
 
         g.drawCenteredString(this.font, Component.literal(EndingsBook.seenCount() + " / " + SLOTS), this.width / 2, centerY() - 4, 0xFFA0A0A0);
-        if (selected >= 0) {
-            EndingsBook.Ending e = ending(selected);
-            String name = seen(selected) && e.name() != null ? e.name() : "???";
+        if (hovered >= 0) {
+            EndingsBook.Ending e = ending(hovered);
+            String name = seen(hovered) && e.name() != null ? e.name() : "???";
             g.drawCenteredString(this.font, Component.literal(name), this.width / 2, centerY() + 10, 0xFFE4E7D8);
         }
         super.render(g, mouseX, mouseY, partial);
