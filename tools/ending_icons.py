@@ -13,7 +13,8 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src', 'main', 'resources', 'assets', 'lotusblight')
 OUT = os.path.join(ROOT, 'textures', 'gui', 'endings')
 S = 32
-SS = 8   # drawn 8x larger and shrunk, for soft edges
+SS = 16  # drawn 16x larger and shrunk, for soft edges
+OUT_S = 64   # size of the finished icon
 
 
 def canvas():
@@ -31,7 +32,7 @@ def glow(img, color, radius, strength=1.0):
 
 
 def finish(img, name):
-    img = img.resize((S, S), Image.LANCZOS)
+    img = img.resize((OUT_S, OUT_S), Image.LANCZOS)
     img.save(os.path.join(OUT, name + '.png'))
 
 
@@ -105,39 +106,92 @@ def glitch():
     return out
 
 
-def lotus_flower(d, cx, cy, scale=1):
-    """A small pink lotus (three petals over a green cup), in the palette of the lotus seed."""
-    P = [(255, 120, 190, 255), (222, 60, 150, 255), (150, 20, 100, 255)]
-    for dx, dy, w, h, c in [(-4, -2, 3, 5, 1), (4, -2, 3, 5, 1), (0, -4, 4, 7, 0), (-2, -1, 3, 5, 0), (2, -1, 3, 5, 0)]:
-        d.ellipse((cx + (dx - w) * scale, cy + (dy - h / 2) * scale, cx + (dx + w) * scale, cy + (dy + h / 2) * scale), fill=P[c], outline=P[2])
-    d.ellipse((cx - 5 * scale, cy + 2 * scale, cx + 5 * scale, cy + 5 * scale), fill=(40, 120, 90, 255))
+def line(d, x0, y0, x1, y1, color, w):
+    d.line((x0 * SS, y0 * SS, x1 * SS, y1 * SS), fill=color, width=max(1, int(w * SS)))
 
 
-def sword(d, x0, y0, x1, y1):
-    """A pixel sword from the hilt (x0, y0) to the tip (x1, y1)."""
-    d.line((x0, y0, x1, y1), fill=(205, 215, 225, 255), width=2)
-    d.line((x0, y0, x0 + (x1 - x0) * 0.15, y0 + (y1 - y0) * 0.15), fill=(110, 70, 40, 255), width=2)
-    gx, gy = x0 + (x1 - x0) * 0.22, y0 + (y1 - y0) * 0.22
-    d.line((gx - 3, gy + 3, gx + 3, gy - 3) if (x1 - x0) * (y1 - y0) < 0 else (gx - 3, gy - 3, gx + 3, gy + 3), fill=(230, 190, 70, 255), width=2)
+def poly(d, pts, fill, outline=None, w=0.6):
+    d.polygon([(x * SS, y * SS) for x, y in pts], fill=fill)
+    if outline:
+        d.line([(x * SS, y * SS) for x, y in pts + [pts[0]]], fill=outline, width=max(1, int(w * SS)), joint='curve')
+
+
+def ellipse(d, x0, y0, x1, y1, fill, outline=None, w=0.6):
+    d.ellipse((x0 * SS, y0 * SS, x1 * SS, y1 * SS), fill=fill, outline=outline, width=max(1, int(w * SS)))
+
+
+def shade(c, k):
+    return tuple(max(0, min(255, int(v * k))) for v in c[:3]) + (255,)
+
+
+def petal(d, cx, cy, ang, length, width, base):
+    """One lotus petal: a pointed leaf shape with a lighter middle, turned by ang (0 = up)."""
+    dx, dy = math.sin(ang), -math.cos(ang)
+
+    def tr(u, v):
+        return (cx + u * dx - v * dy, cy + u * dy + v * dx)
+
+    side = [(i / 20 * length, math.sin(i / 20 * math.pi) ** 0.8 * width) for i in range(21)]
+    outline = [tr(u, v) for u, v in side] + [tr(u, -v) for u, v in reversed(side)]
+    poly(d, outline, base, shade(base, 0.45), 0.5)
+    mid = [tr(u, v * 0.35) for u, v in side] + [tr(u, -v * 0.35) for u, v in reversed(side)]
+    poly(d, mid, shade(base, 1.18))
+
+
+def lotus_flower(d, cx, cy, size):
+    pink = (236, 84, 168, 255)
+    ellipse(d, cx - size * 0.9, cy + size * 0.1, cx + size * 0.9, cy + size * 0.55, (46, 132, 98, 255), (20, 70, 52, 255), 0.5)
+    for ang, ln in [(-1.15, size * 0.8), (1.15, size * 0.8), (-0.62, size * 0.95), (0.62, size * 0.95), (0.0, size * 1.05)]:
+        petal(d, cx, cy + size * 0.2, ang, ln, size * 0.26, pink)
+    ellipse(d, cx - size * 0.12, cy - size * 0.1, cx + size * 0.12, cy + size * 0.14, (255, 222, 120, 255))
+
+
+def sword(d, hx, hy, tx, ty):
+    """A sword from the pommel (hx, hy) to the tip (tx, ty): leather grip, gold guard, steel blade with an edge shine."""
+    dx, dy = tx - hx, ty - hy
+    ln = math.hypot(dx, dy)
+    ux, uy = dx / ln, dy / ln
+    nx, ny = -uy, ux
+
+    def pt(u, v):
+        return (hx + ux * u + nx * v, hy + uy * u + ny * v)
+
+    poly(d, [pt(0, -0.7), pt(5, -0.7), pt(5, 0.7), pt(0, 0.7)], (112, 70, 42, 255), (50, 28, 16, 255), 0.4)            # grip
+    px, py = pt(0, 0)
+    ellipse(d, px - 1, py - 1, px + 1, py + 1, (230, 190, 70, 255), (120, 90, 20, 255), 0.4)                           # pommel
+    poly(d, [pt(5, -3.4), pt(6.6, -3.4), pt(6.6, 3.4), pt(5, 3.4)], (232, 192, 76, 255), (120, 90, 20, 255), 0.45)     # guard
+    poly(d, [pt(6.6, -1.5), pt(ln - 2.5, -1.5), pt(ln, 0), pt(ln - 2.5, 1.5), pt(6.6, 1.5)], (190, 202, 216, 255), (80, 92, 108, 255), 0.5)   # blade
+    a, b = pt(7, -0.2), pt(ln - 3, -0.2)
+    line(d, a[0], a[1], b[0], b[1], (245, 250, 255, 255), 0.45)                                                         # shine
 
 
 def war():
-    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    img = canvas()
     d = ImageDraw.Draw(img)
-    sword(d, 4, 28, 27, 5)      # two swords crossed
-    sword(d, 27, 28, 4, 5)
-    lotus_flower(d, 16, 14)
+    sword(d, 3.5, 29, 27.5, 4)
+    sword(d, 28.5, 29, 4.5, 4)
+    ellipse(d, 8, 7.5, 24, 23.5, (24, 12, 30, 240), (240, 200, 90, 255), 0.55)
+    lotus_flower(d, 16, 14.8, 6.6)
     return img
 
 
-def heart(d, cx, cy, c=(230, 40, 60, 255)):
-    d.polygon([(cx - 5, cy - 2), (cx - 3, cy - 4), (cx - 1, cy - 4), (cx, cy - 2), (cx + 1, cy - 4), (cx + 3, cy - 4), (cx + 5, cy - 2),
-               (cx + 5, cy), (cx, cy + 5), (cx - 5, cy)], fill=c)
+def heart(d, cx, cy, k=1.0):
+    pts = []
+    for i in range(61):
+        t = i / 60 * 2 * math.pi
+        x = 16 * math.sin(t) ** 3
+        y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t))
+        pts.append((cx + x * 0.34 * k, cy + y * 0.34 * k + 0.5))
+    poly(d, pts, (226, 44, 66, 255), (110, 14, 28, 255), 0.5)
+    sh = [(cx - 3.0 * k, cy - 2.4 * k), (cx - 1.6 * k, cy - 3.3 * k), (cx - 0.6 * k, cy - 2.4 * k), (cx - 2.2 * k, cy - 1.4 * k)]
+    poly(d, sh, (255, 170, 180, 255))
 
 
-def mini_star(d, cx, cy, r=4):
-    d.polygon(star_points(cx, cy, r, r * 0.3), fill=(255, 235, 150, 255))
-    d.ellipse((cx - 1, cy - 1, cx + 1, cy + 1), fill=(255, 255, 230, 255))
+def mini_star(d, cx, cy, r):
+    pts = [(cx + math.cos(-math.pi / 2 + i * math.pi / 4) * (r if i % 2 == 0 else r * 0.28),
+            cy + math.sin(-math.pi / 2 + i * math.pi / 4) * (r if i % 2 == 0 else r * 0.28)) for i in range(8)]
+    poly(d, pts, (255, 238, 150, 255), (200, 140, 40, 255), 0.35)
+    ellipse(d, cx - r * 0.2, cy - r * 0.2, cx + r * 0.2, cy + r * 0.2, (255, 255, 235, 255))
 
 
 # The face of the player is drawn into the transparent square (FACE) by the game, from the player's own skin.
@@ -145,22 +199,35 @@ FACE = (10, 1, 12)   # x, y, size
 
 
 def alliance():
-    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    img = canvas()
     d = ImageDraw.Draw(img)
-    mini_star(d, 6, 25, 5)
-    mini_star(d, 26, 25, 5)
-    heart(d, 16, 24)
+    mini_star(d, 6.5, 24, 5.5)
+    mini_star(d, 25.5, 24, 5.5)
+    heart(d, 16, 23, 1.15)
     return img
 
 
 def neutral():
-    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    img = canvas()
     d = ImageDraw.Draw(img)
-    d.rectangle((8, 15, 23, 31), fill=(60, 90, 160, 255))                 # the body under the face
-    d.rectangle((23, 18, 25, 26), fill=(190, 150, 120, 255))              # the arm that holds the knife
-    d.line((24, 18, 28, 8), fill=(215, 220, 230, 255), width=2)           # blade
-    d.line((24, 18, 24, 20), fill=(110, 70, 40, 255), width=2)
-    d.line((22, 18, 26, 18), fill=(230, 190, 70, 255), width=1)
+    poly(d, [(8, 15), (23, 15), (24, 31.5), (7, 31.5)], (58, 88, 164, 255), (24, 36, 84, 255), 0.5)      # the body under the face
+    poly(d, [(8, 15), (13, 15), (16, 18), (19, 15), (23, 15), (23, 18), (8, 18)], (46, 70, 138, 255))
+    poly(d, [(23, 17), (26.5, 17), (27, 25), (23.5, 25)], (205, 160, 126, 255), (110, 76, 56, 255), 0.4)  # the arm that holds the knife
+    poly(d, [(26, 17), (29.4, 8.6), (30.2, 10.4), (28, 17)], (214, 222, 232, 255), (80, 92, 108, 255), 0.4)   # the blade, pointing up
+    line(d, 27.7, 16, 29.4, 10.2, (250, 252, 255, 255), 0.3)
+    poly(d, [(25.2, 16.6), (28.6, 16.6), (28.6, 18.0), (25.2, 18.0)], (230, 190, 70, 255), (120, 90, 20, 255), 0.35)
+    return img
+
+
+def honcho():
+    """The skin's head is plain black: a black head over the pale suit with the red tie."""
+    img = canvas()
+    d = ImageDraw.Draw(img)
+    poly(d, [(3, 31.5), (4.5, 23), (11, 21), (21, 21), (27.5, 23), (29, 31.5)], (190, 196, 244, 255), (70, 74, 130, 255), 0.5)
+    poly(d, [(12, 21), (20, 21), (16, 26)], (255, 255, 255, 255), (150, 150, 190, 255), 0.35)
+    poly(d, [(15.2, 24.5), (16.8, 24.5), (17.6, 31), (14.4, 31)], (206, 62, 62, 255), (110, 24, 24, 255), 0.3)
+    poly(d, [(9, 2.5), (23, 2.5), (23, 20.5), (9, 20.5)], (10, 10, 14, 255), (70, 70, 84, 255), 0.5)
+    line(d, 9.8, 3.4, 22.2, 3.4, (46, 46, 58, 255), 0.5)
     return img
 
 
@@ -175,30 +242,18 @@ def four():
     return img
 
 
-def honcho():
-    # the skin's head is plain black, so the icon is a black head over the pale suit with the red tie
-    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    d.rectangle((3, 22, 28, 31), fill=(196, 200, 244, 255))            # shoulders
-    d.rectangle((13, 21, 18, 24), fill=(255, 255, 255, 255))           # collar
-    d.rectangle((15, 23, 16, 30), fill=(200, 60, 60, 255))             # tie
-    d.rectangle((9, 3, 22, 20), fill=(8, 8, 10, 255))                  # head
-    d.rectangle((9, 3, 22, 3), fill=(40, 40, 48, 255))
-    return img
-
-
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     for name, fn in [('moon', moon), ('star', star), ('mischief', mischief), ('glitch', glitch), ('four', four)]:
         finish(fn(), name)
-    honcho().save(os.path.join(OUT, 'honcho.png'))
+    finish(honcho(), 'honcho')
     for name, fn in [('war', war), ('alliance', alliance), ('neutral', neutral)]:
-        fn().save(os.path.join(OUT, name + '.png'))
+        finish(fn(), name)
     # a preview strip, enlarged
     names = ['moon', 'star', 'mischief', 'glitch', 'four', 'honcho', 'war', 'alliance', 'neutral']
-    strip = Image.new('RGBA', (S * 9 * 4, S * 4), (10, 10, 14, 255))
+    strip = Image.new('RGBA', (S * 9 * 4, S * 4), (28, 28, 34, 255))
     for i, n in enumerate(names):
-        im = Image.open(os.path.join(OUT, n + '.png')).resize((S * 4, S * 4), Image.NEAREST)
+        im = Image.open(os.path.join(OUT, n + '.png')).resize((S * 4, S * 4), Image.LANCZOS)
         strip.paste(im, (i * S * 4, 0), im)
     strip.save(os.path.join(os.environ.get('TEMP', '.'), 'ending_icons_preview.png'))
     print('ok')
