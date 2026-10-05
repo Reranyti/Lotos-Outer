@@ -29,6 +29,7 @@ public final class EndingsBook {
             new Ending("war", "Война", "war"),
             new Ending("alliance", "Альянс", "alliance"),
             new Ending("neutral", "Нейтральная", "neutral"),
+            new Ending("traitor", "Предатель", null),                      // split off from the alliance; icon not given yet
             new Ending("guiding", "Путеводная", "moon"),                  // the guiding line: moonlight
             new Ending("starlight", "Звёздный свет", "star"),                // starlight
             new Ending("mischievous", "Озорной свет", "mischief"),          // the mischievous light
