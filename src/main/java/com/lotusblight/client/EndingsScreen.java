@@ -102,8 +102,13 @@ public final class EndingsScreen extends Screen {
             boolean on = i == hovered;
             int len = on ? ringRadius() * 6 / 10 : RAY_SHORT;
             int color = on ? 0xFFE4E7D8 : seen(i) ? 0xFF907070 : 0xFF505050;
-            line(g, x + (int) (Math.cos(a) * NODE_RADIUS), y + (int) (Math.sin(a) * NODE_RADIUS),
-                    x + (int) (Math.cos(a) * (NODE_RADIUS + len)), y + (int) (Math.sin(a) * (NODE_RADIUS + len)), color);
+            int rx0 = x + (int) (Math.cos(a) * NODE_RADIUS);
+            int ry0 = y + (int) (Math.sin(a) * NODE_RADIUS);
+            int rx1 = x + (int) (Math.cos(a) * (NODE_RADIUS + len));
+            int ry1 = y + (int) (Math.sin(a) * (NODE_RADIUS + len));
+            line(g, rx0 - 1, ry0, rx1 - 1, ry1, 0x60FF2020);       // the tape's colour channels slip apart
+            line(g, rx0 + 1, ry0, rx1 + 1, ry1, 0x6020D0FF);
+            line(g, rx0, ry0, rx1, ry1, color);
             disc(g, x, y, NODE_RADIUS, 0xFF000000 | (seen(i) ? 0x402020 : 0x181818));
             ring(g, x, y, NODE_RADIUS, on ? 0xFFFFFFFF : color);
             EndingsBook.Ending e = ending(i);
@@ -130,6 +135,34 @@ public final class EndingsScreen extends Screen {
             g.drawCenteredString(this.font, Component.literal(name), this.width / 2, centerY() + 10, 0xFFE4E7D8);
         }
         super.render(g, mouseX, mouseY, partial);
+        vhs(g, this.font, this.width, this.height);
+    }
+
+    /** The whole screen as a worn VHS tape: scanlines, a tracking band crawling up, snow, and the PLAY mark. */
+    static void vhs(GuiGraphics g, net.minecraft.client.gui.Font font, int width, int height) {
+        long ms = net.minecraft.Util.getMillis();
+        for (int y = 0; y < height; y += 2) g.fill(0, y, width, y + 1, 0x26000000);
+        // the tracking band: a bright smear that crawls up, with torn lines at its edge
+        int band = height - (int) ((ms / 14) % (height + 80));
+        g.fill(0, band, width, band + 5, 0x14FFFFFF);
+        g.fill(0, band + 5, width, band + 7, 0x0AFFFFFF);
+        java.util.Random rnd = new java.util.Random(ms / 90);
+        for (int i = 0; i < 14; i++) {
+            int y = band + rnd.nextInt(14) - 4;
+            int x0 = rnd.nextInt(width);
+            g.fill(x0, y, Math.min(width, x0 + 20 + rnd.nextInt(120)), y + 1, 0x30FFFFFF);
+        }
+        // snow
+        java.util.Random snow = new java.util.Random(ms / 60);
+        for (int i = 0; i < 90; i++) {
+            int x = snow.nextInt(width);
+            int y = snow.nextInt(height);
+            g.fill(x, y, x + 1 + snow.nextInt(2), y + 1, 0x30FFFFFF);
+        }
+        // the player's marks, in the corners
+        g.drawString(font, "▶ PLAY", width - 56, 8, 0xFFE0E0E0, true);
+        long sec = ms / 1000;
+        g.drawString(font, String.format("%02d:%02d", (sec / 60) % 100, sec % 60), width - 46, height - 14, 0xFFA0A0A0, true);
     }
 
     // ---- small drawing helpers (the GUI only knows rectangles)

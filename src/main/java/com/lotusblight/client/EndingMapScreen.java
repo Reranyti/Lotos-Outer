@@ -84,5 +84,6 @@ public final class EndingMapScreen extends Screen {
         }
         g.disableScissor();
         super.render(g, mouseX, mouseY, partial);
+        EndingsScreen.vhs(g, this.font, this.width, this.height);
     }
 }

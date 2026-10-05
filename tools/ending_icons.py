@@ -1,4 +1,4 @@
-"""Icons for the endings menu (32x32): the four lights and Honcho's head.
+"""Icons for the endings menu (64x64, with a VHS look): the four lights and Honcho's head.
 
 Run: python tools/ending_icons.py
 Writes src/main/resources/assets/lotusblight/textures/gui/endings/{moon,star,mischief,glitch,four,honcho}.png
@@ -8,7 +8,8 @@ spiral); the glitch light is the fourth: the purple Architect of the early Archi
 import math
 import os
 import random
-from PIL import Image, ImageDraw, ImageFilter
+import zlib
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src', 'main', 'resources', 'assets', 'lotusblight')
 OUT = os.path.join(ROOT, 'textures', 'gui', 'endings')
@@ -31,8 +32,40 @@ def glow(img, color, radius, strength=1.0):
     return Image.alpha_composite(img, layer)
 
 
+def vhs(img, seed):
+    """A worn VHS look: the colour channels slip apart, scanlines, a few torn rows, tape noise, a little blur."""
+    rnd = random.Random(seed)
+    img = img.filter(ImageFilter.GaussianBlur(0.7))
+    r, g, b, a = img.split()
+    r = r.transform(r.size, Image.AFFINE, (1, 0, 2, 0, 1, 0))      # red slips right, blue left
+    b = b.transform(b.size, Image.AFFINE, (1, 0, -2, 0, 1, 0))
+    a = Image.merge('RGBA', (r, g, b, a)).split()[3]
+    a = ImageChops.lighter(a, Image.merge('RGBA', (r, g, b, a)).split()[3])
+    img = Image.merge('RGBA', (r, g, b, a))
+    px = img.load()
+    w, h = img.size
+    # torn rows
+    for _ in range(3):
+        y = rnd.randrange(4, h - 4)
+        sh = rnd.choice([-3, -2, 2, 3])
+        row = img.crop((0, y, w, y + 2))
+        img.paste((0, 0, 0, 0), (0, y, w, y + 2))
+        img.paste(row, (sh, y))
+    px = img.load()
+    for y in range(h):
+        for x in range(w):
+            cr, cg, cb, ca = px[x, y]
+            if ca == 0:
+                continue
+            k = 0.74 if y % 2 else 1.0                              # scanlines
+            n = rnd.randint(-14, 14)
+            px[x, y] = (max(0, min(255, int(cr * k + n))), max(0, min(255, int(cg * k + n))), max(0, min(255, int(cb * k + n))), ca)
+    return img
+
+
 def finish(img, name):
     img = img.resize((OUT_S, OUT_S), Image.LANCZOS)
+    img = vhs(img, zlib.crc32(name.encode()))
     img.save(os.path.join(OUT, name + '.png'))
 
 
