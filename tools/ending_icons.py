@@ -3,7 +3,7 @@
 Run: python tools/ending_icons.py
 Writes src/main/resources/assets/lotusblight/textures/gui/endings/{moon,star,mischief,glitch,four,honcho}.png
 The first three follow the three lights of the old finale animation (blue crescent, yellow four-point star, red diamond with a
-spiral); the glitch light is the fourth: a purple orb torn into shifted slices with the spiral inside.
+spiral); the glitch light is the fourth: the purple Architect of the early ArchitectScene prototype (colour B25CFF, an upward triangle), torn into shifted slices.
 """
 import math
 import os
@@ -90,8 +90,9 @@ def glitch():
     d = ImageDraw.Draw(img)
     c = S * SS // 2
     r = 8 * SS
-    d.ellipse((c - r, c - r, c + r, c + r), fill=(170, 60, 255, 255))
-    spiral(d, c, c, 6.5 * SS, (40, 0, 90, 255), SS)
+    d.ellipse((c - r, c - r, c + r, c + r), fill=(178, 92, 255, 255))
+    k = 5.5 * SS   # the purple Architect's symbol in the early prototype: an upward triangle, outline only
+    d.polygon([(c, c - k), (c + k * 0.9, c + k * 0.7), (c - k * 0.9, c + k * 0.7)], outline=(224, 187, 255, 255), width=SS)
     # tear the picture into rows and shift them
     out = Image.new('RGBA', img.size, (0, 0, 0, 0))
     y = 0
