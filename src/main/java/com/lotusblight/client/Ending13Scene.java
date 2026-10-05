@@ -303,6 +303,12 @@ public final class Ending13Scene {
         double cy = lerp(baseCam[1], hitCam[1], k) + rnd.nextGaussian() * shake;
         double cz = lerp(baseCam[2], hitCam[2], k) - 0.08 * kb;
         r.camera(cx, cy, cz, Math.sin(t * 0.3) * 0.02 + rnd.nextGaussian() * shake * 0.4, lerp(-0.13, pitchHit, k) + rnd.nextGaussian() * shake * 0.4);
+        if (t >= SMASH_END && t < MEMORY_START[0]) {                // the dark room: he looks round it, slowly, before the first cut; the arm comes in at the end
+            double look = smooth(t, SMASH_END, MEMORY_START[0] - 1.0);
+            double yawL = lerp(-2.35, 0.15, look) + Math.sin(t * 0.7) * 0.015;
+            r.camera(Math.sin(t * 0.4) * 0.05, 1.5 + Math.sin(t * 0.9) * 0.015, lerp(-1.0, -1.7, look), yawL, -0.10 + Math.sin(t * 0.5) * 0.012);
+            r.lights.add(new Soft3D.Light(0.2, 2.2, -0.6, 0.55, 0.6, 0.78, 6.5));            // a cold fill, so the room can be seen
+        }
 
         room(t);
         chair(-1.35, 0.15);
@@ -396,6 +402,191 @@ public final class Ending13Scene {
             double pz = -0.5 + Math.sin(ang) * rad * 0.8 + Math.cos(t * 0.25 + i) * 0.05;
             r.billboard(px, py, pz, 0.006, 0.006, dust, 0xFFFFFFFF, 0.85);
         }
+        basementProps(t);
+    }
+
+    // ------------------------------------------------------------------ the basement, lived in
+
+    private Soft3D.Tex noticeTex, tallyTex, handTex, paperTex, stainTex, mattressTex, tarpTex;
+
+    private Soft3D.Tex noticeBoard() {
+        if (noticeTex != null) return noticeTex;
+        noticeTex = paint(128, 96, g2 -> {
+            g2.setColor(new Color(92, 70, 48)); g2.fillRect(0, 0, 128, 96);
+            Random q = new Random(61);
+            for (int i = 0; i < 9; i++) {
+                int x = 6 + q.nextInt(100), y = 6 + q.nextInt(62), w = 16 + q.nextInt(18), h = 20 + q.nextInt(14);
+                int v = 170 + q.nextInt(60);
+                g2.setColor(new Color(v, v - 6, v - 24)); g2.fillRect(x, y, w, h);
+                g2.setColor(new Color(60, 56, 50, 190));
+                for (int l = 0; l < 4 + q.nextInt(4); l++) g2.fillRect(x + 2, y + 3 + l * 4, w - 5 - q.nextInt(8), 1);
+                g2.setColor(new Color(200, 40, 40)); g2.fillOval(x + w / 2 - 1, y - 1, 3, 3);               // a red pin
+            }
+            g2.setColor(new Color(150, 30, 30, 160)); g2.setStroke(new BasicStroke(1.2f));               // a string joining them
+            g2.drawLine(20, 20, 70, 60); g2.drawLine(70, 60, 108, 18); g2.drawLine(20, 20, 108, 18);
+            g2.setColor(new Color(30, 22, 16)); g2.setStroke(new BasicStroke(3f)); g2.drawRect(1, 1, 125, 93);
+        });
+        return noticeTex;
+    }
+
+    private Soft3D.Tex tallyMarks() {
+        if (tallyTex != null) return tallyTex;
+        tallyTex = paint(128, 64, g2 -> {
+            g2.setColor(new Color(0, 0, 0, 0)); g2.fillRect(0, 0, 128, 64);
+            Random q = new Random(62);
+            g2.setColor(new Color(214, 210, 196, 215)); g2.setStroke(new BasicStroke(1.6f));
+            for (int group = 0; group < 14; group++) {
+                int bx = 6 + (group % 7) * 17, by = 6 + (group / 7) * 28;
+                for (int k = 0; k < 4; k++) g2.drawLine(bx + k * 3 + q.nextInt(2), by + q.nextInt(2), bx + k * 3 + q.nextInt(2), by + 18 + q.nextInt(3));
+                if (group < 12) g2.drawLine(bx - 2, by + 15, bx + 12, by + 3);
+            }
+        });
+        return tallyTex;
+    }
+
+    private Soft3D.Tex bloodHand() {
+        if (handTex != null) return handTex;
+        handTex = paint(64, 64, g2 -> {
+            g2.setColor(new Color(0, 0, 0, 0)); g2.fillRect(0, 0, 64, 64);
+            g2.setColor(new Color(110, 14, 18, 215));
+            g2.fillRoundRect(18, 26, 28, 30, 10, 10);                                           // the palm
+            for (int f = 0; f < 4; f++) g2.fillRoundRect(16 + f * 8, 6 + (f == 1 || f == 2 ? 0 : 6), 6, 28, 5, 5);
+            g2.fillRoundRect(40, 24, 16, 7, 6, 6);                                                // the thumb
+            g2.setColor(new Color(90, 8, 12, 150));
+            for (int d = 0; d < 6; d++) g2.fillRect(18 + d * 5, 52, 2, 10 + d * 2);               // drips
+        });
+        return handTex;
+    }
+
+    private Soft3D.Tex scrap() {
+        if (paperTex != null) return paperTex;
+        paperTex = paint(32, 32, g2 -> {
+            g2.setColor(new Color(212, 206, 184)); g2.fillRect(0, 0, 32, 32);
+            g2.setColor(new Color(70, 66, 60, 170));
+            for (int l = 0; l < 7; l++) g2.fillRect(3, 4 + l * 4, 20 + (l * 7) % 7, 1);
+            g2.setColor(new Color(120, 60, 30, 70)); g2.fillOval(18, 14, 11, 9);
+        });
+        return paperTex;
+    }
+
+    private Soft3D.Tex puddleTex() {
+        if (stainTex != null) return stainTex;
+        stainTex = paint(64, 64, g2 -> {
+            for (int i = 0; i < 12; i++) {
+                int rr = 30 - i * 2;
+                g2.setColor(new Color(10 + i, 14 + i, 18 + i * 2, 255));
+                g2.fillOval(32 - rr, 32 - rr * 3 / 4, rr * 2, rr * 3 / 2);
+            }
+        });
+        for (int i = 0; i < stainTex.px.length; i++) {
+            int x = i % 64, y = i / 64;
+            double d = Math.hypot((x - 31.5) / 32.0, (y - 31.5) / 32.0);
+            int a = (int) (255 * Math.max(0, Math.min(1, (1 - d) * 3.0)));
+            stainTex.px[i] = (a << 24) | (stainTex.px[i] & 0xFFFFFF);
+        }
+        return stainTex;
+    }
+
+    /** Everything that makes the room a room somebody has lived in: shelves, a bench, barrels, a mattress, notices, a drip, light in the air. */
+    private void basementProps(double t) {
+        double h = 3.0;
+        Random q = new Random(2024);
+        // the shelves on the right wall, with their stores
+        r.matSpec = 0.1; r.matShine = 10;
+        for (int side = 0; side < 2; side++) {
+            double z = -3.6 + side * 1.2;
+            r.box(2.78, 0, z, 2.84, 2.2, z + 0.05, wood, 0xFF8A7A66, 0, 2);
+            r.box(2.78, 0, z + 1.1, 2.84, 2.2, z + 1.15, wood, 0xFF8A7A66, 0, 2);
+            for (int sh = 0; sh < 4; sh++) {
+                double y = 0.25 + sh * 0.6;
+                r.box(2.5, y, z, 2.84, y + 0.04, z + 1.15, wood, 0xFFA09080, 0, 2);
+                for (int it = 0; it < 4; it++) {
+                    double iz = z + 0.06 + it * 0.27 + q.nextDouble() * 0.04, hh = 0.1 + q.nextDouble() * 0.28, ww = 0.08 + q.nextDouble() * 0.14;
+                    int kind = q.nextInt(3);
+                    if (kind == 0) r.box(2.52, y + 0.04, iz, 2.52 + ww + 0.1, y + 0.04 + hh, iz + ww + 0.06, crate, 0xFFCCBBAA, 0, 3);
+                    else if (kind == 1) {                                                          // a jar with something in it
+                        r.box(2.58, y + 0.04, iz, 2.58 + 0.1, y + 0.04 + hh, iz + 0.1, Soft3D.Tex.solid(150 + q.nextInt(80), 120 + q.nextInt(80), 60 + q.nextInt(120)), 0xFFAAAAAA, 0.08, 1);
+                    } else r.box(2.56, y + 0.04, iz, 2.56 + 0.12, y + 0.04 + hh * 0.7, iz + 0.07, steel, 0xFF889098, 0, 1);
+                }
+            }
+        }
+        // a workbench in the back left, with a vise, tools on the wall over it, and a lamp
+        r.box(-2.9, 0.82, -3.7, -1.5, 0.88, -2.9, wood, 0xFFB09A80, 0, 2);
+        for (double lx : new double[]{-2.85, -1.55}) for (double lz : new double[]{-3.65, -2.95}) r.box(lx, 0, lz, lx + 0.06, 0.82, lz + 0.06, wood, 0xFF70604A, 0, 2);
+        r.box(-2.0, 0.88, -3.6, -1.85, 1.0, -3.4, steel, 0xFF8A8F96, 0, 1);                                      // the vise
+        for (int i = 0; i < 6; i++) r.box(-2.8 + i * 0.22, 1.55, -3.78, -2.78 + i * 0.22, 1.55 + 0.16 + (i % 3) * 0.07, -3.76, dark, 0xFFFFFFFF, 0, 1);   // tools on the pegboard
+        r.box(-2.9, 1.2, -3.795, -1.5, 1.95, -3.78, wood, 0xFF6A5A48, 0, 2);
+        r.matSpec = 0;
+        // barrels and crates in the far corner and by the door
+        r.matSpec = 0.3; r.matShine = 16;
+        for (int b = 0; b < 4; b++) {
+            double bx = 1.3 + (b % 2) * 0.62, bz = -3.2 + (b / 2) * 0.62;
+            r.bar(new double[]{bx, 0, bz}, new double[]{bx, 0.9, bz}, new double[]{0.27, 0, 0}, new double[]{0, 0, 0.27}, rust, 0xFF9A7A60, 0);
+            r.bar(new double[]{bx, 0.3, bz}, new double[]{bx, 0.34, bz}, new double[]{0.29, 0, 0}, new double[]{0, 0, 0.29}, steel, 0xFF666A70, 0);
+            r.bar(new double[]{bx, 0.62, bz}, new double[]{bx, 0.66, bz}, new double[]{0.29, 0, 0}, new double[]{0, 0, 0.29}, steel, 0xFF666A70, 0);
+        }
+        r.matSpec = 0;
+        r.box(0.2, 0, -3.5, 0.9, 0.5, -2.9, crate, 0xFFDDCCBB, 0, 2);
+        r.box(0.28, 0.5, -3.45, 0.82, 0.95, -3.0, crate, 0xFFCCBBAA, 0, 2);
+        // a mattress in the left corner with a blanket thrown over it
+        r.box(-2.9, 0.0, -2.2, -1.95, 0.2, -0.95, mattress(), 0xFFFFFFFF, 0, 1);
+        r.box(-2.88, 0.2, -1.5, -2.2, 0.27, -1.0, tarp(), 0xFF8A8A8A, 0, 1);                                  // the blanket
+        r.box(-2.86, 0.2, -2.1, -2.4, 0.3, -1.8, white, 0xFFBBBBAA, 0, 2);                                    // a flat pillow
+        // notices, tally marks, and a hand, on the walls
+        r.faceXY(-3.795, -0.9, 1.15, 0.4, 2.05, noticeBoard(), 0xFFB0B0B0, 0, 1, 1);
+        r.faceXY(-3.79, 0.7, 1.0, 1.6, 1.5, tallyMarks(), 0xFFFFFFFF, 0.05, 1, 1);
+        r.faceYZ(-2.995, 1.0, -0.4, 1.9, 0.5, bloodHand(), 0xFFFFFFFF, 0, 1, 1);
+        // a drip from the pipe, and its puddle
+        r.matSpec = 0.9; r.matShine = 80;
+        r.faceXZ(0.004, -0.9, -2.6, 0.5, -1.7, puddleTex(), 0xFFFFFFFF, 0, 1, 1);
+        r.matSpec = 0;
+        double ph = (t * 0.75) % 1.0;
+        if (ph < 0.8) sprite(-0.2, 2.35 - ph * 2.35 * 1.0 / 0.8 * (0.35 + 0.65 * ph / 0.8), -2.15, 0.012, 0.03, 0xFFB8D0E8, 0.9, 0.5);
+        double ring = ((t * 0.75) % 1.0);
+        if (ring > 0.8) {                                                                                  // the ripple
+            double rr = (ring - 0.8) * 1.5;
+            for (int k = 0; k < 16; k++) {
+                double a = k * Math.PI / 8;
+                sprite(-0.2 + Math.cos(a) * rr, 0.012, -2.15 + Math.sin(a) * rr * 0.7, 0.012, 0.012, 0xFFC8D8E8, 0.7 * (1 - (ring - 0.8) / 0.2), 0.6);
+            }
+        }
+        // paper and rubbish on the floor
+        for (int k = 0; k < 14; k++) {
+            double px = -2.2 + q.nextDouble() * 4.6, pz = -3.2 + q.nextDouble() * 3.8, a = q.nextDouble() * 6.28, sz = 0.07 + q.nextDouble() * 0.08;
+            double ca = Math.cos(a) * sz, sa = Math.sin(a) * sz;
+            r.quad(new double[][]{{px - ca, 0.006 + k * 0.0004, pz - sa}, {px + sa, 0.006 + k * 0.0004, pz - ca}, {px + ca, 0.006 + k * 0.0004, pz + sa}, {px - sa, 0.006 + k * 0.0004, pz + ca}},
+                    new double[][]{{0, 0}, {1, 0}, {1, 1}, {0, 1}}, scrap(), 0xFFFFFFFF, 0);
+        }
+        // a chain hoist from a beam
+        r.bar(new double[]{1.0, h - 0.3, 0.0}, new double[]{1.0, 1.9, 0.0}, new double[]{0.012, 0, 0}, new double[]{0, 0, 0.012}, steel, 0xFF70767E, 0);
+        r.box(0.94, 1.78, -0.06, 1.06, 1.92, 0.06, steel, 0xFF70767E, 0, 1);
+        // light in the air: the bulb's halo and cone, dust, low mist, cold moon through a slit
+        sprite(-1.7, 2.3, -0.5, 0.6, 0.6, 0xFFFFE6B0, 0.55, 1.0);
+        lightCone(new double[]{-1.7, 2.28, -0.5}, new double[]{-1.7, 0.0, -0.5}, 0.05, 1.5, 0xFFFFE2A8, 0.13, 18);
+        motes(new double[]{-1.6, 1.4, -0.6}, 1.3, 1.1, 1.3, 70, t, 11, 0xFFFFF0D0, 0.011, 0.9);
+        mistLayer(0.22, 3.5, 0, -1.2, 0xFFB8BCC8, 0.22, t, 0.01, 1.6);
+        lightCone(new double[]{-2.98, 2.7, -2.4}, new double[]{-1.6, 0.0, -1.7}, 0.03, 0.6, 0xFFA8C4F0, 0.10, 12);
+        r.box(-3.0, 2.55, -2.7, -2.97, 2.85, -2.1, Soft3D.Tex.solid(190, 210, 245), 0xFFFFFFFF, 0.9, 1);       // the slit of window
+    }
+
+    private Soft3D.Tex mattress() {
+        if (mattressTex != null) return mattressTex;
+        mattressTex = paint(32, 32, g2 -> {
+            g2.setColor(new Color(112, 108, 90)); g2.fillRect(0, 0, 32, 32);
+            g2.setColor(new Color(70, 64, 50, 140));
+            for (int i = 0; i < 5; i++) g2.fillOval(2 + i * 6, 4 + (i * 7) % 20, 9, 7);
+            g2.setColor(new Color(60, 56, 46)); for (int x = 0; x < 32; x += 8) g2.fillRect(x, 0, 1, 32);
+        });
+        return mattressTex;
+    }
+
+    private Soft3D.Tex tarp() {
+        if (tarpTex != null) return tarpTex;
+        tarpTex = paint(32, 32, g2 -> {
+            g2.setColor(new Color(58, 66, 76)); g2.fillRect(0, 0, 32, 32);
+            g2.setColor(new Color(40, 46, 54)); for (int x = 0; x < 32; x += 5) g2.fillRect(x, 0, 2, 32);
+        });
+        return tarpTex;
     }
 
     private void chair(double x, double z) {
@@ -1071,14 +1262,15 @@ public final class Ending13Scene {
         double l1 = Math.sqrt(e1[0] * e1[0] + e1[1] * e1[1] + e1[2] * e1[2]) + 1e-9;
         for (int k = 0; k < 3; k++) e1[k] /= l1;
         double[] e2 = cross(ax, e1);
-        r.matBlend = true; r.matAlpha = alpha;
-        for (int i = 0; i < sides; i++) {
+        r.matBlend = true; r.matAlpha = alpha * 0.45;
+        for (int layer = 0; layer < 3; layer++) for (int i = 0; i < sides; i++) {
+            double lk = 1.0 - 0.30 * layer;
             double a0 = i * 2 * Math.PI / sides, a1 = (i + 1) * 2 * Math.PI / sides;
             double[] p0 = new double[3], p1 = new double[3], q0 = new double[3], q1 = new double[3];
             for (int k = 0; k < 3; k++) {
                 double d0 = Math.cos(a0) * e1[k] + Math.sin(a0) * e2[k], d1 = Math.cos(a1) * e1[k] + Math.sin(a1) * e2[k];
-                p0[k] = apex[k] + d0 * rApex; p1[k] = apex[k] + d1 * rApex;
-                q0[k] = base[k] + d0 * rBase; q1[k] = base[k] + d1 * rBase;
+                p0[k] = apex[k] + d0 * rApex * lk; p1[k] = apex[k] + d1 * rApex * lk;
+                q0[k] = base[k] + d0 * rBase * lk; q1[k] = base[k] + d1 * rBase * lk;
             }
             r.quad(new double[][]{p0, p1, q1, q0}, new double[][]{{0, 0}, {1, 0}, {1, 1}, {0, 1}}, cone(), tint, 1.0);
         }
