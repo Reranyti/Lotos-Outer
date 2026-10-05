@@ -44,6 +44,7 @@ public final class EndingsScreen extends Screen {
 
     @Override
     public void onClose() {
+        VhsTv.stopLoops();
         this.minecraft.setScreen(parent);
     }
 
@@ -113,6 +114,7 @@ public final class EndingsScreen extends Screen {
         tv.body(g, this.width, this.height);
         tv.beginScreen(g);
         if (tv.picture()) {
+            VhsTv.ensureLoops();
             drawRing(g, mouseX, mouseY);
         }
         tv.endScreen(g, this.font);

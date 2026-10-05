@@ -43,5 +43,30 @@
         "stream": true
       }
     ]
+  },
+  "vhs_music": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "lotusblight:vhs_music",
+        "stream": true
+      }
+    ]
+  },
+  "vhs_noise": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "lotusblight:vhs_noise"
+      }
+    ]
+  },
+  "vhs_insert": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "lotusblight:vhs_insert"
+      }
+    ]
   }
 }

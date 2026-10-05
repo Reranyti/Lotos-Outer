@@ -16,7 +16,7 @@ import java.util.Random;
  * a crawling tracking band, snow and the tape's marks over it. Content is drawn between {@link #beginScreen} and {@link #endScreen}.
  */
 final class VhsTv {
-    private static final long INSERT_MS = 1900;      // the cassette goes in
+    private static final long INSERT_MS = 2600;      // the cassette goes in (the recording of it is about that long)
     private static final long POWER_MS = 500;        // the picture opens from a line
     private static final int BODY = 0xFF2A2420;
     private static final int BODY_LIGHT = 0xFF4A4038;
@@ -30,7 +30,6 @@ final class VhsTv {
     private final long openedAt = Util.getMillis();
     private boolean skipped;
     private boolean insertSoundPlayed;
-    private boolean powerSoundPlayed;
     private final boolean intro;
 
     VhsTv(boolean intro) {
@@ -71,13 +70,54 @@ final class VhsTv {
         return age() >= INSERT_MS + POWER_MS * 0.6;
     }
 
-    /** The real recordings (cassette going in, the set switching on) are not in yet: until they are, the menu is silent. */
-    private static final boolean SOUNDS = false;
+    /** One sound that goes on until it is stopped: the music of the menu, and under it the hiss of the tape. */
+    private static final class Loop extends net.minecraft.client.resources.sounds.AbstractTickableSoundInstance {
+        Loop(String name, float volume) {
+            super(SoundEvent.createVariableRangeEvent(new ResourceLocation("lotusblight", name)),
+                    net.minecraft.sounds.SoundSource.MASTER, net.minecraft.client.resources.sounds.SoundInstance.createUnseededRandom());
+            this.looping = true;
+            this.delay = 0;
+            this.volume = volume;
+            this.relative = true;
+            this.attenuation = net.minecraft.client.resources.sounds.SoundInstance.Attenuation.NONE;
+        }
+
+        @Override
+        public void tick() {}
+
+        void end() {
+            stop();
+        }
+    }
+
+    private static Loop music;
+    private static Loop hiss;
 
     private static void play(String name) {
-        if (!SOUNDS) return;
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(
                 SoundEvent.createVariableRangeEvent(new ResourceLocation("lotusblight", name)), 1.0f));
+    }
+
+    /** Once the picture is on: the music of the menu, and the tape's hiss under it, quieter than the music. Safe to call every frame. */
+    static void ensureLoops() {
+        Minecraft mc = Minecraft.getInstance();
+        if (music == null || !mc.getSoundManager().isActive(music)) {
+            mc.getMusicManager().stopPlaying();
+            music = new Loop("vhs_music", 0.7f);
+            mc.getSoundManager().play(music);
+        }
+        if (hiss == null || !mc.getSoundManager().isActive(hiss)) {
+            hiss = new Loop("vhs_noise", 0.3f);
+            mc.getSoundManager().play(hiss);
+        }
+    }
+
+    /** The menu is left: the tape stops. */
+    static void stopLoops() {
+        if (music != null) music.end();
+        if (hiss != null) hiss.end();
+        music = null;
+        hiss = null;
     }
 
     /** The room, the set, the deck. Call first, before anything else is drawn. */
@@ -85,7 +125,6 @@ final class VhsTv {
         long age = age();
         if (intro && !skipped) {
             if (!insertSoundPlayed) { insertSoundPlayed = true; play("vhs_insert"); }
-            if (!powerSoundPlayed && age >= INSERT_MS - 100) { powerSoundPlayed = true; play("tv_on"); }
         }
         g.fill(0, 0, w, h, 0xFF0A0807);
         // the set
