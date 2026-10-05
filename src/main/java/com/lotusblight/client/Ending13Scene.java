@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import com.lotusblight.cinema.GpuScene;
 import com.lotusblight.cinema.PlayerBoxes;
 import com.lotusblight.cinema.Soft3D;
+import com.lotusblight.cinema.SkinActor;
+import com.lotusblight.overlay.Actor15;
 import com.lotusblight.overlay.Ending13Rig;
 import java.util.Random;
 
@@ -58,6 +60,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
     private final int[] pixels = ((java.awt.image.DataBufferInt) image.getRaster().getDataBuffer()).getData();
     private final Random rnd = new Random();
     private final PlayerBoxes model = new PlayerBoxes();
+    private final Actor15 actor = new Actor15();           // the player's body, with elbows, knees and fingers
     private final Soft3D.Tex skin;
 
     private double[] kicks = new double[0];
@@ -1071,6 +1074,30 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         return new double[]{x + lx * cf + lz * sf, (22 + ly * Math.cos(pitch)) * scale, z - lx * sf + lz * cf};
     }
 
+    /** A world point as a stage point (skin pixels) of a body standing at {@code org} turned {@code face}. */
+    private static double[] worldToStage(double[] w, double[] org, double face) {
+        double cf = Math.cos(face), sf = Math.sin(face);
+        double dx = w[0] - org[0], dy = w[1] - org[1], dz = w[2] - org[2];
+        return new double[]{(cf * dx - sf * dz) / SkinActor.PX, dy / SkinActor.PX, (sf * dx + cf * dz) / SkinActor.PX};
+    }
+
+    /** A knife in the fist of a posed body: a handle through the fingers, a guard, a blade along the front of the fist. */
+    private void knifeInHand(Actor15.Hand h, double[] org, double face, double bladePx) {
+        double[] x = h.x(), y = h.y(), z = h.z();
+        double[] fist = {h.wrist()[0] - y[0] * 1.7, h.wrist()[1] - y[1] * 1.7, h.wrist()[2] - y[2] * 1.7};
+        java.util.function.BiFunction<Double, double[], double[]> at = (k, dir) -> SkinActor.toWorld(new double[]{fist[0] + dir[0] * k, fist[1] + dir[1] * k, fist[2] + dir[2] * k}, org, face, SkinActor.PX);
+        double[] wx = SkinActor.dirToWorld(x, face), wy = SkinActor.dirToWorld(y, face);
+        double px = SkinActor.PX;
+        r.matSpec = 0.15; r.matShine = 8;
+        r.bar(at.apply(-2.3, z), at.apply(2.0, z), scaled(wx, 0.42 * px), scaled(wy, 0.55 * px), grip, 0xFFFFFFFF, 0);
+        r.matSpec = 0.8; r.matShine = 50;
+        r.bar(at.apply(2.0, z), at.apply(2.35, z), scaled(wx, 0.45 * px), scaled(wy, 1.7 * px), steel, 0xFFD0C8B0, 0);
+        r.matSpec = 1.0; r.matShine = 70;
+        r.bar(at.apply(2.35, z), at.apply(2.35 + bladePx * 0.84, z), scaled(wx, 0.2 * px), scaled(wy, 0.95 * px), blade, 0xFFFFFFFF, 0);
+        r.bar(at.apply(2.35 + bladePx * 0.84, z), at.apply(2.35 + bladePx, z), scaled(wx, 0.08 * px), scaled(wy, 0.2 * px), blade, 0xFFDDDDDD, 0);
+        r.matSpec = 0;
+    }
+
     private void smash(double t) {
         t0 = t;
         double p = pulse(t);
@@ -1105,28 +1132,44 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         double step = smooth(t, PULL_A - 0.2, PULL_B);
         double fz = -0.12 + 0.12 * step;
         double fx = -0.42 * (1 - step * 0.6);
-        Soft3D.Pose pose = new Soft3D.Pose();
         boolean rightHits = kNear % 2 == 0;
         double sw = striking ? swing(v) : 0.18;
-        double pitchR = rightHits ? sw : 0.45 + 0.1 * Math.sin(t * 3), pitchL = rightHits ? 0.45 + 0.1 * Math.sin(t * 3 + 1) : sw;
-        if (!striking) {
-            double reach = smooth(t, PULL_A, PULL_B);
-            pitchR = lerp(0.2, -0.40, reach); pitchL = lerp(0.2, -0.28, reach);
-            if (t >= CASSETTE_SNAP) { pitchR = -0.95; pitchL = -0.95; }
-        }
-        pose.pitch[PlayerBoxes.RIGHT_ARM] = pitchR;
-        pose.pitch[PlayerBoxes.LEFT_ARM] = pitchL;
-        double lean = striking ? impact * 0.08 : 0;
-        pose.pitch[PlayerBoxes.BODY] = -lean;
-        pose.yaw[PlayerBoxes.BODY] = (rightHits ? 0.14 : -0.14) + 0.0 * (striking ? Math.min(1, Math.abs(sw)) * 0.8 : 0);
-        pose.pitch[PlayerBoxes.HEAD] = -0.12 - lean * 0.5;
-        pose.pitch[PlayerBoxes.LEFT_LEG] = 0.05; pose.pitch[PlayerBoxes.RIGHT_LEG] = -0.05;
-        double sc = 0.0568;
         double face = Math.atan2(0.0 - fx, 0.30 - fz) * 0.85;
-        double cf = Math.cos(face), sf = Math.sin(face);
-        double[][] basis = {{cf, 0, -sf}, {0, 1, 0}, {sf, 0, cf}};
+        double[] org = {fx, 0, fz};
+        actor.reset();
+        // the feet planted, a little apart, the near one forward
+        actor.placeFoot(true, new double[]{-3.4, 3, 0.8}, new double[]{0, 0, 1}, 1, 0, 0).placeFoot(false, new double[]{3.4, 3, -1.8}, new double[]{0, 0, 1}, 1, 0, 0);
+        double[] tvStage = worldToStage(new double[]{0.0, 0.92, 0.30}, org, face);
+        double[] tipR, tipL;
+        if (striking) {
+            double wind = clamp01((sw - 0.18) / 1.07), hit = clamp01((0.18 - sw) / 0.98);
+            double side = rightHits ? -1 : 1;
+            double[] rest = {side * 5.5, 13.5, 3.5}, windUp = {side * 7.5, 28.0, -3.5}, struck = {tvStage[0] + side * 1.3, tvStage[1], tvStage[2] + 0.5};
+            double[] hitTip = lerp3(lerp3(rest, windUp, wind), struck, hit);
+            double[] guard = {-side * 5.0, 17.0, 6.5};
+            tipR = rightHits ? hitTip : guard;
+            tipL = rightHits ? guard : hitTip;
+            actor.reachArm(true, tipR, new double[]{-1, -0.5, -0.6}, 1).reachArm(false, tipL, new double[]{1, -0.5, -0.6}, 1);
+            actor.hand(true, 1, 0).hand(false, 1, 0);
+            actor.turn(Actor15.Part.LOWER_TORSO, impact * 9 + 3, side * (-9) * wind, 0);
+            actor.lookAt(tvStage, 0.9);
+        } else {
+            double reach = smooth(t, PULL_A, PULL_B);
+            double[] slot = worldToStage(new double[]{0.0, 0.60, 0.27}, org, face);
+            double[] chest = {0, 19.5, 7.5};
+            double[] mid = lerp3(new double[]{0, 14, 4}, slot, reach);
+            if (t >= PULL_B) mid = lerp3(slot, chest, smooth(t, PULL_B, PULL_B + 0.45));
+            double apart = t >= CASSETTE_SNAP ? smooth(t, CASSETTE_SNAP, CASSETTE_SNAP + 0.25) * 3.6 : 0;
+            tipR = new double[]{mid[0] - 1.0 - apart, mid[1], mid[2]};
+            tipL = new double[]{mid[0] + 1.0 + apart, mid[1], mid[2]};
+            actor.reachArm(true, tipR, new double[]{-1, -0.7, -0.3}, 1).reachArm(false, tipL, new double[]{1, -0.7, -0.3}, 1);
+            actor.hand(true, 0.55, 0.1).hand(false, 0.55, 0.1);
+            actor.turn(Actor15.Part.LOWER_TORSO, 8 * reach, 0, 0);
+            actor.lookAt(mid, 0.8);
+        }
+        actor.solve();
         r.matSpec = 0.08; r.matShine = 10; r.matBump = 0.4; r.matWrap = 0.45;
-        r.figure(model, skin, new double[]{fx, 0, fz}, basis, sc, pose, FIG_TINT, 0, Soft3D.ALL_PARTS);
+        SkinActor.draw(r, actor, skin, org, face, SkinActor.PX, FIG_TINT, 0);
         r.matSpec = 0; r.matBump = 0; r.matWrap = 0;
 
         // the room, the chair, the set
@@ -1148,8 +1191,8 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         }
         // the tape in his hands, then broken
         if (cassetteInHand) {
-            double[] hr = handPos(true, pitchR, fx, fz, sc, face), hl = handPos(false, pitchL, fx, fz, sc, face);
-            double[] mid = {(hr[0] + hl[0]) / 2, (hr[1] + hl[1]) / 2 + 0.05, (hr[2] + hl[2]) / 2 + 0.04};
+            double[] hr = SkinActor.toWorld(actor.fistTip(true), org, face, SkinActor.PX), hl = SkinActor.toWorld(actor.fistTip(false), org, face, SkinActor.PX);
+            double[] mid = {(hr[0] + hl[0]) / 2, (hr[1] + hl[1]) / 2 + 0.03, (hr[2] + hl[2]) / 2 + 0.03};
             smashFocus = new double[]{mid[0], mid[1], mid[2]};
             r.lights.add(new Soft3D.Light(mid[0] + 0.25, mid[1] + 0.25, mid[2] - 0.35, 0.95, 0.95, 1.05, 2.2));      // the tape catches the light
             double snap = smooth(t, CASSETTE_SNAP, CASSETTE_SNAP + 0.25);
@@ -1592,49 +1635,42 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         double run = smooth(t, LIGHT_AT[0], LIGHT_AT[0] + 4.0);
         double fz = lerp(-8.3, -2.7, run), fx = 0.0, face = 0.0;
         boolean running = run > 0.0 && run < 0.985;
-        double stride = t * 11.0;
-        Soft3D.Pose pose = new Soft3D.Pose();
-        double saw = Math.sin(t * Math.PI * 4.0);
-        double yawR = 0.50 + 0.28 * saw, pitchR = -1.12 + 0.05 * saw, pitchL = -1.12, yawL = -0.40;
+        double[] org = {fx, 0, fz};
+        actor.reset();
+        double bounce = 0;
         if (running) {
-            pitchR = 0.9 * Math.sin(stride); pitchL = -0.9 * Math.sin(stride); yawR = 0; yawL = 0;
-            pose.pitch[PlayerBoxes.RIGHT_LEG] = -0.8 * Math.sin(stride); pose.pitch[PlayerBoxes.LEFT_LEG] = 0.8 * Math.sin(stride);
-            pose.pitch[PlayerBoxes.BODY] = -0.18;
+            double ph = t * 11.0;
+            double zr = 6.5 * Math.sin(ph), zl = -zr;
+            double liftR = Math.max(0, Math.cos(ph)) * 4.0, liftL = Math.max(0, -Math.cos(ph)) * 4.0;
+            actor.placeFoot(true, new double[]{-2.2, 3 + liftR, zr}, new double[]{0, 0, 1}, 1, 0, 0).placeFoot(false, new double[]{2.2, 3 + liftL, zl}, new double[]{0, 0, 1}, 1, 0, 0);
+            actor.reachArm(true, new double[]{-5.2, 15.0 + Math.max(0, zl) * 0.2, zl * 0.8 + 2}, new double[]{-1, -0.3, -1}, 1);
+            actor.reachArm(false, new double[]{5.2, 15.0 + Math.max(0, zr) * 0.2, zr * 0.8 + 2}, new double[]{1, -0.3, -1}, 1);
+            actor.turn(Actor15.Part.LOWER_TORSO, 12, 0, 0).hand(true, 0.7, 0).hand(false, 0.7, 0);
+            bounce = Math.abs(Math.sin(ph)) * 0.7;
+            actor.move(0, -bounce, 0);
         } else {
-            double settle = smooth(t, LIGHT_AT[0] + 3.7, LIGHT_AT[0] + 4.6);
-            pitchR = lerp(0.9 * Math.sin(stride), pitchR, settle); pitchL = lerp(-0.9 * Math.sin(stride), pitchL, settle);
-            yawR = yawR * settle; yawL = yawL * settle;
-            pose.pitch[PlayerBoxes.LEFT_LEG] = 0.04; pose.pitch[PlayerBoxes.RIGHT_LEG] = -0.04;
+            double saw = Math.sin(t * Math.PI * 4.0);
+            double weight = smooth(t, 119, 150);
+            double[] tipL = {3.2, 17.2, 10.8}, tipR = {-0.8 + 3.4 * saw, 18.6, 9.8};
+            double[] chestAim = {-0.6, 17.0, 3.0};
+            if (stabU >= 0) {                                            // the blow: the blade rises over his head, trembles, comes down into his chest
+                double up = smooth(stabU, 0.0, 1.2), down = smooth(stabU, 1.45, 1.6);
+                double[] raised = {-3.5, 36.0 + 0.5 * Math.sin(stabU * 40) * up, 2.0};
+                tipR = lerp3(lerp3(tipR, raised, up), chestAim, down);
+                tipL = lerp3(tipL, new double[]{6.0, 15.5, 6.0}, up);
+            }
+            actor.placeFoot(true, new double[]{-3.0, 3, -0.5}, new double[]{0, 0, 1}, 1, 0, 0).placeFoot(false, new double[]{3.0, 3, 1.0}, new double[]{0, 0, 1}, 1, 0, 0);
+            actor.reachArm(true, tipR, new double[]{-1, -0.9, -0.2}, 1).reachArm(false, tipL, new double[]{1, -0.9, 0.2}, 1);
+            actor.hand(true, 1.0, 0).hand(false, 0.12, 0.45);
+            actor.turn(Actor15.Part.R_HAND, 62, 0, 0);
+            actor.turn(Actor15.Part.LOWER_TORSO, 5 + 9 * weight + 1.5 * Math.sin(t * 1.3), 0, 0);
+            actor.lookAt(stabU >= 0 ? new double[]{0, 14, 10} : new double[]{1.0, 14, 12}, 0.85);
         }
-        if (stabU >= 0) {                                                // the blow: the blade rises over his head, trembles, comes down into his chest
-            double up = smooth(stabU, 0.0, 1.2), down = smooth(stabU, 1.45, 1.6);
-            pitchR = lerp(lerp(-1.12, -2.75, up), -1.15, down) + 0.04 * Math.sin(stabU * 40) * up * (1 - down);
-            yawR = lerp(lerp(0.5, 0.15, up), 0.95, down);
-            pitchL = lerp(-1.12, -0.5, up); yawL = lerp(-0.4, -0.7, up);
-        }
-        pose.pitch[PlayerBoxes.RIGHT_ARM] = pitchR; pose.yaw[PlayerBoxes.RIGHT_ARM] = yawR;
-        pose.pitch[PlayerBoxes.LEFT_ARM] = pitchL; pose.yaw[PlayerBoxes.LEFT_ARM] = yawL;
-        double weight = smooth(t, 119, 150);
-        if (!running) {
-            pose.pitch[PlayerBoxes.HEAD] = -0.25 - 0.15 * weight;                       // the head sinks
-            pose.pitch[PlayerBoxes.BODY] += 0.05 * Math.sin(t * 1.3) - 0.10 * weight;
-        }
-        double bounce = running ? Math.abs(Math.sin(stride)) * 0.05 : 0;
-        double[][] basis = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        actor.solve();
         r.matSpec = 0.08; r.matShine = 10; r.matBump = 0.4; r.matWrap = 0.45;
-        r.figure(model, skin, new double[]{fx, bounce, fz}, basis, sc, pose, FIG_TINT, 0, Soft3D.ALL_PARTS);
+        SkinActor.draw(r, actor, skin, org, face, SkinActor.PX, FIG_TINT, 0);
         r.matSpec = 0; r.matBump = 0; r.matWrap = 0;
-        if (!running) {
-            // the blade in the right hand, pointing along the left forearm
-            double[] tipR = armTip(true, pitchR, yawR, fx, fz, face, sc), tipL = armTip(false, pitchL, yawL, fx, fz, face, sc);
-            double[] dir = {tipL[0] - tipR[0], tipL[1] - tipR[1], tipL[2] - tipR[2]};
-            double dl = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]) + 1e-9;
-            for (int k = 0; k < 3; k++) dir[k] /= dl;
-            double[] bEnd = {tipR[0] + dir[0] * 0.19, tipR[1] + dir[1] * 0.19 - 0.02, tipR[2] + dir[2] * 0.19};
-            r.matSpec = 0.9; r.matShine = 60;
-            r.bar(tipR, bEnd, new double[]{0.006, 0, 0}, new double[]{0, 0.003, 0}, blade, 0xFFFFFFFF, 0);
-            r.matSpec = 0;
-        }
+        if (!running) knifeInHand(actor.handOf(true), org, face, 4.6);
 
         // the camera: high in the corner by the door, looking down the hall at him and the Architect; it drifts, as a held camera does
         double a = lerp(-0.25, 0.45, smooth(t, 115, 151));
@@ -1830,7 +1866,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
             int[] v3 = new int[3];
             for (int c = 0; c < 3; c++) {
                 int sh = 16 - 8 * c;
-                double v = ((px[i] >> sh) & 255) + 0.55 * ((b1[i] >> sh) & 255) + 0.55 * ((b2[i] >> sh) & 255) + 0.62 * ((b3[i] >> sh) & 255);
+                double v = ((px[i] >> sh) & 255) + 0.26 * ((b1[i] >> sh) & 255) + 0.30 * ((b2[i] >> sh) & 255) + 0.36 * ((b3[i] >> sh) & 255);
                 v3[c] = Math.min(255, (int) (v * m));
             }
             out.setRGB(x, y, 0xFF000000 | (v3[0] << 16) | (v3[1] << 8) | v3[2]);
