@@ -36,17 +36,17 @@ def glow(img, color, radius, strength=1.0):
 def vhs(img, seed):
     """A worn VHS look: the colour channels slip apart, scanlines, a few torn rows, tape noise, a little blur."""
     rnd = random.Random(seed)
-    img = img.filter(ImageFilter.GaussianBlur(0.7))
+    img = img.filter(ImageFilter.GaussianBlur(0.85))
     r, g, b, a = img.split()
-    r = r.transform(r.size, Image.AFFINE, (1, 0, 2, 0, 1, 0))      # red slips right, blue left
-    b = b.transform(b.size, Image.AFFINE, (1, 0, -2, 0, 1, 0))
+    r = r.transform(r.size, Image.AFFINE, (1, 0, 3, 0, 1, 0))      # red slips right, blue left
+    b = b.transform(b.size, Image.AFFINE, (1, 0, -3, 0, 1, 0))
     a = Image.merge('RGBA', (r, g, b, a)).split()[3]
     a = ImageChops.lighter(a, Image.merge('RGBA', (r, g, b, a)).split()[3])
     img = Image.merge('RGBA', (r, g, b, a))
     px = img.load()
     w, h = img.size
     # torn rows
-    for _ in range(3):
+    for _ in range(5):
         y = rnd.randrange(4, h - 4)
         sh = rnd.choice([-3, -2, 2, 3])
         row = img.crop((0, y, w, y + 2))
@@ -58,8 +58,8 @@ def vhs(img, seed):
             cr, cg, cb, ca = px[x, y]
             if ca == 0:
                 continue
-            k = 0.74 if y % 2 else 1.0                              # scanlines
-            n = rnd.randint(-14, 14)
+            k = 0.66 if y % 2 else 1.0                              # scanlines
+            n = rnd.randint(-24, 24)
             px[x, y] = (max(0, min(255, int(cr * k + n))), max(0, min(255, int(cg * k + n))), max(0, min(255, int(cb * k + n))), ca)
     return img
 
@@ -266,44 +266,65 @@ def honcho():
 
 
 def dismembered():
-    """The red light with its diamond, and a figure made of TV static tearing out of it towards us."""
-    img = mischief()
-    rnd = random.Random(11)
-    # the figure: a head, shoulders and one reaching arm, filled with grey static
-    fig = Image.new('L', img.size, 0)
+    """Hijack tearing out of a TV: a CRT with a red static screen and antennae, and a glowing red figure climbing out of it."""
+    img = canvas()
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(21)
+    # the cart under the set
+    line(d, 3.5, 22, 3.5, 31.5, (30, 12, 14, 255), 1.1)
+    line(d, 17.5, 22, 17.5, 31.5, (30, 12, 14, 255), 1.1)
+    line(d, 2.5, 23, 18.5, 23, (40, 16, 18, 255), 1.1)
+    line(d, 3, 29.5, 18, 29.5, (40, 16, 18, 255), 1.0)
+    # the set itself
+    line(d, 7, 7.5, 5, 3.2, (50, 20, 22, 255), 0.5)
+    line(d, 10, 7.5, 12.5, 3.2, (50, 20, 22, 255), 0.5)
+    poly(d, [(2.5, 8), (17.5, 7.2), (18.4, 21.5), (3.5, 22.4)], (36, 14, 16, 255), (96, 34, 36, 255), 0.6)
+    scr = [(4.4, 9.4), (16.3, 8.9), (16.9, 19.9), (5.0, 20.6)]
+    poly(d, scr, (60, 4, 6, 255), (150, 30, 30, 255), 0.4)
+    # red static in the screen
+    mask = Image.new('L', img.size, 0)
+    ImageDraw.Draw(mask).polygon([(x * SS, y * SS) for x, y in scr], fill=255)
+    stat = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    sp = stat.load()
+    cell = SS // 2
+    for gy in range(0, img.size[1], cell):
+        for gx in range(0, img.size[0], cell):
+            v = rnd.random()
+            if v > 0.55:
+                col = (255, int(60 + 80 * rnd.random()), int(60 * rnd.random()), 255) if v > 0.9 else (190, 12, 14, 255)
+                for yy in range(gy, min(gy + cell, img.size[1])):
+                    for xx in range(gx, min(gx + cell, img.size[0])):
+                        sp[xx, yy] = col
+    img.paste(stat, (0, 0), mask)
+    # the figure: a red glow first, then the body
+    fig = Image.new('RGBA', img.size, (0, 0, 0, 0))
     fd = ImageDraw.Draw(fig)
-    def box(x0, y0, x1, y1):
-        fd.rectangle((x0 * SS, y0 * SS, x1 * SS, y1 * SS), fill=255)
-    fd.ellipse((11.5 * SS, 9 * SS, 20.5 * SS, 19 * SS), fill=255)             # head
-    box(7, 19, 25, 32)                                                         # torso, cut by the bottom edge
-    fd.polygon([(25 * SS, 20 * SS), (31 * SS, 14 * SS), (32 * SS, 16 * SS), (27 * SS, 24 * SS)], fill=255)   # the arm pulling out
-    fd.polygon([(7 * SS, 20 * SS), (2 * SS, 27 * SS), (4 * SS, 28 * SS), (8 * SS, 24 * SS)], fill=255)       # and the other one
-    # torn edge: rows pushed sideways
-    for y in range(0, img.size[1], 6 * SS // 4):
-        dx = rnd.choice([-2, 0, 0, 2, 3]) * SS // 2
-        row = fig.crop((0, y, fig.size[0], y + 6 * SS // 4))
-        fig.paste(0, (0, y, fig.size[0], y + 6 * SS // 4))
-        fig.paste(row, (dx, y))
-    noise = Image.new('RGBA', img.size)
-    npx = noise.load()
-    for y in range(0, img.size[1]):
-        for x in range(0, img.size[0]):
-            pass
-    # static is made at the finished resolution of the icon and blown up, so the grains are visible
-    small = Image.new('L', (S * 2, S * 2))
-    sp = small.load()
-    for y in range(S * 2):
-        for x in range(S * 2):
-            sp[x, y] = rnd.randint(40, 255)
-    grain = small.resize(img.size, Image.NEAREST).convert('RGBA')
-    shaded = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    shaded.paste(grain, (0, 0), fig)
-    # a thin red glow where the figure meets the light
-    edge = fig.filter(ImageFilter.GaussianBlur(SS * 0.9))
-    glow_layer = Image.new('RGBA', img.size, (255, 40, 40, 0))
-    glow_layer.putalpha(ImageChops.subtract(edge, fig).point(lambda v: min(255, v * 2)))
-    img = Image.alpha_composite(img, glow_layer)
-    return Image.alpha_composite(img, shaded)
+    red = (238, 18, 18, 255)
+    ellipse(fd, 18.6, 7.5, 25.6, 15.8, red)                                                      # head
+    poly(fd, [(19, 16.8), (26, 16.2), (29.2, 22), (28, 31.5), (19.5, 31.5), (19, 24)], red)         # torso and legs
+    line(fd, 18, 18, 11.5, 15.5, red, 2.6)                                                       # the arm reaching out of the screen
+    for dx, dy in [(-3.2, -1.6), (-3.4, 0.3), (-2.4, 1.8), (-1.2, 2.6)]:                         # the fingers
+        line(fd, 11.5, 15.5, 11.5 + dx, 15.5 + dy, red, 1.1)
+    line(fd, 27.5, 22, 30.5, 27, red, 2.4)                                                       # the other arm
+    rim = fig.split()[3].filter(ImageFilter.MaxFilter(SS * 2 + 1))          # a dark rim keeps the figure apart from the screen
+    rim_layer = Image.new('RGBA', img.size, (14, 2, 4, 255))
+    rim_layer.putalpha(rim)
+    img = Image.alpha_composite(img, rim_layer)
+    halo = fig.filter(ImageFilter.GaussianBlur(SS * 0.9))
+    halo = Image.merge('RGBA', (halo.split()[0], halo.split()[1].point(lambda v: v // 2), halo.split()[2].point(lambda v: v // 2), halo.split()[3].point(lambda v: int(v * 0.45))))
+    img = Image.alpha_composite(img, halo)
+    img = Image.alpha_composite(img, fig)
+    # white speckle on the body, like the reference
+    sp2 = img.load()
+    fa = fig.split()[3].load()
+    for _ in range(260):
+        x = rnd.randrange(img.size[0])
+        y = rnd.randrange(img.size[1])
+        if fa[x, y] > 200 and rnd.random() < 0.6:
+            for yy in range(y, min(y + SS // 3, img.size[1])):
+                for xx in range(x, min(x + SS // 3, img.size[0])):
+                    sp2[xx, yy] = (255, 235, 235, 255)
+    return img
 
 
 def chromo():
