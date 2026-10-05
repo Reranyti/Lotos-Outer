@@ -105,6 +105,65 @@ def glitch():
     return out
 
 
+def lotus_flower(d, cx, cy, scale=1):
+    """A small pink lotus (three petals over a green cup), in the palette of the lotus seed."""
+    P = [(255, 120, 190, 255), (222, 60, 150, 255), (150, 20, 100, 255)]
+    for dx, dy, w, h, c in [(-4, -2, 3, 5, 1), (4, -2, 3, 5, 1), (0, -4, 4, 7, 0), (-2, -1, 3, 5, 0), (2, -1, 3, 5, 0)]:
+        d.ellipse((cx + (dx - w) * scale, cy + (dy - h / 2) * scale, cx + (dx + w) * scale, cy + (dy + h / 2) * scale), fill=P[c], outline=P[2])
+    d.ellipse((cx - 5 * scale, cy + 2 * scale, cx + 5 * scale, cy + 5 * scale), fill=(40, 120, 90, 255))
+
+
+def sword(d, x0, y0, x1, y1):
+    """A pixel sword from the hilt (x0, y0) to the tip (x1, y1)."""
+    d.line((x0, y0, x1, y1), fill=(205, 215, 225, 255), width=2)
+    d.line((x0, y0, x0 + (x1 - x0) * 0.15, y0 + (y1 - y0) * 0.15), fill=(110, 70, 40, 255), width=2)
+    gx, gy = x0 + (x1 - x0) * 0.22, y0 + (y1 - y0) * 0.22
+    d.line((gx - 3, gy + 3, gx + 3, gy - 3) if (x1 - x0) * (y1 - y0) < 0 else (gx - 3, gy - 3, gx + 3, gy + 3), fill=(230, 190, 70, 255), width=2)
+
+
+def war():
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    sword(d, 4, 28, 27, 5)      # two swords crossed
+    sword(d, 27, 28, 4, 5)
+    lotus_flower(d, 16, 14)
+    return img
+
+
+def heart(d, cx, cy, c=(230, 40, 60, 255)):
+    d.polygon([(cx - 5, cy - 2), (cx - 3, cy - 4), (cx - 1, cy - 4), (cx, cy - 2), (cx + 1, cy - 4), (cx + 3, cy - 4), (cx + 5, cy - 2),
+               (cx + 5, cy), (cx, cy + 5), (cx - 5, cy)], fill=c)
+
+
+def mini_star(d, cx, cy, r=4):
+    d.polygon(star_points(cx, cy, r, r * 0.3), fill=(255, 235, 150, 255))
+    d.ellipse((cx - 1, cy - 1, cx + 1, cy + 1), fill=(255, 255, 230, 255))
+
+
+# The face of the player is drawn into the transparent square (FACE) by the game, from the player's own skin.
+FACE = (10, 1, 12)   # x, y, size
+
+
+def alliance():
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    mini_star(d, 6, 25, 5)
+    mini_star(d, 26, 25, 5)
+    heart(d, 16, 24)
+    return img
+
+
+def neutral():
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rectangle((8, 15, 23, 31), fill=(60, 90, 160, 255))                 # the body under the face
+    d.rectangle((23, 18, 25, 26), fill=(190, 150, 120, 255))              # the arm that holds the knife
+    d.line((24, 18, 28, 8), fill=(215, 220, 230, 255), width=2)           # blade
+    d.line((24, 18, 24, 20), fill=(110, 70, 40, 255), width=2)
+    d.line((22, 18, 26, 18), fill=(230, 190, 70, 255), width=1)
+    return img
+
+
 def four():
     # the four lights at once: each in its own quarter
     parts = [moon(), star(), mischief(), glitch()]
@@ -133,9 +192,11 @@ if __name__ == '__main__':
     for name, fn in [('moon', moon), ('star', star), ('mischief', mischief), ('glitch', glitch), ('four', four)]:
         finish(fn(), name)
     honcho().save(os.path.join(OUT, 'honcho.png'))
+    for name, fn in [('war', war), ('alliance', alliance), ('neutral', neutral)]:
+        fn().save(os.path.join(OUT, name + '.png'))
     # a preview strip, enlarged
-    names = ['moon', 'star', 'mischief', 'glitch', 'four', 'honcho']
-    strip = Image.new('RGBA', (S * 6 * 4, S * 4), (10, 10, 14, 255))
+    names = ['moon', 'star', 'mischief', 'glitch', 'four', 'honcho', 'war', 'alliance', 'neutral']
+    strip = Image.new('RGBA', (S * 9 * 4, S * 4), (10, 10, 14, 255))
     for i, n in enumerate(names):
         im = Image.open(os.path.join(OUT, n + '.png')).resize((S * 4, S * 4), Image.NEAREST)
         strip.paste(im, (i * S * 4, 0), im)

@@ -113,6 +113,12 @@ public final class EndingsScreen extends Screen {
                 g.setColor(shade, shade, shade, 1f);
                 g.blit(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("lotusblight", "textures/gui/endings/" + e.icon() + ".png"),
                         x - 12, y - 12, 24, 24, 0, 0, 32, 32, 32, 32);
+                if (e.icon().equals("alliance") || e.icon().equals("neutral")) {
+                    // the player's own face goes into the icon's empty square (see tools/ending_icons.py, FACE)
+                    net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                    net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,
+                            mc.getSkinManager().getInsecureSkinLocation(mc.getUser().getGameProfile()), x - 12 + 8, y - 12 + 1, 9);
+                }
                 g.setColor(1f, 1f, 1f, 1f);
             }
         }
