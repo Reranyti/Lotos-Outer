@@ -66,6 +66,7 @@ public final class GpuScene {
         public java.awt.image.BufferedImage img;
         public double[] c = new double[8];
         public double gain;
+        public float tr = 1, tg = 1, tb = 1;
     }
 
     private static final class Batch {
@@ -137,10 +138,16 @@ public final class GpuScene {
         }
 
         public void addSprite(java.awt.image.BufferedImage img, double[] corners, double gain) {
+            addSprite(img, corners, gain, 1, 1, 1);
+        }
+
+        /** An image laid over the picture as light, tinted: corners in output pixels, clockwise from the top left. */
+        public void addSprite(java.awt.image.BufferedImage img, double[] corners, double gain, double r, double g, double b) {
             SpriteCmd s = new SpriteCmd();
             s.img = img;
             s.c = corners;
             s.gain = gain;
+            s.tr = (float) r; s.tg = (float) g; s.tb = (float) b;
             sprites.add(s);
         }
 
@@ -349,6 +356,67 @@ public final class GpuScene {
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, t.fbo);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, t.tex0, 0);
         return t;
+    }
+
+    /** The game's own graphics-card state, kept to be put back exactly as it was after the scene has drawn. */
+    public static final class State {
+        int fbo, prog, vao, arrayBuf, active, depthFunc, srcRgb, dstRgb, srcA, dstA;
+        int[] tex = new int[4];
+        int[] viewport = new int[4];
+        boolean depthTest, blend, cull, scissor, depthMask;
+        java.nio.ByteBuffer colorMask = BufferUtils.createByteBuffer(4);
+    }
+
+    public static State saveState() {
+        State s = new State();
+        s.fbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+        s.prog = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        s.vao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
+        s.arrayBuf = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
+        s.active = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        for (int i = 0; i < 4; i++) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0 + i);
+            s.tex[i] = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        }
+        GL13.glActiveTexture(s.active);
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, s.viewport);
+        s.depthTest = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
+        s.blend = GL11.glIsEnabled(GL11.GL_BLEND);
+        s.cull = GL11.glIsEnabled(GL11.GL_CULL_FACE);
+        s.scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        s.depthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+        s.depthFunc = GL11.glGetInteger(GL11.GL_DEPTH_FUNC);
+        GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK, s.colorMask);
+        s.srcRgb = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB);
+        s.dstRgb = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
+        s.srcA = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA);
+        s.dstA = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
+        return s;
+    }
+
+    public static void restoreState(State s) {
+        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, s.fbo);
+        GL11.glViewport(s.viewport[0], s.viewport[1], s.viewport[2], s.viewport[3]);
+        GL20.glUseProgram(s.prog);
+        GL30.glBindVertexArray(s.vao);
+        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, s.arrayBuf);
+        for (int i = 0; i < 4; i++) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0 + i);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, s.tex[i]);
+        }
+        GL13.glActiveTexture(s.active);
+        setEnabled(GL11.GL_DEPTH_TEST, s.depthTest);
+        setEnabled(GL11.GL_BLEND, s.blend);
+        setEnabled(GL11.GL_CULL_FACE, s.cull);
+        setEnabled(GL11.GL_SCISSOR_TEST, s.scissor);
+        GL11.glDepthMask(s.depthMask);
+        GL11.glDepthFunc(s.depthFunc);
+        GL11.glColorMask(s.colorMask.get(0) != 0, s.colorMask.get(1) != 0, s.colorMask.get(2) != 0, s.colorMask.get(3) != 0);
+        GL14.glBlendFuncSeparate(s.srcRgb, s.dstRgb, s.srcA, s.dstA);
+    }
+
+    private static void setEnabled(int cap, boolean on) {
+        if (on) GL11.glEnable(cap); else GL11.glDisable(cap);
     }
 
     /** The finished picture, as a texture of the output size (RGBA, 8 bits). */
@@ -560,6 +628,7 @@ public final class GpuScene {
         Params fp = f.params;
         freeDead();
         sendOverlay(f);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
         GL11.glDisable(GL11.GL_CULL_FACE);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_DEPTH_TEST);
@@ -743,6 +812,7 @@ public final class GpuScene {
                 GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vd, GL15.GL_STREAM_DRAW);
                 tex(0, imageTexture(sp.img));
                 GL20.glUniform1f(loc(progSprite, "uGain"), (float) sp.gain);
+                GL20.glUniform3f(loc(progSprite, "uTint"), sp.tr, sp.tg, sp.tb);
                 GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
             }
             GL11.glDisable(GL11.GL_BLEND);
@@ -786,6 +856,25 @@ public final class GpuScene {
     public void delete() {
         for (GlTex t : texCache.values()) GL11.glDeleteTextures(t.id);
         texCache.clear();
+        for (GlTex t : imgCache.values()) GL11.glDeleteTextures(t.id);
+        imgCache.clear();
+        for (int pr : new int[]{progScene, progShadow, progBloomExtract, progBlur, progBloomAdd, progGrade, progVhs, progSprite, progSsao, progDof, progRays, progCopy}) GL20.glDeleteProgram(pr);
+        for (Target t : new Target[]{scene, ssaoT, rtA, rtB, bloomA, bloomB, ldr, out}) {
+            GL30.glDeleteFramebuffers(t.fbo);
+            GL11.glDeleteTextures(t.tex0);
+            if (t.tex1 != 0) GL11.glDeleteTextures(t.tex1);
+            if (t.depth != 0) GL11.glDeleteTextures(t.depth);
+        }
+        GL30.glDeleteFramebuffers(shadowFbo);
+        GL11.glDeleteTextures(shadowTex);
+        GL30.glDeleteRenderbuffers(shadowDepth);
+        GL11.glDeleteTextures(whiteTex);
+        GL11.glDeleteTextures(overlayTex);
+        GL15.glDeleteBuffers(vboScene);
+        GL15.glDeleteBuffers(vboSprite);
+        GL30.glDeleteVertexArrays(vaoFull);
+        GL30.glDeleteVertexArrays(vaoScene);
+        GL30.glDeleteVertexArrays(vaoSprite);
     }
 
     private static double[] norm(double[] v) {
@@ -1078,8 +1167,8 @@ public final class GpuScene {
 
     private static final String SPRITE_FS = """
             #version 150
-            in vec2 vUV; uniform sampler2D uTex; uniform float uGain; out vec4 o;
-            void main() { vec4 t = texture(uTex, vUV); o = vec4(t.rgb * t.a * uGain, 1.0); }
+            in vec2 vUV; uniform sampler2D uTex; uniform float uGain; uniform vec3 uTint; out vec4 o;
+            void main() { vec4 t = texture(uTex, vUV); o = vec4(t.rgb * uTint * t.a * uGain, 1.0); }
             """;
 
     private static final String COPY_FS = """

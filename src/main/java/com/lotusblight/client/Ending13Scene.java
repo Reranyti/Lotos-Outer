@@ -20,7 +20,7 @@ import java.util.Random;
  *
  * The harm itself is never drawn: the arm, the body and the heart are only hinted at with light, colour and shape, and it cuts away.
  */
-public final class Ending13Scene {
+public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
     public static final int W = 720;
     public static final int H = 405;
     /** The track's first 5 seconds are cut: the scene's clock starts at 0, which is 0:05 of the track. All times below are track times. */
@@ -49,7 +49,12 @@ public final class Ending13Scene {
 
     private final Soft3D r = new Soft3D(W, H, 76);
     private final BufferedImage image = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB);
-    private final Graphics2D g = image.createGraphics();
+    private Graphics2D g = image.createGraphics();
+    private final Graphics2D gCpu = g;
+    private boolean gpuMode;                  // the 2D layer is being drawn for the graphics card: no pixels to copy, lights go as sprites
+    private GpuScene.Frame curFrame;
+    private double ovScale = 1;               // the 2D layer's pixels per logical pixel
+    private double outScaleX = 1, outScaleY = 1;   // output pixels per logical pixel
     private final int[] pixels = ((java.awt.image.DataBufferInt) image.getRaster().getDataBuffer()).getData();
     private final Random rnd = new Random();
     private final PlayerBoxes model = new PlayerBoxes();
@@ -122,6 +127,14 @@ public final class Ending13Scene {
     }
 
     // ------------------------------------------------------------------ the picture
+
+    @Override public int width() { return W; }
+
+    @Override public int height() { return H; }
+
+    @Override public double length() { return LENGTH; }
+
+    @Override public int[] renderCpu(double clock) { return render(clock); }
 
     /** The picture {@code clock} seconds into the scene (which starts at {@link #T0} of the track), ARGB pixels, W*H. */
     public int[] render(double clock) {
@@ -206,9 +219,9 @@ public final class Ending13Scene {
 
     // ------------------------------------------------------------------ the same picture, by the graphics card
 
-    private int ovW, ovH;
-    private java.awt.image.BufferedImage ovImage;
-    private Graphics2D ovG;
+    private final BufferedImage[] ovImages = new BufferedImage[2];
+    private final Graphics2D[] ovGs = new Graphics2D[2];
+    private int ovIdx;
 
     /**
      * The frame at {@code clock}, collected for the graphics card without touching it (so a thread of its own can do this while the game draws
@@ -219,6 +232,34 @@ public final class Ending13Scene {
         GpuScene.Frame frame = new GpuScene.Frame(r);
         String overlay = buildFrame(t);
         double flash = frameFlash;
+        // the 2D layer: text, the camera's marks, mist, blood; drawn at its own size (sharp at any output), laid over by the card
+        if (overlay != null || bloodAmount > 0.01 || titleAlpha > 0.01) {
+            int ow = Math.min(outW, 1280), oh = Math.min(outH, 720);
+            ovIdx ^= 1;
+            if (ovImages[ovIdx] == null || ovImages[ovIdx].getWidth() != ow || ovImages[ovIdx].getHeight() != oh) {
+                ovImages[ovIdx] = new BufferedImage(ow, oh, BufferedImage.TYPE_INT_ARGB);
+                ovGs[ovIdx] = ovImages[ovIdx].createGraphics();
+                ovGs[ovIdx].setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                ovGs[ovIdx].setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            }
+            Graphics2D og = ovGs[ovIdx];
+            og.setTransform(new java.awt.geom.AffineTransform());
+            og.setComposite(java.awt.AlphaComposite.Clear);
+            og.fillRect(0, 0, ow, oh);
+            og.setComposite(java.awt.AlphaComposite.SrcOver);
+            og.scale(ow / (double) W, oh / (double) H);
+            g = og; gpuMode = true; curFrame = frame;
+            outScaleX = outW / (double) W; outScaleY = outH / (double) H;
+            ovScale = ow / (double) W;
+            try {
+                if (overlay != null) overlayText(overlay, tmOverlay, t);
+                if (bloodAmount > 0.01) bloodGpu(t);
+                if (titleAlpha > 0.01) titleGpu();
+            } finally {
+                g = gCpu; gpuMode = false; curFrame = null;
+            }
+            frame.setOverlay(((java.awt.image.DataBufferInt) ovImages[ovIdx].getRaster().getDataBuffer()).getData(), ow, oh);
+        }
         GpuScene.Params fp = new GpuScene.Params();
         fp.gain = exposure * (1 - exposureBoost) * (1 - fade);
         fp.bloomStrength = fxBloom;
@@ -1621,8 +1662,29 @@ public final class Ending13Scene {
     }
 
     /** A soft round glow: bright in the middle, fading out to nothing. */
+    private BufferedImage radialImg;
+
+    /** A round soft falloff as a picture: white, its alpha the glow's profile. */
+    private BufferedImage radial() {
+        if (radialImg != null) return radialImg;
+        final int N = 128;
+        radialImg = new BufferedImage(N, N, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
+            double d = Math.hypot(x - (N - 1) / 2.0, y - (N - 1) / 2.0) / (N / 2.0);
+            double a = d >= 1 ? 0 : d < 0.18 ? 1 - (d / 0.18) * 0.45 : d < 0.5 ? 0.55 - (d - 0.18) / 0.32 * 0.39 : 0.16 * (1 - (d - 0.5) / 0.5);
+            radialImg.setRGB(x, y, ((int) (255 * Math.max(0, a)) << 24) | 0xFFFFFF);
+        }
+        return radialImg;
+    }
+
     private void softGlow(double cx, double cy, double radius, double r, double gr, double b, double a) {
         if (radius < 1) return;
+        if (gpuMode) {                                              // the card draws the wide soft ones: far cheaper than filling them here
+            double fx = outScaleX, fy = outScaleY;
+            curFrame.addSprite(radial(), new double[]{(cx - radius) * fx, (cy - radius) * fy, (cx + radius) * fx, (cy - radius) * fy, (cx + radius) * fx, (cy + radius) * fy, (cx - radius) * fx, (cy + radius) * fy},
+                    a, r / 255.0, gr / 255.0, b / 255.0);
+            return;
+        }
         java.awt.RadialGradientPaint paint = new java.awt.RadialGradientPaint(new java.awt.geom.Point2D.Double(cx, cy), (float) radius,
                 new float[]{0f, 0.18f, 0.5f, 1f},
                 new Color[]{rgba(r, gr, b, a), rgba(r, gr, b, a * 0.55), rgba(r, gr, b, a * 0.16), rgba(r, gr, b, 0)});
@@ -1809,6 +1871,15 @@ public final class Ending13Scene {
         java.awt.geom.AffineTransform at = new java.awt.geom.AffineTransform();
         at.translate(cx - scale * REF_CENTER[i][0], cy - scale * REF_CENTER[i][1]);
         at.scale(scale, scale);
+        if (gpuMode) {                                               // the card adds it itself, at its own size and sharpness
+            double fx = outScaleX, fy = outScaleY, iw = im.getWidth(), ih = im.getHeight();
+            double[] pts = {0, 0, iw, 0, iw, ih, 0, ih};
+            double[] dst = new double[8];
+            at.transform(pts, 0, dst, 0, 4);
+            for (int k = 0; k < 4; k++) { dst[k * 2] *= fx; dst[k * 2 + 1] *= fy; }
+            curFrame.addSprite(im, dst, a * 0.85);
+            return true;
+        }
         g.setComposite(ADD);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.drawImage(im, at, null);
@@ -1826,10 +1897,16 @@ public final class Ending13Scene {
             double x = ((k * 173 + tt * (5 + k * 1.7)) % (W + 520)) - 260;
             double y = H * (0.60 + 0.12 * ((k * 37) % 5) / 4.0) + Math.sin(k * 1.7 + tt * 0.25) * 12;
             double rx = 240 + k * 22, ry = 30 + (k % 3) * 14;
+            double tr = 150 + 40 * fr / n, tg = 150 + 40 * fg / n, tb = 160 + 40 * fb / n;
+            if (gpuMode) {
+                double sx = outScaleX, sy = outScaleY;
+                curFrame.addSprite(radial(), new double[]{(x - rx) * sx, (y - ry) * sy, (x + rx) * sx, (y - ry) * sy, (x + rx) * sx, (y + ry) * sy, (x - rx) * sx, (y + ry) * sy},
+                        0.20 * Math.min(1, n), tr / 255.0, tg / 255.0, tb / 255.0);
+                continue;
+            }
             g.setTransform(old);
             g.translate(x, y);
             g.scale(1.0, ry / rx);
-            double tr = 150 + 40 * fr / n, tg = 150 + 40 * fg / n, tb = 160 + 40 * fb / n;
             java.awt.RadialGradientPaint paint = new java.awt.RadialGradientPaint(new java.awt.geom.Point2D.Double(0, 0), (float) rx,
                     new float[]{0f, 1f}, new Color[]{rgba(tr, tg, tb, 0.085 * Math.min(1, n)), rgba(tr, tg, tb, 0)});
             g.setPaint(paint);
@@ -2826,7 +2903,7 @@ public final class Ending13Scene {
 
     private void overlayText(String what, double tm, double t) {
         // the pixels are in the image's own buffer: draw with Graphics2D onto it, then bring them back
-        image.setRGB(0, 0, W, H, pixels, 0, W);
+        if (!gpuMode) image.setRGB(0, 0, W, H, pixels, 0, W);
         switch (what) {
             case "CRACKS" -> {
                 Random q = new Random(7);
@@ -2897,7 +2974,7 @@ public final class Ending13Scene {
             }
             default -> { }
         }
-        image.getRGB(0, 0, W, H, pixels, 0, W);
+        if (!gpuMode) image.getRGB(0, 0, W, H, pixels, 0, W);
     }
 
     /** The words of an Architect, in its own colour and hand. */
@@ -2929,6 +3006,32 @@ public final class Ending13Scene {
         }
         g.setColor(new Color(i == 4 || i == 1 ? 255 : col.getRed(), i == 4 ? 255 : col.getGreen(), i == 4 ? 255 : col.getBlue(), (int) (255 * a)));
         g.drawString(s, x, y);
+    }
+
+    /** The same blood as {@link #blood}, drawn as shapes: a wavy dark edge climbing the picture, with drips. */
+    private void bloodGpu(double t) {
+        int top = (int) (H * (1 - 0.34 * bloodAmount));
+        java.awt.geom.Path2D edge = new java.awt.geom.Path2D.Double();
+        edge.moveTo(0, H + 10);
+        for (int x = 0; x <= W; x += 3) {
+            double ey = top + Math.sin(x * 0.045 + t * 0.9) * 9 + Math.sin(x * 0.11 - t * 0.5) * 5 + (x % 37 < 5 ? 14 : 0);
+            edge.lineTo(x, ey);
+        }
+        edge.lineTo(W, H + 10);
+        edge.closePath();
+        g.setPaint(new java.awt.GradientPaint(0, top - 10, new Color(130, 14, 20, 235), 0, top + 60, new Color(60, 4, 8, 250)));
+        g.fill(edge);
+        g.setColor(new Color(190, 50, 50, 70));
+        g.setStroke(new BasicStroke(1.6f));
+        for (int x = 0; x < W; x += 29) g.drawLine(x, top + 4 + (x * 7) % 9, x + 17, top + 6 + (x * 5) % 9);       // a wet shine along the edge
+    }
+
+    private void titleGpu() {
+        g.setFont(new Font(Font.SERIF, Font.BOLD, 24));
+        String s = "YOUR TRUTH AND YOUR POWER.";
+        int w = g.getFontMetrics().stringWidth(s);
+        g.setColor(new Color(200, 20, 20, (int) (255 * titleAlpha)));
+        g.drawString(s, (W - w) / 2, H / 2 + 8);
     }
 
     /** Blood coming up over the lower edge of the picture: dark, wet, moving a little. */
