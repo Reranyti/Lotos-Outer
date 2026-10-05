@@ -153,6 +153,9 @@ public final class RootGrowthEngine {
         level.setBlock(next, ModBlocks.LOTUS_ROOTS.get().defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, underwater), 3);
         if (underwater) {
             data.incrementChunkCount(new ChunkPos(next), 1);
+            // counted in the outbreak too: mining a waterlogged root takes it back down
+            OutbreakRecord fresh = data.getOutbreak(task.outbreakId());
+            if (fresh != null) data.updateOutbreak(fresh.withInfectedBlockCount(fresh.infectedBlockCount() + 1));   // the spread pass re-derives the phase
         }
         level.sendParticles(ROOT_GREEN, next.getX() + 0.5, next.getY() + 0.4, next.getZ() + 0.5, 3, 0.2, 0.15, 0.2, 0.01);
         level.playSound(null, next, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.2f, 0.7f);

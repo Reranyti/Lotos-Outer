@@ -5,6 +5,7 @@ Writes src/main/resources/assets/lotusblight/textures/gui/endings/{moon,star,mis
 The first three follow the three lights of the old finale animation (blue crescent, yellow four-point star, red diamond with a
 spiral); the glitch light is the fourth: the purple Architect of the early ArchitectScene prototype (colour B25CFF, an upward triangle), torn into shifted slices.
 """
+import colorsys
 import math
 import os
 import random
@@ -264,6 +265,73 @@ def honcho():
     return img
 
 
+def dismembered():
+    """The red light with its diamond, and a figure made of TV static tearing out of it towards us."""
+    img = mischief()
+    rnd = random.Random(11)
+    # the figure: a head, shoulders and one reaching arm, filled with grey static
+    fig = Image.new('L', img.size, 0)
+    fd = ImageDraw.Draw(fig)
+    def box(x0, y0, x1, y1):
+        fd.rectangle((x0 * SS, y0 * SS, x1 * SS, y1 * SS), fill=255)
+    fd.ellipse((11.5 * SS, 9 * SS, 20.5 * SS, 19 * SS), fill=255)             # head
+    box(7, 19, 25, 32)                                                         # torso, cut by the bottom edge
+    fd.polygon([(25 * SS, 20 * SS), (31 * SS, 14 * SS), (32 * SS, 16 * SS), (27 * SS, 24 * SS)], fill=255)   # the arm pulling out
+    fd.polygon([(7 * SS, 20 * SS), (2 * SS, 27 * SS), (4 * SS, 28 * SS), (8 * SS, 24 * SS)], fill=255)       # and the other one
+    # torn edge: rows pushed sideways
+    for y in range(0, img.size[1], 6 * SS // 4):
+        dx = rnd.choice([-2, 0, 0, 2, 3]) * SS // 2
+        row = fig.crop((0, y, fig.size[0], y + 6 * SS // 4))
+        fig.paste(0, (0, y, fig.size[0], y + 6 * SS // 4))
+        fig.paste(row, (dx, y))
+    noise = Image.new('RGBA', img.size)
+    npx = noise.load()
+    for y in range(0, img.size[1]):
+        for x in range(0, img.size[0]):
+            pass
+    # static is made at the finished resolution of the icon and blown up, so the grains are visible
+    small = Image.new('L', (S * 2, S * 2))
+    sp = small.load()
+    for y in range(S * 2):
+        for x in range(S * 2):
+            sp[x, y] = rnd.randint(40, 255)
+    grain = small.resize(img.size, Image.NEAREST).convert('RGBA')
+    shaded = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    shaded.paste(grain, (0, 0), fig)
+    # a thin red glow where the figure meets the light
+    edge = fig.filter(ImageFilter.GaussianBlur(SS * 0.9))
+    glow_layer = Image.new('RGBA', img.size, (255, 40, 40, 0))
+    glow_layer.putalpha(ImageChops.subtract(edge, fig).point(lambda v: min(255, v * 2)))
+    img = Image.alpha_composite(img, glow_layer)
+    return Image.alpha_composite(img, shaded)
+
+
+def chromo():
+    """A diamond cut in two: rainbow on the left, black-and-white on the right."""
+    img = canvas()
+    c = S * SS // 2
+    k = 12.5 * SS
+    mask = Image.new('L', img.size, 0)
+    ImageDraw.Draw(mask).polygon([(c, c - k), (c + k, c), (c, c + k), (c - k, c)], fill=255)
+    fill = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    px = fill.load()
+    W, H = img.size
+    for y in range(H):
+        for x in range(W):
+            if x < c:
+                h = (y / H * 0.85 + (x / W) * 0.25) % 1.0       # rainbow bands, slanted
+                r, g, b = colorsys.hsv_to_rgb(h, 0.95, 1.0)
+                px[x, y] = (int(r * 255), int(g * 255), int(b * 255), 255)
+            else:
+                v = 255 if ((x // (2 * SS)) + (y // (2 * SS))) % 2 == 0 else 20       # black and white squares
+                px[x, y] = (v, v, v, 255)
+    img.paste(fill, (0, 0), mask)
+    d = ImageDraw.Draw(img)
+    d.polygon([(c, c - k), (c + k, c), (c, c + k), (c - k, c)], outline=(235, 235, 245, 255), width=int(0.7 * SS))
+    d.line((c, c - k, c, c + k), fill=(235, 235, 245, 255), width=int(0.7 * SS))
+    return glow(img, (200, 200, 255), 15, 0.35) if False else img
+
+
 def four():
     # the four lights at once: each in its own quarter
     parts = [moon(), star(), mischief(), glitch()]
@@ -280,11 +348,11 @@ if __name__ == '__main__':
     for name, fn in [('moon', moon), ('star', star), ('mischief', mischief), ('glitch', glitch), ('four', four)]:
         finish(fn(), name)
     finish(honcho(), 'honcho')
-    for name, fn in [('war', war), ('alliance', alliance), ('neutral', neutral)]:
+    for name, fn in [('war', war), ('alliance', alliance), ('neutral', neutral), ('dismembered', dismembered), ('chromo', chromo)]:
         finish(fn(), name)
     # a preview strip, enlarged
-    names = ['moon', 'star', 'mischief', 'glitch', 'four', 'honcho', 'war', 'alliance', 'neutral']
-    strip = Image.new('RGBA', (S * 9 * 4, S * 4), (28, 28, 34, 255))
+    names = ['moon', 'star', 'mischief', 'glitch', 'four', 'honcho', 'war', 'alliance', 'neutral', 'dismembered', 'chromo']
+    strip = Image.new('RGBA', (S * 11 * 4, S * 4), (28, 28, 34, 255))
     for i, n in enumerate(names):
         im = Image.open(os.path.join(OUT, n + '.png')).resize((S * 4, S * 4), Image.LANCZOS)
         strip.paste(im, (i * S * 4, 0), im)

@@ -262,6 +262,7 @@ public class InfectionSpreadEngine {
         attempts = (int) scaled + (level.random.nextDouble() < scaled - (int) scaled ? 1 : 0);
         if (attempts == 0) return;
         int converted = 0;
+        bonusCounted = 0;
 
         for (int i = 0; i < attempts; i++) {
             BlockPos source = pickFrontierSource(level, frontier, outbreak.pos());
@@ -279,6 +280,8 @@ public class InfectionSpreadEngine {
             VineBarrierGenerator.tryGrow(level, outbreak.id(), candidate.above());
         }
 
+        converted += bonusCounted;
+        bonusCounted = 0;
         int newCount = outbreak.infectedBlockCount() + converted;
         int newPhase = InfectionPhases.phaseForBlockCount(newCount);
         if (openOcean) {
@@ -607,6 +610,7 @@ public class InfectionSpreadEngine {
                     && !level.getFluidState(above.above()).isEmpty() && level.random.nextInt(SEABED_ROOT_ONE_IN) == 0) {
                 level.setBlock(above, ModBlocks.LOTUS_ROOTS.get().defaultBlockState()
                         .setValue(BlockStateProperties.WATERLOGGED, true), 3);
+                countPlaced(level, above);
             }
             if (level.getBlockState(above).isAir()) {
                 // Before this, the mini-biome (phase 4) never grew anything of its own — logs and
@@ -792,6 +796,14 @@ public class InfectionSpreadEngine {
     }
 
     /** A 3-5 tall lotus-log trunk with a thick, multi-layer leaf canopy — the mini-biome's own tree, grown rather than converted. */
+    /** Blocks placed beside the converted ground in this pass (trees, seabed roots): the world loses them when mined, so they count. */
+    private int bonusCounted;
+
+    private void countPlaced(ServerLevel level, BlockPos pos) {
+        OutbreakSavedData.get(level).incrementChunkCount(new ChunkPos(pos), 1);
+        bonusCounted++;
+    }
+
     private boolean tryGrowMiniTree(ServerLevel level, BlockPos base) {
         // The canopy reaches 2 blocks out from the trunk, which can cross into an unloaded chunk.
         if (!level.hasChunkAt(base.offset(-2, 0, -2)) || !level.hasChunkAt(base.offset(2, 0, 2))
@@ -804,6 +816,7 @@ public class InfectionSpreadEngine {
         }
         for (int i = 0; i < trunkHeight; i++) {
             level.setBlock(base.above(i), ModBlocks.LOTUS_LOG.get().defaultBlockState(), 3);
+            countPlaced(level, base.above(i));
         }
         // Two overlapping canopy layers (wide lower ring + narrower top) so the leaves read as a
         // thick crown from a distance, not a single flat slab.
@@ -811,12 +824,14 @@ public class InfectionSpreadEngine {
         for (BlockPos leaf : BlockPos.betweenClosed(lowerRing.offset(-2, 0, -2), lowerRing.offset(2, 1, 2))) {
             if (level.getBlockState(leaf).isAir()) {
                 level.setBlock(leaf, ModBlocks.LOTUS_LEAVES.get().defaultBlockState(), 3);
+                countPlaced(level, leaf);
             }
         }
         BlockPos canopyCenter = base.above(trunkHeight + 1);
         for (BlockPos leaf : BlockPos.betweenClosed(canopyCenter.offset(-1, 0, -1), canopyCenter.offset(1, 1, 1))) {
             if (level.getBlockState(leaf).isAir()) {
                 level.setBlock(leaf, ModBlocks.LOTUS_LEAVES.get().defaultBlockState(), 3);
+                countPlaced(level, leaf);
             }
         }
         return true;
