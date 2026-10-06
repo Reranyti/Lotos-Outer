@@ -2566,7 +2566,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
     private String memForest(double tm, double t) {
         r.clear(0x0A1226);
         r.ambR = 0.14; r.ambG = 0.17; r.ambB = 0.30;
-        r.fogDensity = 0.065; r.fogR = 12; r.fogG = 20; r.fogB = 42;
+        r.fogDensity = 0.085; r.fogR = 14; r.fogG = 24; r.fogB = 50;
         double walk = smooth(tm, 0, 0.55) * 6.0;
         double turn = smooth(tm, 0.55, 0.68) * Math.PI;
         double bob = Math.sin(walk * 5) * 0.035;
@@ -2578,12 +2578,12 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         r.lights.add(new Soft3D.Light(r.camX, 1.4, r.camZ + (turn > 1.5 ? -0.8 : 0.8), 1.5, 1.55, 1.6, 8.5));      // the torch
         fxBloom = 0.8; fxSsao = 0.75; fxContrast = 1.15; fxSat = 0.85; fxRays = 0.25; fxRayAt = new double[]{r.camX - 4, 14, r.camZ + (turn > 1.5 ? -14 : 14)};
         r.matSpec = 0.1; r.matShine = 12;
-        r.faceXZ(-0.01, -40, -40, 40, 40, ground, 0xFFFFFFFF, 0, 22, 22);
+        r.faceXZ(-0.01, -150, -150, 150, 150, ground, 0xFFFFFFFF, 0, 80, 80);
         r.matSpec = 0;
         r.card(r.camX - 4, 15, r.camZ + (turn > 1.5 ? -30 : 30), 1.8, 1.8, turn > 1.5 ? Math.PI : 0, Soft3D.Tex.solid(235, 242, 255), 0xFFFFFFFF, 1.0);
         Random q = new Random(77);
-        for (int i = 0; i < 120; i++) {
-            double x = (q.nextDouble() - 0.5) * 18, z = -10 + q.nextDouble() * 34;
+        for (int i = 0; i < 520; i++) {                                                  // a real forest: wide and deep, so there is no edge to see
+            double x = (q.nextDouble() - 0.5) * 70, z = r.camZ - 30 + q.nextDouble() * 70;
             if (Math.abs(x) < 1.4) x += x < 0 ? -1.8 : 1.8;
             double h = 6 + q.nextDouble() * 4, w = 0.14 + q.nextDouble() * 0.12;
             r.box(x - w, 0, z - w, x + w, h, z + w, bark, 0xFFFFFFFF, 0, 1.2);
@@ -2594,8 +2594,8 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
                 r.bar(new double[]{ex, ey, ez}, new double[]{ex + Math.cos(ang + 0.7) * 0.5, ey + 0.35, ez + Math.sin(ang + 0.7) * 0.5}, new double[]{0.02, 0, 0}, new double[]{0, 0, 0.02}, bark, 0xFFFFFFFF, 0);
             }
         }
-        for (int i = 0; i < 160; i++) {                                                  // dead grass
-            double gx = (q.nextDouble() - 0.5) * 16, gz = -8 + q.nextDouble() * 30;
+        for (int i = 0; i < 420; i++) {                                                  // dead grass
+            double gx = (q.nextDouble() - 0.5) * 36, gz = r.camZ - 14 + q.nextDouble() * 34;
             r.billboard(gx, 0.18, gz, 0.2, 0.18, grass, 0xFFFFFFFF, 0);
         }
         // the fence, chain-link, along the path
