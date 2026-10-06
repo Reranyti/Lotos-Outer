@@ -136,15 +136,21 @@ public final class NormalBranchFreeze {
             command.add("--interlude");
             command.add(NormalBranchTracks.interlude().toString());
         }
-        // The video is read straight out of the jar by the fight - no copy on disk.
-        command.add("--video-resource");
-        command.add("/assets/" + LotusBlight.MODID + "/overlay/finale.mp4");
+        // The video is not in the jar: it is fetched to a roomy drive just before the fight starts, read into memory and deleted at once.
         // Our temporary files go away with the process.
         command.add("--cleanup");
         // On the Chromo difficulty the first two songs are played on their own, harder maps.
         if (ChromoClient.isActive()) command.add("--chromo");
         Thread starter = new Thread(() -> {
             try {
+                File video = FinaleVideoStore.obtain(mc.gameDirectory);
+                if (video != null) {
+                    command.add("--video");
+                    command.add(video.getAbsolutePath());
+                    command.add("--video-delete");
+                } else {
+                    LOG.warn("Нормальная_ветка: the finale video is not available, the fight goes on without it");
+                }
                 Process process = new ProcessBuilder(command)
                         .directory(mc.gameDirectory)
                         .redirectErrorStream(true)
@@ -152,6 +158,7 @@ public final class NormalBranchFreeze {
                         .start();
                 process.onExit().thenAccept(done -> mc.execute(() -> {
                     NormalBranchTracks.cleanup();
+                    FinaleVideoStore.remove(mc.gameDirectory);
                     release(gen);
                     if (done.exitValue() == NormalBranchReward.FINALE_EXIT_CODE) NormalBranchReward.grantHorn(mc);
                 }));

@@ -190,6 +190,7 @@ public final class GameMain {
         }
         Hazards hazards = new Hazards(skin, screen.height);
         // The animation: straight from the video (a file, or inside our own jar), else from a folder of frames.
+        deleteVideo = java.util.List.of(args).contains("--video-delete");
         FinaleVideo anim = video != null || videoResource != null ? openVideo(video, videoResource)
                 : framesDir != null ? new VideoScene(new File(framesDir), animFps) : null;
         FakeWindows fakeWindows = new FakeWindows();
@@ -769,11 +770,22 @@ public final class GameMain {
      * The video player, or none if the video can't be opened (or the decoder isn't there). The video is
      * read whole into memory - from a file, or from a resource in our own jar, so nothing is copied out.
      */
+    private static boolean deleteVideo;
+
     private static FinaleVideo openVideo(String file, String resource) {
         try {
             byte[] data;
             if (file != null) {
                 data = java.nio.file.Files.readAllBytes(new File(file).toPath());
+                if (deleteVideo) {                                   // it is all in memory now: the file need not stay on the disk a moment longer
+                    try {
+                        java.nio.file.Files.deleteIfExists(new File(file).toPath());
+                        File dir = new File(file).getParentFile();
+                        String[] left = dir == null ? null : dir.list();
+                        if (left != null && left.length == 0 && dir.getName().equals(".lotusblight-cache")) java.nio.file.Files.deleteIfExists(dir.toPath());
+                    } catch (Exception ignored) {
+                    }
+                }
             } else {
                 try (InputStream in = GameMain.class.getResourceAsStream(resource)) {
                     if (in == null) return null;

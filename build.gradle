@@ -271,12 +271,8 @@ tasks.named('processResources', ProcessResources).configure {
 
     // The overlay process's own libraries, as plain files (see configurations.overlayLib).
     from(configurations.overlayLib) { into 'assets/lotusblight/overlay/lib' }
-    // The finale video, as is, from a local folder that stays out of git (art/video is ignored): the
-    // release jar is built where the video lives. Without it the fight just plays with no animation.
-    from('art/video') {
-        include 'finale.mp4'
-        into 'assets/lotusblight/overlay'
-    }
+    // The finale video is NOT in the jar (120 MB): the game fetches it from the release on a roomy drive when the
+    // fight needs it (see FinaleVideoStore). Without it the fight just plays with no animation.
     // Honcho's track for the lesson, likewise from a local folder that stays out of git; without it the
     // lesson is silent.
     from('art/music/contact') {
