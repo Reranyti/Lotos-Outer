@@ -1651,7 +1651,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         } else {
             double saw = Math.sin(t * Math.PI * 4.0);
             double weight = smooth(t, 119, 150);
-            double[] tipL = {3.2, 17.2, 10.8}, tipR = {-0.8 + 3.4 * saw, 18.6, 9.8};
+            double[] tipL = {9.5, 17.5, 9.0}, tipR = {4.6 + 3.2 * saw, 18.4, 8.4};      // the left forearm held out to the side in plain view, the knife drawn along it
             double[] chestAim = {-0.6, 17.0, 3.0};
             if (stabU >= 0) {                                            // the blow: the blade rises over his head, trembles, comes down into his chest
                 double up = smooth(stabU, 0.0, 1.2), down = smooth(stabU, 1.45, 1.6);
@@ -1660,7 +1660,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
                 tipL = lerp3(tipL, new double[]{6.0, 15.5, 6.0}, up);
             }
             actor.placeFoot(true, new double[]{-3.0, 3, -0.5}, new double[]{0, 0, 1}, 1, 0, 0).placeFoot(false, new double[]{3.0, 3, 1.0}, new double[]{0, 0, 1}, 1, 0, 0);
-            actor.reachArm(true, tipR, new double[]{-1, -0.9, -0.2}, 1).reachArm(false, tipL, new double[]{1, -0.9, 0.2}, 1);
+            actor.reachArm(true, tipR, new double[]{-1, -0.9, -0.2}, 1).reachArm(false, tipL, new double[]{1.4, -1.0, -0.2}, 1);
             actor.hand(true, 1.0, 0).hand(false, 0.12, 0.45);
             actor.turn(Actor15.Part.R_HAND, 62, 0, 0);
             actor.turn(Actor15.Part.LOWER_TORSO, 5 + 9 * weight + 1.5 * Math.sin(t * 1.3), 0, 0);
@@ -1674,11 +1674,11 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
 
         // the camera: high in the corner by the door, looking down the hall at him and the Architect; it drifts, as a held camera does
         double a = lerp(-0.25, 0.45, smooth(t, 115, 151));
-        double[] tgt = {0, 2.35, -1.6};
+        double[] tgt = {0, 2.0, -2.2};
         double kick = p * 0.012;
-        double cx = lerp(-3.4, 2.6, smooth(t, 115, 151)) + hand(t, 11, 0.05) + rnd.nextGaussian() * kick;
-        double cy = 1.75 + hand(t, 12, 0.04) + rnd.nextGaussian() * kick;
-        double cz = -6.9 + hand(t, 13, 0.05);
+        double cx = lerp(1.6, 3.4, smooth(t, 115, 151)) + hand(t, 11, 0.05) + rnd.nextGaussian() * kick;
+        double cy = 1.55 + hand(t, 12, 0.04) + rnd.nextGaussian() * kick;
+        double cz = lerp(-6.4, -5.2, smooth(t, 130, 151)) + hand(t, 13, 0.05);
         double yaw = Math.atan2(tgt[0] - cx, tgt[2] - cz) + hand(t, 14, 0.012);
         double pitch = Math.atan2(tgt[1] - cy, Math.hypot(tgt[0] - cx, tgt[2] - cz)) + hand(t, 15, 0.01);
         r.camera(cx, cy, cz, yaw, pitch);
@@ -2504,7 +2504,7 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         r.lights.add(new Soft3D.Light(0, 2.6, 1.4, 0.9, 0.2, 0.2, 4.5));
         fxBloom = 1.0; fxSsao = 0.85; fxContrast = 1.2; fxSat = 0.9; fxRays = 0.4; fxRayAt = new double[]{0, 2.5, 0.5};
         double step = smooth(tm, 0.05, 0.45);
-        double[] full = cameraFor(new double[]{0, 1.12, 0.9}, gripMid(), 0, -0.1);
+        double[] full = cameraFor(new double[]{0, 1.86, 0.9}, gripMid(), 0, -0.1);
         r.camera(Math.sin(t * 0.7) * 0.01, lerp(1.58, full[1], step), lerp(-2.7, full[2], step), 0, -0.1);
         double x0 = -1.6, x1 = 1.6, z0 = -3.4, z1 = 2.2, h = 2.9;
         r.matSpec = 0.45; r.matShine = 30;
