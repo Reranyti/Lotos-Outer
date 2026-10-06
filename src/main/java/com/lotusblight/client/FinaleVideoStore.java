@@ -57,10 +57,12 @@ public final class FinaleVideoStore {
     }
 
     private static volatile java.util.concurrent.CompletableFuture<File> prefetching;
+    private static volatile boolean cancelled;
 
     /** Starts the download in the background (at the game's launch), so the fight finds the video already there. */
     public static void prefetch(File gameDir) {
         if (prefetching != null) return;
+        cancelled = false;
         prefetching = java.util.concurrent.CompletableFuture.supplyAsync(() -> fetch(gameDir), r -> {
             Thread t = new Thread(r, "LotusBlight video fetch");
             t.setDaemon(true);
@@ -106,6 +108,7 @@ public final class FinaleVideoStore {
 
     /** Deletes the video and its folder if it is empty. */
     public static void remove(File gameDir) {
+        cancelled = true;
         File f = current;
         current = null;
         prefetching = null;
@@ -162,8 +165,13 @@ public final class FinaleVideoStore {
         HttpRequest req = HttpRequest.newBuilder(URI.create(URL)).timeout(Duration.ofMinutes(30)).GET().build();
         HttpResponse<InputStream> res = client.send(req, HttpResponse.BodyHandlers.ofInputStream());
         if (res.statusCode() != 200) throw new IOException("HTTP " + res.statusCode());
-        try (InputStream in = res.body()) {
-            Files.copy(in, part.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        try (InputStream in = res.body(); java.io.OutputStream out = Files.newOutputStream(part.toPath())) {
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                if (cancelled) throw new IOException("cancelled");        // the player left the path: stop at once
+                out.write(buf, 0, n);
+            }
         }
     }
 

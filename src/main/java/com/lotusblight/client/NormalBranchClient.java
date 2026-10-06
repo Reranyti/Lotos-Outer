@@ -11,7 +11,11 @@ public final class NormalBranchClient {
     private NormalBranchClient() {}
 
     public static void setSilenced(boolean value) {
+        boolean was = silenced;
         silenced = value;
+        // Three drownings in: the player is on the path, so the finale video starts coming in quietly; if the run is broken it goes at once.
+        if (value && !was) FinaleVideoStore.prefetch(FinaleVideoStore.gameDir());
+        else if (!value && was) FinaleVideoStore.remove(FinaleVideoStore.gameDir());
     }
 
     public static boolean isSilenced() {
