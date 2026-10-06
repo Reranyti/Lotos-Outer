@@ -52,6 +52,8 @@ public class CutsceneScreen extends Screen {
     private final Factory factory;
 
     private Renderer renderer = Renderer.GPU;
+    /** The card's picture height: 0 = by the window, else 720, 1080 or 1440 (2K). */
+    private int resolution = 0;
     private boolean started;
     private volatile boolean running;
     private long startedAt;
@@ -80,6 +82,7 @@ public class CutsceneScreen extends Screen {
         this.info = info;
         this.factory = factory;
         this.renderer = loadChoice();
+        this.resolution = loadResolution();
     }
 
     // ------------------------------------------------------------------ the choice, remembered
@@ -101,6 +104,36 @@ public class CutsceneScreen extends Screen {
         } catch (IOException ignored) {
         }
         return Renderer.GPU;
+    }
+
+    private static int loadResolution() {
+        try {
+            Path f = file();
+            if (Files.exists(f)) {
+                Properties p = new Properties();
+                try (InputStream in = Files.newInputStream(f)) {
+                    p.load(in);
+                }
+                int v = Integer.parseInt(p.getProperty("resolution", "0").trim());
+                return v == 720 || v == 1080 || v == 1440 ? v : 0;
+            }
+        } catch (Exception ignored) {
+        }
+        return 0;
+    }
+
+    private void saveResolution() {
+        try {
+            Path f = file();
+            Files.createDirectories(f.getParent());
+            Properties p = new Properties();
+            p.setProperty("renderer", renderer == Renderer.CPU ? "cpu" : "gpu");
+            p.setProperty("resolution", Integer.toString(resolution));
+            try (OutputStream out = Files.newOutputStream(f)) {
+                p.store(out, "How cutscenes are drawn: gpu (graphics card) or cpu (processor); resolution 0 = auto, 720, 1080, 1440");
+            }
+        } catch (IOException ignored) {
+        }
     }
 
     private static void saveChoice(Renderer r) {
@@ -125,14 +158,24 @@ public class CutsceneScreen extends Screen {
         if (started) return;
         int cx = this.width / 2;
         int y = this.height - 70;
+        if (y < 150) y = 150;
+        addRenderableWidget(Button.builder(Component.literal(resolutionLabel()), b -> {
+            resolution = resolution == 0 ? 720 : resolution == 720 ? 1080 : resolution == 1080 ? 1440 : 0;
+            saveResolution();
+            b.setMessage(Component.literal(resolutionLabel()));
+        }).bounds(cx - 150, y - 24, 300, 20).build());
         addRenderableWidget(Button.builder(Component.literal(rendererLabel()), b -> {
             renderer = renderer == Renderer.GPU ? Renderer.CPU : Renderer.GPU;
             note = null;
-            saveChoice(renderer);
+            saveResolution();
             b.setMessage(Component.literal(rendererLabel()));
         }).bounds(cx - 150, y, 300, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Начать / Start"), b -> start()).bounds(cx - 150, y + 24, 146, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Назад / Back"), b -> onClose()).bounds(cx + 4, y + 24, 146, 20).build());
+    }
+
+    private String resolutionLabel() {
+        return resolution == 0 ? "Разрешение: авто (по окну)" : "Разрешение: " + (resolution == 1440 ? "2K (1440p)" : resolution + "p") + " (для видеокарты)";
     }
 
     private String rendererLabel() {
@@ -238,7 +281,7 @@ public class CutsceneScreen extends Screen {
         if (renderer == Renderer.GPU) {
             try {
                 int fbH = this.minecraft.getWindow().getHeight();
-                outH = fbH >= 1400 ? 1440 : fbH >= 1000 ? 1080 : 720;
+                outH = resolution != 0 ? resolution : fbH >= 1400 ? 1440 : fbH >= 1000 ? 1080 : 720;
                 outW = outH * 16 / 9;
                 GpuScene.State before = GpuScene.saveState();
                 try {
