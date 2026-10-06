@@ -2473,8 +2473,9 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         p.pitch[PlayerBoxes.RIGHT_LEG] = -1.55; p.pitch[PlayerBoxes.LEFT_LEG] = -1.55;
         p.pitch[PlayerBoxes.HEAD] = 0.35 + 0.15 * spill;
         p.pitch[PlayerBoxes.RIGHT_ARM] = -0.5; p.pitch[PlayerBoxes.LEFT_ARM] = -0.5;
+        r.lights.add(new Soft3D.Light(0.4, 1.7, -0.3, 1.1, 0.62, 0.40, 3.2));                  // the lamp's glow reaches him: he must be seen
         r.matSpec = 0.05;
-        r.figure(model, skin, 0, 0.5, 1.0, Math.PI, 0.0625 * 1.0, p, dim(62), 0, Soft3D.ALL_PARTS);
+        r.figure(model, skin, 0, -0.27, 0.98, Math.PI, 0.0625 * 1.0, p, dim(120), 0, Soft3D.ALL_PARTS);      // origin is between the feet: the hips (0.75 m up) land on the seat at 0.5 m
         r.matSpec = 0;
         r.box(-0.28, 0, 0.7, 0.28, 0.5, 1.2, deskWood, 0xFF666666, 0, 2);                    // his chair
         // the words come out of him and fly at the player
