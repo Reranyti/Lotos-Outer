@@ -44,7 +44,32 @@ public final class FinaleVideoStore {
      * The video, ready to be read, or null if it can't be had (no network, no room, a wrong file): the fight then goes on without it.
      * Blocks while downloading, so call it off the game's thread.
      */
-    public static synchronized File obtain(File gameDir) {
+    public static File obtain(File gameDir) {
+        java.util.concurrent.CompletableFuture<File> running = prefetching;
+        if (running != null) {                                   // the download begun at launch: wait for it rather than start another
+            try {
+                File f = running.get();
+                if (f != null && f.isFile()) return f;
+            } catch (Exception ignored) {
+            }
+        }
+        return fetch(gameDir);
+    }
+
+    private static volatile java.util.concurrent.CompletableFuture<File> prefetching;
+
+    /** Starts the download in the background (at the game's launch), so the fight finds the video already there. */
+    public static void prefetch(File gameDir) {
+        if (prefetching != null) return;
+        prefetching = java.util.concurrent.CompletableFuture.supplyAsync(() -> fetch(gameDir), r -> {
+            Thread t = new Thread(r, "LotusBlight video fetch");
+            t.setDaemon(true);
+            t.setPriority(Thread.MIN_PRIORITY);
+            t.start();
+        });
+    }
+
+    private static synchronized File fetch(File gameDir) {
         sweep(gameDir);
         installHook(gameDir);
         List<File> places = candidates(gameDir);
@@ -83,6 +108,7 @@ public final class FinaleVideoStore {
     public static void remove(File gameDir) {
         File f = current;
         current = null;
+        prefetching = null;
         if (f != null) deleteWithDir(f);
         sweep(gameDir);
     }
