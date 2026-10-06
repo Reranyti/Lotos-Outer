@@ -240,7 +240,12 @@ public class CutsceneScreen extends Screen {
                 int fbH = this.minecraft.getWindow().getHeight();
                 outH = fbH >= 1400 ? 1440 : fbH >= 1000 ? 1080 : 720;
                 outW = outH * 16 / 9;
-                gpu = new GpuScene(outW, outH);
+                GpuScene.State before = GpuScene.saveState();
+                try {
+                    gpu = new GpuScene(outW, outH);
+                } finally {
+                    GpuScene.restoreState(before);
+                }
                 gpuTexture = new GpuTexture(gpu.outputTexture());
                 gpuTextureId = new ResourceLocation(LotusBlight.MODID, "cutscene_gpu");
                 this.minecraft.getTextureManager().register(gpuTextureId, gpuTexture);

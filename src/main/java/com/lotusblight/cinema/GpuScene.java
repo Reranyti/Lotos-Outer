@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL21;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL32;
 
@@ -361,6 +362,7 @@ public final class GpuScene {
     /** The game's own graphics-card state, kept to be put back exactly as it was after the scene has drawn. */
     public static final class State {
         int fbo, prog, vao, arrayBuf, active, depthFunc, srcRgb, dstRgb, srcA, dstA;
+        int unpackBuf, unpackRow, unpackSkipPx, unpackSkipRows, unpackAlign, unpackImgH, packBuf, readFbo, drawFbo;
         int[] tex = new int[4];
         int[] viewport = new int[4];
         boolean depthTest, blend, cull, scissor, depthMask;
@@ -370,6 +372,20 @@ public final class GpuScene {
     public static State saveState() {
         State s = new State();
         s.fbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+        s.unpackBuf = GL11.glGetInteger(GL21.GL_PIXEL_UNPACK_BUFFER_BINDING);
+        s.packBuf = GL11.glGetInteger(GL21.GL_PIXEL_PACK_BUFFER_BINDING);
+        s.unpackRow = GL11.glGetInteger(GL11.GL_UNPACK_ROW_LENGTH);
+        s.unpackSkipPx = GL11.glGetInteger(GL11.GL_UNPACK_SKIP_PIXELS);
+        s.unpackSkipRows = GL11.glGetInteger(GL11.GL_UNPACK_SKIP_ROWS);
+        s.unpackAlign = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
+        s.unpackImgH = GL11.glGetInteger(GL12.GL_UNPACK_IMAGE_HEIGHT);
+        GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
+        GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
+        GL11.glPixelStorei(GL12.GL_UNPACK_IMAGE_HEIGHT, 0);
         s.prog = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         s.vao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
         s.arrayBuf = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
@@ -395,6 +411,13 @@ public final class GpuScene {
     }
 
     public static void restoreState(State s) {
+        GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, s.unpackRow);
+        GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, s.unpackSkipPx);
+        GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, s.unpackSkipRows);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, s.unpackAlign);
+        GL11.glPixelStorei(GL12.GL_UNPACK_IMAGE_HEIGHT, s.unpackImgH);
+        GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, s.unpackBuf);
+        GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, s.packBuf);
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, s.fbo);
         GL11.glViewport(s.viewport[0], s.viewport[1], s.viewport[2], s.viewport[3]);
         GL20.glUseProgram(s.prog);
