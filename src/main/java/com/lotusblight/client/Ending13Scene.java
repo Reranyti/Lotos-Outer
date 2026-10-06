@@ -2585,14 +2585,9 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         for (int i = 0; i < 520; i++) {                                                  // a real forest: wide and deep, so there is no edge to see
             double x = (q.nextDouble() - 0.5) * 70, z = r.camZ - 30 + q.nextDouble() * 70;
             if (Math.abs(x) < 1.4) x += x < 0 ? -1.8 : 1.8;
-            double h = 6 + q.nextDouble() * 4, w = 0.14 + q.nextDouble() * 0.12;
-            r.box(x - w, 0, z - w, x + w, h, z + w, bark, 0xFFFFFFFF, 0, 1.2);
-            for (int b = 0; b < 4; b++) {
-                double by = 2.2 + q.nextDouble() * 4, len = 0.8 + q.nextDouble() * 1.3, ang = q.nextDouble() * Math.PI * 2;
-                double ex = x + Math.cos(ang) * len, ey = by + 0.3 + q.nextDouble() * 0.6, ez = z + Math.sin(ang) * len;
-                r.bar(new double[]{x, by, z}, new double[]{ex, ey, ez}, new double[]{0.035, 0, 0}, new double[]{0, 0, 0.035}, bark, 0xFFFFFFFF, 0);
-                r.bar(new double[]{ex, ey, ez}, new double[]{ex + Math.cos(ang + 0.7) * 0.5, ey + 0.35, ez + Math.sin(ang + 0.7) * 0.5}, new double[]{0.02, 0, 0}, new double[]{0, 0, 0.02}, bark, 0xFFFFFFFF, 0);
-            }
+            double dist = Math.hypot(x - r.camX, z - r.camZ);
+            if (dist < 0.8) continue;
+            tree(x, z, 5000 + i * 31L, dist < 16 ? 1.0 : 0.0);
         }
         for (int i = 0; i < 420; i++) {                                                  // dead grass
             double gx = (q.nextDouble() - 0.5) * 36, gz = r.camZ - 14 + q.nextDouble() * 34;
@@ -2845,6 +2840,77 @@ public final class Ending13Scene implements com.lotusblight.cinema.Cutscene {
         }
         motes(new double[]{cx, 1.4, cz + dir * 4}, 5, 1.6, 7, 160, t, 61, 0xFFA8D8FF, 0.014, 0.9);       // fireflies of cold light
         for (int k = 0; k < 4; k++) mistLayer(0.3 + k * 0.7, 24, cx, cz + dir * 6, 0xFF8AA0C8, 0.20 - k * 0.03, t, (k % 2 == 0 ? 1 : -1) * 0.006, 4.0);
+    }
+
+    // ------------------------------------------------------------------ trees: tapered, bent, rooted, branching
+
+    /** A tapering round limb from {@code a} (radius {@code ra}) to {@code b} (radius {@code rb}), {@code sides} faces round. */
+    private void limb(double[] a, double[] b, double ra, double rb, int sides, Soft3D.Tex tex, int tint, double vRepeat) {
+        double dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+        double len = Math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-9;
+        dx /= len; dy /= len; dz /= len;
+        double[] up = Math.abs(dy) > 0.9 ? new double[]{1, 0, 0} : new double[]{0, 1, 0};
+        double e1x = dy * up[2] - dz * up[1], e1y = dz * up[0] - dx * up[2], e1z = dx * up[1] - dy * up[0];
+        double l1 = Math.sqrt(e1x * e1x + e1y * e1y + e1z * e1z) + 1e-9;
+        e1x /= l1; e1y /= l1; e1z /= l1;
+        double e2x = dy * e1z - dz * e1y, e2y = dz * e1x - dx * e1z, e2z = dx * e1y - dy * e1x;
+        for (int i = 0; i < sides; i++) {
+            double a0 = i * 2 * Math.PI / sides, a1 = (i + 1) * 2 * Math.PI / sides;
+            double c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+            double[] p0 = {a[0] + (e1x * c0 + e2x * s0) * ra, a[1] + (e1y * c0 + e2y * s0) * ra, a[2] + (e1z * c0 + e2z * s0) * ra};
+            double[] p1 = {a[0] + (e1x * c1 + e2x * s1) * ra, a[1] + (e1y * c1 + e2y * s1) * ra, a[2] + (e1z * c1 + e2z * s1) * ra};
+            double[] q0 = {b[0] + (e1x * c0 + e2x * s0) * rb, b[1] + (e1y * c0 + e2y * s0) * rb, b[2] + (e1z * c0 + e2z * s0) * rb};
+            double[] q1 = {b[0] + (e1x * c1 + e2x * s1) * rb, b[1] + (e1y * c1 + e2y * s1) * rb, b[2] + (e1z * c1 + e2z * s1) * rb};
+            double u0 = (double) i / sides, u1 = (double) (i + 1) / sides;
+            r.quad(new double[][]{q0, q1, p1, p0}, new double[][]{{u0, 0}, {u1, 0}, {u1, vRepeat}, {u0, vRepeat}}, tex, tint, 0);
+        }
+    }
+
+    /** One bare, dead tree: roots flaring from the base, a trunk that thins and leans, branches that fork twice. {@code detail} 0 = far, 1 = near. */
+    private void tree(double x, double z, long seed, double detail) {
+        Random q = new Random(seed);
+        int sides = detail > 0.5 ? 7 : 4;
+        double height = 6.5 + q.nextDouble() * 4.5, baseR = 0.17 + q.nextDouble() * 0.14;
+        double leanA = q.nextDouble() * 6.28, lean = 0.05 + q.nextDouble() * 0.10;
+        int segs = detail > 0.5 ? 7 : 3;
+        double[] prev = {x, 0, z};
+        double rPrev = baseR * 1.25;
+        double[][] spine = new double[segs + 1][];
+        spine[0] = prev;
+        for (int k = 1; k <= segs; k++) {
+            double f = (double) k / segs;
+            double bend = Math.sin(f * 3.0 + seed % 7) * 0.22 * f;
+            double[] cur = {x + Math.cos(leanA) * lean * height * f * f + bend, height * f, z + Math.sin(leanA) * lean * height * f * f + bend * 0.6};
+            double rCur = baseR * (1.0 - 0.78 * f);
+            limb(prev, cur, rPrev, rCur, sides, bark, 0xFFFFFFFF, 1.6 * height / segs / 1.6);
+            spine[k] = cur;
+            prev = cur; rPrev = rCur;
+        }
+        if (detail > 0.5) {
+            for (int k = 0; k < 4; k++) {                                                          // roots flaring out over the ground
+                double a = q.nextDouble() * 6.28, len = 0.5 + q.nextDouble() * 0.7;
+                limb(new double[]{x, 0.45, z}, new double[]{x + Math.cos(a) * len, 0.0, z + Math.sin(a) * len}, baseR * 0.6, baseR * 0.14, 4, bark, 0xFF99999A, 1.0);
+            }
+        }
+        int boughs = detail > 0.5 ? 7 : 3;
+        for (int bI = 0; bI < boughs; bI++) {
+            double f = 0.32 + 0.62 * ((bI + q.nextDouble() * 0.6) / boughs);
+            int si = Math.min(segs - 1, (int) (f * segs));
+            double[] a = spine[si];
+            double ang = q.nextDouble() * 6.28, len = (1.1 + q.nextDouble() * 1.7) * (1.1 - 0.5 * f);
+            double[] mid = {a[0] + Math.cos(ang) * len * 0.55, a[1] + 0.25 + q.nextDouble() * 0.4, a[2] + Math.sin(ang) * len * 0.55};
+            double[] end = {a[0] + Math.cos(ang + 0.25) * len, mid[1] + 0.35 + q.nextDouble() * 0.5, a[2] + Math.sin(ang + 0.25) * len};
+            double rb = baseR * (0.34 - 0.2 * f);
+            limb(a, mid, rb, rb * 0.65, 4, bark, 0xFFEEEEEE, 1.0);
+            limb(mid, end, rb * 0.65, rb * 0.25, 4, bark, 0xFFEEEEEE, 1.0);
+            if (detail > 0.5) {                                                                   // the branch forks into twigs
+                for (int tw = 0; tw < 3; tw++) {
+                    double ta = ang + (tw - 1) * 0.7 + q.nextDouble() * 0.3, tl = 0.5 + q.nextDouble() * 0.7;
+                    double[] te = {end[0] + Math.cos(ta) * tl, end[1] + 0.15 + q.nextDouble() * 0.5, end[2] + Math.sin(ta) * tl};
+                    limb(end, te, rb * 0.25, rb * 0.06, 3, bark, 0xFFDDDDDD, 1.0);
+                }
+            }
+        }
     }
 
     private Soft3D.Tex mist;
