@@ -1,9 +1,13 @@
 #version 120
 
-// Lotos Cinema, stages 2-3 (part 1): sun/moon shadows, ambient occlusion and distance haze.
-// Everything is deferred: normals are rebuilt from the depth buffer, so vanilla geometry programs stay untouched.
+// Lotos Cinema, stages 2-4: sun/moon shadows, relief lighting, specular, rim light, AO and haze.
+// Normals and materials come from the geometry passes (colortex1/2); where they are missing the normal is rebuilt from depth.
+
+/* DRAWBUFFERS:0 */
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex1;
+uniform sampler2D colortex2;
 uniform sampler2D depthtex0;
 uniform sampler2D shadowtex0;
 
@@ -12,6 +16,8 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 uniform vec3 shadowLightPosition;
+uniform vec3 sunPosition;
+uniform vec3 upPosition;
 uniform float near;
 uniform float far;
 uniform float viewWidth;
@@ -26,6 +32,8 @@ const float shadowDistance = 80.0;
 #define SHADOW_STRENGTH 0.45    //[0.0 0.25 0.35 0.45 0.6 0.75]
 #define AO_STRENGTH 0.55        //[0.0 0.25 0.4 0.55 0.75 1.0]
 #define HAZE_DENSITY 0.35       //[0.0 0.2 0.35 0.5 0.75 1.0]
+#define SPECULAR_STRENGTH 1.0   //[0.0 0.5 1.0 1.5 2.0]
+#define RELIEF_LIGHT 0.8        //[0.0 0.4 0.8 1.2 1.6]
 
 vec3 viewPos(vec2 uv, float depth) {
     vec4 v = gbufferProjectionInverse * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
@@ -51,15 +59,35 @@ void main() {
     vec2 px = vec2(1.0 / viewWidth, 1.0 / viewHeight);
     vec3 p = viewPos(texcoord, depth);
 
-    // normal from the depth buffer, picking the nearer neighbour on each axis to survive edges
-    vec3 pR = viewPos(texcoord + vec2(px.x, 0.0), depthAt(texcoord + vec2(px.x, 0.0)));
-    vec3 pL = viewPos(texcoord - vec2(px.x, 0.0), depthAt(texcoord - vec2(px.x, 0.0)));
-    vec3 pU = viewPos(texcoord + vec2(0.0, px.y), depthAt(texcoord + vec2(0.0, px.y)));
-    vec3 pD = viewPos(texcoord - vec2(0.0, px.y), depthAt(texcoord - vec2(0.0, px.y)));
-    vec3 dx = abs(pR.z - p.z) < abs(p.z - pL.z) ? pR - p : p - pL;
-    vec3 dy = abs(pU.z - p.z) < abs(p.z - pD.z) ? pU - p : p - pD;
-    vec3 n = normalize(cross(dx, dy));
-    if (dot(n, p) > 0.0) n = -n;
+    // normal and material: from the geometry passes when present, else rebuilt from depth
+    vec4 nd = texture2D(colortex1, texcoord);
+    vec4 md = texture2D(colortex2, texcoord);
+    float haveMat = nd.a > 0.5 ? 1.0 : 0.0;
+    vec3 n;
+    float spec = 0.08;
+    float smoothness = 0.3;
+    float emis = 0.0;
+    float skyLight = 1.0;
+    if (haveMat > 0.5) {
+        n = normalize(nd.rgb * 2.0 - 1.0);
+        spec = md.r;
+        smoothness = md.g;
+        emis = md.b;
+        skyLight = md.a;
+    } else {
+        vec3 pR = viewPos(texcoord + vec2(px.x, 0.0), depthAt(texcoord + vec2(px.x, 0.0)));
+        vec3 pL = viewPos(texcoord - vec2(px.x, 0.0), depthAt(texcoord - vec2(px.x, 0.0)));
+        vec3 pU = viewPos(texcoord + vec2(0.0, px.y), depthAt(texcoord + vec2(0.0, px.y)));
+        vec3 pD = viewPos(texcoord - vec2(0.0, px.y), depthAt(texcoord - vec2(0.0, px.y)));
+        vec3 dx = abs(pR.z - p.z) < abs(p.z - pL.z) ? pR - p : p - pL;
+        vec3 dy = abs(pU.z - p.z) < abs(p.z - pD.z) ? pU - p : p - pD;
+        n = normalize(cross(dx, dy));
+        if (dot(n, p) > 0.0) n = -n;
+    }
+    float skyGate = haveMat > 0.5 ? smoothstep(0.15, 0.85, skyLight) : 1.0;     // caves and interiors get no sun
+
+    float dayness = smoothstep(-0.1, 0.2, dot(normalize(sunPosition), normalize(upPosition)));
+    vec3 lightTint = mix(vec3(0.55, 0.66, 1.0), vec3(1.0, 0.86, 0.66), dayness);
 
     // shadow map lookup with a small PCF kernel
     vec3 lightDir = normalize(shadowLightPosition);
@@ -82,8 +110,9 @@ void main() {
         vis = lit / 9.0;
     }
     float facing = smoothstep(0.0, 0.18, ndotl);
-    float sunlit = vis * facing;
-    float shade = mix(1.0 - SHADOW_STRENGTH * (1.0 - 0.5 * rainStrength), 1.0, sunlit);
+    float sunlit = vis * facing * skyGate;
+    float shade = mix(1.0 - SHADOW_STRENGTH * (1.0 - 0.5 * rainStrength), 1.0, vis * facing);
+    shade = mix(1.0, shade, skyGate);
 
     // ambient occlusion from depth
     float lc = linearDepth(depth);
@@ -97,9 +126,29 @@ void main() {
     }
     float ao = 1.0 - AO_STRENGTH * occ / 8.0;
 
-    // far things (clouds, distant hills) lie outside the shadow map: fade shadows and AO out with distance
+    // far things (clouds, distant hills) lie outside the shadow map: fade shadows, AO and relief with distance
     float nearAmount = 1.0 - smoothstep(55.0, 105.0, length(p));
-    color *= mix(1.0, shade * ao, nearAmount);
+    color *= mix(1.0, mix(shade * ao, 1.0, emis), nearAmount);
+
+    if (haveMat > 0.5) {
+        // per-pixel relief: the textured normal modulates the sunlight, so every block face has depth
+        float diffuse = clamp(ndotl, 0.0, 1.0);
+        color *= mix(1.0, 0.78 + 0.5 * diffuse, sunlit * RELIEF_LIGHT * 0.6 * nearAmount * (1.0 - emis));
+
+        // specular highlight; metals tint it with their own colour
+        vec3 V = normalize(-p);
+        vec3 H = normalize(lightDir + V);
+        float shin = mix(10.0, 220.0, smoothness * smoothness);
+        float sp0 = pow(max(dot(n, H), 0.0), shin) * (shin + 8.0) / 60.0;
+        float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        vec3 metalCol = clamp(color / max(luma, 0.03), 0.0, 1.7);
+        vec3 specCol = mix(vec3(1.0), metalCol, step(0.5, spec));
+        color += lightTint * specCol * sp0 * spec * SPECULAR_STRENGTH * sunlit * nearAmount * (1.0 - 0.8 * rainStrength);
+
+        // faint rim light so edges separate from the dark
+        float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+        color += lightTint * rim * 0.05 * skyGate * nearAmount * (1.0 - emis);
+    }
 
     // cold haze that thickens with distance (and in rain)
     float dist = length(p);
