@@ -51,7 +51,10 @@ void main() {
     acc /= float(STEPS);
 
     float fade = clamp(1.0 - length(lightUV - 0.5) * 0.85, 0.0, 1.0);
-    color += tint * acc * fade * power * GODRAYS * 0.9;
+    // capped, and weaker on the sky itself, so the horizon never burns out
+    float onSky = texture2D(depthtex0, texcoord).r >= 0.9999 ? 0.25 : 1.0;
+    float add = min(acc * fade * power * GODRAYS * 0.5, 0.28) * onSky;
+    color += tint * add;
 
     gl_FragData[0] = vec4(color, 1.0);
 }

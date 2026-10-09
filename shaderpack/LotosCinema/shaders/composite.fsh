@@ -97,7 +97,9 @@ void main() {
     }
     float ao = 1.0 - AO_STRENGTH * occ / 8.0;
 
-    color *= shade * ao;
+    // far things (clouds, distant hills) lie outside the shadow map: fade shadows and AO out with distance
+    float nearAmount = 1.0 - smoothstep(55.0, 105.0, length(p));
+    color *= mix(1.0, shade * ao, nearAmount);
 
     // cold haze that thickens with distance (and in rain)
     float dist = length(p);
